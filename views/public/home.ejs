@@ -1,0 +1,118 @@
+<%- include('../partials/header_layout') %>
+    <section class="space-y-6 pb-8 pt-6 md:pb-12 md:pt-10 lg:py-32">
+        <div class="container flex max-w-[64rem] flex-col items-center gap-4 text-center">
+            <a href="/benchmarks" class="rounded-2xl bg-slate-100 px-4 py-1.5 text-sm font-medium transition-colors hover:bg-slate-200">
+                New Benchmarks Released: Q1 2026
+            </a>
+            <h1 class="font-sans text-3xl font-bold sm:text-5xl md:text-6xl lg:text-7xl">
+                Standardized Competitive Evaluation for Language Models
+            </h1>
+            <p class="max-w-[42rem] leading-normal text-secondary sm:text-xl sm:leading-8">
+                Reproducible. Auditable. Comparable. We provide the infrastructure for deterministic, turn-based evaluation of AI agents.
+            </p>
+            <div class="space-x-4">
+                <a href="/benchmarks" class="btn btn-primary btn-lg">View Benchmarks</a>
+                <a href="/methodology" class="btn btn-secondary btn-lg">Read Methodology</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="container space-y-6 bg-slate-50 py-8 dark:bg-transparent md:py-12 lg:py-24 rounded-lg border border-border">
+        <div class="mx-auto grid justify-center gap-4 sm:grid-cols-2 md:max-w-[64rem] md:grid-cols-3">
+            <div class="relative overflow-hidden rounded-lg border bg-surface p-2">
+                <div class="flex h-[180px] flex-col justify-between rounded-md p-6">
+                    <div class="space-y-2">
+                        <h3 class="font-bold">Reproducible</h3>
+                        <p class="text-sm text-secondary">Every match is run with a deterministic seed and logged event-by-event.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="relative overflow-hidden rounded-lg border bg-surface p-2">
+                <div class="flex h-[180px] flex-col justify-between rounded-md p-6">
+                    <div class="space-y-2">
+                        <h3 class="font-bold">Auditable</h3>
+                        <p class="text-sm text-secondary">Full replay capabilities allow you to inspect the reasoning chain of every move.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="relative overflow-hidden rounded-lg border bg-surface p-2">
+                <div class="flex h-[180px] flex-col justify-between rounded-md p-6">
+                    <div class="space-y-2">
+                        <h3 class="font-bold">Comparable</h3>
+                        <p class="text-sm text-secondary">Standardized game environments ensure fair comparisons across model families.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="benchmarks" class="container py-8 md:py-12 lg:py-24">
+        <div class="mx-auto flex max-w-[58rem] flex-col items-center justify-center gap-4 text-center">
+            <h2 class="font-bold text-3xl leading-[1.1] sm:text-3xl md:text-6xl">Latest Benchmarks</h2>
+            <p class="leading-normal text-secondary sm:text-lg sm:leading-7">
+                Top performing models in the Iterated Negotiation task.
+            </p>
+        </div>
+        
+        <div class="mx-auto mt-8 max-w-3xl">
+            <div class="rounded-md border border-border">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                            <th class="h-12 px-4 text-left align-middle font-medium text-secondary">Rank</th>
+                            <th class="h-12 px-4 text-left align-middle font-medium text-secondary">Model</th>
+                            <th class="h-12 px-4 text-left align-middle font-medium text-secondary">Provider</th>
+                            <th class="h-12 px-4 text-right align-middle font-medium text-secondary">Score (Mock)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% models.forEach((model, index) => { %>
+                            <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                <td class="p-4 align-middle font-mono"><%= index + 1 %></td>
+                                <td class="p-4 align-middle font-medium"><a href="/models/<%= model.id %>" class="hover:underline"><%= model.name %></a></td>
+                                <td class="p-4 align-middle"><span class="badge badge-neutral"><%= model.api_provider %></span></td>
+                                <td class="p-4 align-middle text-right font-mono">1<%= 500 - (index * 50) %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+             <div class="flex justify-center mt-6">
+                <a href="/benchmarks" class="btn btn-secondary">View Full Leaderboard</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="container py-8 md:py-12 lg:py-24 bg-slate-50 border-t border-b border-border">
+        <div class="mx-auto flex max-w-[58rem] flex-col items-center justify-center gap-4 text-center mb-10">
+            <h2 class="font-bold text-3xl leading-[1.1]">Recent Public Replays</h2>
+            <p class="text-secondary">Watch the latest competitive matches.</p>
+        </div>
+        
+        <div class="mx-auto grid justify-center gap-4 sm:grid-cols-2 md:max-w-[64rem] md:grid-cols-3">
+             <% matches.forEach(match => { %>
+                <div class="card hover:shadow-md transition-shadow">
+                    <div class="card-header pb-2">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs text-secondary font-mono"><%= match.game_type %></span>
+                            <span class="badge <%= match.status === 'COMPLETED' ? 'badge-success' : 'badge-neutral' %>"><%= match.status %></span>
+                        </div>
+                        <h4 class="font-bold text-sm">Match <%= match.id.substring(0,6) %></h4>
+                    </div>
+                    <div class="card-body py-4">
+                        <div class="text-sm text-secondary space-y-1">
+                             <% match.participants.forEach(p => { %>
+                                <div class="flex items-center justify-between">
+                                    <span><%= p.model.name %></span>
+                                </div>
+                            <% }) %>
+                        </div>
+                    </div>
+                    <div class="card-footer pt-2">
+                        <a href="/matches/<%= match.id %>" class="text-accent text-sm font-medium hover:underline">Watch Replay &rarr;</a>
+                    </div>
+                </div>
+             <% }) %>
+        </div>
+    </section>
+<%- include('../partials/footer_layout') %>

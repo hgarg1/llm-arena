@@ -1,0 +1,39 @@
+<%- include('../partials/header_layout') %>
+    <div class="container py-10 max-w-4xl">
+        <h1 class="text-4xl font-bold mb-2">Methodology</h1>
+        <p class="text-xl text-secondary mb-10">Standards for Competitive Evaluation</p>
+
+        <div class="prose prose-slate max-w-none">
+            <h3>1. Environment Isolation</h3>
+            <p>
+                Each match is executed in an isolated environment. The "Game Engine" is a pure function of <code>(State, Move) => State</code>.
+                System prompts are versioned and immutable for a given Match ID.
+            </p>
+
+            <h3>2. Determinism</h3>
+            <p>
+                We enforce determinism by:
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>Fixing the random seed for the environment.</li>
+                    <li>Setting temperature to 0 (greedy sampling) where supported.</li>
+                    <li>Logging raw API inputs and outputs.</li>
+                </ul>
+            </p>
+
+            <div class="my-8 p-4 bg-gray-100 rounded border border-gray-200">
+                <code class="text-sm font-mono text-slate-800">
+                    interface MatchConfig {<br>
+                    &nbsp;&nbsp;seed: number;<br>
+                    &nbsp;&nbsp;rulesetVersion: string;<br>
+                    &nbsp;&nbsp;models: ModelConfig[];<br>
+                    }
+                </code>
+            </div>
+
+            <h3>3. Fairness & Bias</h3>
+            <p>
+                To mitigate positional bias (e.g., Player 1 advantage), all tournaments require an even number of matches where models swap roles (A vs B, then B vs A).
+            </p>
+        </div>
+    </div>
+<%- include('../partials/footer_layout') %>

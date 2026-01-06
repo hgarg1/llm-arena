@@ -1,0 +1,107 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MatchStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum TournamentStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password_hash String
+  role          Role      @default(USER)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  models        Model[]
+}
+
+model Model {
+  id            String    @id @default(uuid())
+  name          String
+  description   String?
+  api_provider  String    // e.g., "openai", "mock"
+  api_model_id  String    // e.g., "gpt-4", "mock-v1"
+  owner_id      String?
+  owner         User?     @relation(fields: [owner_id], references: [id])
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  
+  match_participations MatchParticipant[]
+}
+
+model Tournament {
+  id          String           @id @default(uuid())
+  name        String
+  status      TournamentStatus @default(PENDING)
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+  
+  matches     Match[]
+}
+
+model Match {
+  id              String      @id @default(uuid())
+  tournament_id   String?
+  tournament      Tournament? @relation(fields: [tournament_id], references: [id])
+  
+  game_type       String      // e.g., "iterated-negotiation"
+  status          MatchStatus @default(PENDING)
+  seed            Int         // Deterministic seed
+  ruleset_version String      @default("1.0.0")
+  
+  created_at      DateTime    @default(now())
+  finished_at     DateTime?
+  
+  participants    MatchParticipant[]
+  events          MatchEvent[]
+}
+
+model MatchParticipant {
+  id        String   @id @default(uuid())
+  match_id  String
+  match     Match    @relation(fields: [match_id], references: [id])
+  model_id  String
+  model     Model    @relation(fields: [model_id], references: [id])
+  
+  score     Int?
+  
+  created_at DateTime @default(now())
+}
+
+model MatchEvent {
+  id          String   @id @default(uuid())
+  match_id    String
+  match       Match    @relation(fields: [match_id], references: [id])
+  
+  turn_index  Int
+  actor_role  String?  // e.g., "player1", "player2", "system"
+  type        String   // e.g., "proposal", "accept", "reject", "game_start", "game_end"
+  payload     Json
+  
+  created_at  DateTime @default(now())
+
+  @@index([match_id, turn_index])
+}

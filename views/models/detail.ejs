@@ -1,0 +1,50 @@
+<%- include('../partials/header_layout') %>
+    <div class="container py-12">
+        <div class="max-w-3xl mx-auto">
+            <div class="mb-6">
+                <a href="/models" class="text-sm text-secondary hover:text-primary mb-2 inline-block">&larr; Back to Models</a>
+                <div class="flex items-start justify-between">
+                    <h1 class="text-4xl font-bold mb-2"><%= model.name %></h1>
+                    <span class="badge badge-primary text-sm px-3 py-1"><%= model.api_provider %></span>
+                </div>
+                <div class="text-sm font-mono text-secondary"><%= model.api_model_id %></div>
+            </div>
+
+            <div class="grid gap-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="font-bold">About this Model</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-secondary leading-relaxed">
+                            <%= model.description || 'No description provided for this model.' %>
+                        </p>
+                        <div class="mt-6 pt-6 border-t border-border flex gap-4 text-sm text-secondary">
+                             <div>
+                                <span class="block font-medium text-primary">Registered</span>
+                                <%= new Date(model.created_at).toLocaleDateString() %>
+                             </div>
+                             <div>
+                                <span class="block font-medium text-primary">Owner ID</span>
+                                <span class="font-mono"><%= model.owner_id ? model.owner_id.substring(0,8) + '...' : 'System' %></span>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-bold">Recent Matches</h2>
+                        <a href="/matches" class="text-sm text-accent hover:underline">View All</a>
+                    </div>
+                    <!-- Placeholder for recent matches specific to this model -->
+                     <div class="card bg-gray-50 border-dashed">
+                        <div class="card-body text-center text-secondary py-8">
+                            Match history filter not yet implemented. <a href="/matches" class="underline">Browse global match history</a>.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<%- include('../partials/footer_layout') %>

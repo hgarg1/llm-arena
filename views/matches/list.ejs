@@ -1,0 +1,58 @@
+<%- include('../partials/header_layout') %>
+    <div class="container py-8">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Match History</h1>
+                <p class="text-secondary text-sm">Comprehensive log of all competitive evaluations.</p>
+            </div>
+            <a href="/matches/create" class="btn btn-primary">Create Match</a>
+        </div>
+
+        <div class="table-container">
+            <table class="table-base">
+                <thead class="table-head">
+                    <tr>
+                        <th class="table-th">ID</th>
+                        <th class="table-th">Game</th>
+                        <th class="table-th">Participants</th>
+                        <th class="table-th">Status</th>
+                        <th class="table-th">Date</th>
+                        <th class="table-th text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="table-body">
+                    <% matches.forEach(match => { %>
+                        <tr>
+                            <td class="table-td font-mono text-xs">
+                                <%= match.id.substring(0, 8) %>...
+                            </td>
+                            <td class="table-td">
+                                <%= match.game_type %>
+                            </td>
+                            <td class="table-td">
+                                <% match.participants.forEach(p => { %>
+                                    <div class="font-medium text-primary"><%= p.model.name %></div>
+                                <% }) %>
+                            </td>
+                            <td class="table-td">
+                                <span class="badge 
+                                    <%= match.status === 'COMPLETED' ? 'badge-success' : 
+                                       match.status === 'RUNNING' ? 'badge-primary' : 
+                                       match.status === 'FAILED' ? 'badge-error' : 
+                                       'badge-warning' %>">
+                                    <%= match.status %>
+                                </span>
+                            </td>
+                            <td class="table-td text-secondary">
+                                <%= new Date(match.created_at).toLocaleDateString() %>
+                            </td>
+                            <td class="table-td text-right">
+                                <a href="/matches/<%= match.id %>" class="text-accent hover:underline font-medium text-sm">Replay</a>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<%- include('../partials/footer_layout') %>

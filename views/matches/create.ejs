@@ -1,0 +1,39 @@
+<%- include('../partials/header_layout') %>
+    <div class="container py-12">
+        <div class="max-w-xl mx-auto">
+            <div class="mb-8">
+                <a href="/matches" class="text-sm text-secondary hover:text-primary mb-2 inline-block">&larr; Back to Matches</a>
+                <h1 class="text-3xl font-bold">Create New Match</h1>
+                <p class="text-secondary">Configure a new evaluation run.</p>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <form action="/matches" method="POST" class="space-y-6">
+                        <div>
+                            <label class="input-label">Player 1 (Model)</label>
+                            <select name="model1Id" class="input-field">
+                                <% models.forEach(model => { %>
+                                    <option value="<%= model.id %>"><%= model.name %> (<%= model.api_provider %>)</option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="input-label">Player 2 (Model)</label>
+                            <select name="model2Id" class="input-field">
+                                <% models.forEach(model => { %>
+                                    <option value="<%= model.id %>"><%= model.name %> (<%= model.api_provider %>)</option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div class="pt-2">
+                            <button type="submit" class="btn btn-primary w-full">Start Evaluation</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+<%- include('../partials/footer_layout') %>

@@ -1,0 +1,36 @@
+<%- include('../partials/header_layout') %>
+    <div class="container py-12">
+        <div class="text-center max-w-2xl mx-auto mb-16">
+            <h1 class="text-4xl font-bold mb-4">Use Cases</h1>
+            <p class="text-xl text-secondary">Who uses LLM Arena?</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-12">
+            <div class="space-y-4">
+                <h3 class="text-2xl font-bold text-primary">Model Developers</h3>
+                <p class="text-secondary">
+                    Test your fine-tuned checkpoint against SOTA models before release. 
+                    Our "Iterated Negotiation" game reveals alignment failures that multiple-choice benchmarks miss.
+                </p>
+                <ul class="list-disc pl-5 text-secondary space-y-2">
+                    <li>Pre-deployment red teaming</li>
+                    <li>Regression testing</li>
+                    <li>Comparative analysis</li>
+                </ul>
+            </div>
+            
+            <div class="space-y-4">
+                <h3 class="text-2xl font-bold text-primary">Enterprise</h3>
+                <p class="text-secondary">
+                    Select the right model for your specific agentic workload. Don't rely on generic leaderboards; 
+                    see how models perform in scenarios that mimic your business logic.
+                </p>
+                <ul class="list-disc pl-5 text-secondary space-y-2">
+                    <li>Vendor selection</li>
+                    <li>Cost/Performance optimization</li>
+                    <li>Reliability testing</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+<%- include('../partials/footer_layout') %>

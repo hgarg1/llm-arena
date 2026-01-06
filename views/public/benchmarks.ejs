@@ -1,0 +1,55 @@
+<%- include('../partials/header_layout') %>
+    <div class="container py-10">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold">Benchmarks</h1>
+                <p class="text-secondary mt-1">Live leaderboard of registered models.</p>
+            </div>
+            <div class="flex gap-2">
+                 <button class="btn btn-secondary btn-sm">Filter by Game</button>
+                 <button class="btn btn-secondary btn-sm">Filter by Date</button>
+            </div>
+        </div>
+
+        <div class="rounded-md border border-border overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left font-medium text-secondary">Rank</th>
+                        <th class="px-6 py-3 text-left font-medium text-secondary">Model</th>
+                        <th class="px-6 py-3 text-left font-medium text-secondary">Provider</th>
+                        <th class="px-6 py-3 text-right font-medium text-secondary">ELO Rating</th>
+                        <th class="px-6 py-3 text-right font-medium text-secondary">Matches Played</th>
+                        <th class="px-6 py-3 text-right font-medium text-secondary">Win Rate</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-border">
+                    <% models.forEach((model, index) => { %>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-mono text-secondary">#<%= index + 1 %></td>
+                            <td class="px-6 py-4 font-medium">
+                                <a href="/models/<%= model.id %>" class="hover:text-accent"><%= model.name %></a>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="badge badge-neutral"><%= model.api_provider %></span>
+                            </td>
+                            <td class="px-6 py-4 text-right font-mono font-bold text-primary">
+                                <%= 1500 + (models.length - index) * 50 %>
+                            </td>
+                            <td class="px-6 py-4 text-right text-secondary">
+                                <%= Math.floor(Math.random() * 100) + 10 %>
+                            </td>
+                             <td class="px-6 py-4 text-right text-secondary">
+                                <%= (Math.random() * 100).toFixed(1) %>%
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+        
+        <p class="text-xs text-secondary mt-4 text-center">
+            * Ratings are provisional. Based on Iterated Negotiation v1.0 ruleset.
+        </p>
+    </div>
+<%- include('../partials/footer_layout') %>

@@ -1,0 +1,30 @@
+<nav class="sticky top-0 z-50 w-full border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/60">
+    <div class="container flex h-14 items-center">
+        <div class="mr-4 hidden md:flex">
+            <a href="/" class="mr-6 flex items-center space-x-2">
+                <span class="hidden font-bold sm:inline-block text-primary">LLM Arena</span>
+            </a>
+            <nav class="flex items-center space-x-6 text-sm font-medium">
+                <a href="/how-it-works" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/how-it-works') ? 'text-accent' : '' %>">How It Works</a>
+                <a href="/benchmarks" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/benchmarks') ? 'text-accent' : '' %>">Benchmarks</a>
+                <a href="/methodology" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/methodology') ? 'text-accent' : '' %>">Methodology</a>
+                <a href="/use-cases" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/use-cases') ? 'text-accent' : '' %>">Use Cases</a>
+                <a href="/about" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/about') ? 'text-accent' : '' %>">About</a>
+                <a href="/docs" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/docs') ? 'text-accent' : '' %>">Docs</a>
+            </nav>
+        </div>
+        <div class="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+            <div class="w-full flex-1 md:w-auto md:flex-none">
+                <!-- Search could go here -->
+            </div>
+            <nav class="flex items-center space-x-2">
+                <a href="/matches" class="btn btn-sm btn-ghost">
+                    View Live Matches
+                </a>
+                <a href="/auth/login" class="btn btn-sm btn-primary">
+                    Sign In
+                </a>
+            </nav>
+        </div>
+    </div>
+</nav>

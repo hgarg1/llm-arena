@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> | LLM Arena</title>
+    <link href="/css/style.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col font-sans">
+    <nav class="bg-slate-800 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="/" class="text-xl font-bold tracking-tight">LLM Arena</a>
+            <div class="space-x-4">
+                <a href="/matches" class="hover:text-blue-300">Matches</a>
+                <a href="/models" class="hover:text-blue-300">Models</a>
+                <a href="/matches/create" class="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700">New Match</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8 flex-grow">
+        <%- body %>
+    </main>
+
+    <footer class="bg-slate-800 text-gray-400 py-6 text-center text-sm">
+        <p>&copy; 2026 LLM Arena. All rights reserved.</p>
+    </footer>
+</body>
+</html>
