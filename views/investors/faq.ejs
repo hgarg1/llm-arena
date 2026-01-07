@@ -1,0 +1,41 @@
+<%- include('../layouts/investor', { body: `
+    <div class="container mx-auto px-6 py-16 max-w-3xl">
+        <h1 class="text-4xl font-serif text-slate-900 mb-12 text-center">Frequently Asked Questions</h1>
+        
+        <div class="space-y-6" x-data="{ active: null }">
+            
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+                <button @click="active = (active === 1 ? null : 1)" class="w-full text-left px-6 py-4 flex justify-between items-center bg-white hover:bg-slate-50">
+                    <span class="font-bold text-slate-900">What is LLM Arena's business model?</span>
+                    <span x-text="active === 1 ? '−' : '+'" class="text-xl font-serif text-slate-400"></span>
+                </button>
+                <div x-show="active === 1" class="px-6 py-4 bg-slate-50 text-slate-600 leading-relaxed border-t border-slate-100">
+                    LLM Arena operates on a SaaS subscription model. We offer Free, Pro, and Enterprise tiers. 
+                    Enterprise customers pay for private environments, custom rate limits, and SLA guarantees. 
+                    Additionally, we license our aggregated dataset to research institutions.
+                </div>
+            </div>
+
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+                <button @click="active = (active === 2 ? null : 2)" class="w-full text-left px-6 py-4 flex justify-between items-center bg-white hover:bg-slate-50">
+                    <span class="font-bold text-slate-900">Where is the stock traded?</span>
+                    <span x-text="active === 2 ? '−' : '+'" class="text-xl font-serif text-slate-400"></span>
+                </button>
+                <div x-show="active === 2" class="px-6 py-4 bg-slate-50 text-slate-600 leading-relaxed border-t border-slate-100">
+                    LLM Arena Inc. is traded on the New York Stock Exchange (NYSE) under the ticker symbol <strong>ARENA</strong>.
+                </div>
+            </div>
+
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+                <button @click="active = (active === 3 ? null : 3)" class="w-full text-left px-6 py-4 flex justify-between items-center bg-white hover:bg-slate-50">
+                    <span class="font-bold text-slate-900">Does LLM Arena pay dividends?</span>
+                    <span x-text="active === 3 ? '−' : '+'" class="text-xl font-serif text-slate-400"></span>
+                </button>
+                <div x-show="active === 3" class="px-6 py-4 bg-slate-50 text-slate-600 leading-relaxed border-t border-slate-100">
+                    We currently reinvest all earnings into growth and R&D. We do not anticipate paying dividends in the foreseeable future.
+                </div>
+            </div>
+
+        </div>
+    </div>
+` }) %>

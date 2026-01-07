@@ -1,0 +1,142 @@
+<%- include('../../layouts/investor', { body: `
+    <div class="bg-slate-50 border-b border-slate-200 py-24">
+        <div class="container mx-auto px-6 text-center max-w-4xl">
+            <h1 class="text-5xl md:text-7xl font-serif text-slate-900 mb-8 tracking-tight">Stewards of Intelligence</h1>
+            <p class="text-xl md:text-2xl text-slate-500 font-light leading-relaxed">
+                Our leadership team combines decades of experience in machine learning, capital markets, and enterprise infrastructure to define the standard for AI evaluation.
+            </p>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-6 py-20">
+        
+        <!-- CEO Spotlight -->
+        <div class="grid lg:grid-cols-2 gap-16 items-center mb-32">
+            <div class="relative">
+                <div class="aspect-[4/5] bg-slate-900 overflow-hidden relative z-10">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="CEO" class="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity duration-700">
+                </div>
+                <div class="absolute -bottom-6 -right-6 w-full h-full border-2 border-slate-200 z-0"></div>
+            </div>
+            <div>
+                <h4 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-2">Chief Executive Officer</h4>
+                <h2 class="text-4xl font-serif font-bold text-slate-900 mb-6">Alexander Vane</h2>
+                <div class="space-y-6 text-lg text-slate-600 leading-relaxed font-light">
+                    <p>
+                        Alexander founded LLM Arena with a singular thesis: that the value of artificial intelligence cannot be unlocked without a rigorous, deterministic standard of measurement.
+                    </p>
+                    <p>
+                        Previously, he led the Applied AI division at Apex Systems, scaling the team from 5 to 500. He holds a Ph.D. in Computational Linguistics from MIT.
+                    </p>
+                </div>
+                <div class="mt-10 border-l-4 border-slate-900 pl-6">
+                    <p class="font-serif italic text-2xl text-slate-800">
+                        "We are not just building benchmarks. We are building the Moody's of the AI era."
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive Grid -->
+        <div class="grid md:grid-cols-3 gap-x-8 gap-y-16">
+            
+            <!-- CTO -->
+            <div class="group">
+                <div class="aspect-square bg-slate-100 mb-6 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="CTO" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                </div>
+                <h3 class="text-2xl font-serif font-bold text-slate-900">Dr. Aris Thorne</h3>
+                <p class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-4">Chief Technology Officer</p>
+                <p class="text-sm text-slate-600 mb-4">
+                    Architect of the deterministic replay engine. Former Principal Engineer at CloudScale.
+                </p>
+                <div class="flex gap-2">
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Systems</span>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Scale</span>
+                </div>
+            </div>
+
+            <!-- CFO -->
+            <div class="group">
+                <div class="aspect-square bg-slate-100 mb-6 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="CFO" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                </div>
+                <h3 class="text-2xl font-serif font-bold text-slate-900">James Sterling</h3>
+                <p class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-4">Chief Financial Officer</p>
+                <p class="text-sm text-slate-600 mb-4">
+                    20 years in SaaS finance. Led IPOs for two previous tech unicorns.
+                </p>
+                <div class="flex gap-2">
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">M&A</span>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Strategy</span>
+                </div>
+            </div>
+
+            <!-- CRO -->
+            <div class="group">
+                <div class="aspect-square bg-slate-100 mb-6 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="CRO" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                </div>
+                <h3 class="text-2xl font-serif font-bold text-slate-900">Elena Cross</h3>
+                <p class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-4">Chief Revenue Officer</p>
+                <p class="text-sm text-slate-600 mb-4">
+                    Driving global enterprise adoption. Expert in GTM for technical products.
+                </p>
+                <div class="flex gap-2">
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Sales</span>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Growth</span>
+                </div>
+            </div>
+
+            <!-- CSO -->
+            <div class="group">
+                <div class="aspect-square bg-slate-100 mb-6 overflow-hidden">
+                    <!-- To use real image: src="/img/team/julian.jpg" -->
+                    <img src="https://images.unsplash.com/photo-1551836022-deb4988cc6c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="CSO" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                </div>
+                <h3 class="text-2xl font-serif font-bold text-slate-900">Dr. Julian Thorne</h3>
+                <p class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-4">Chief Scientific Officer</p>
+                <p class="text-sm text-slate-600 mb-4">
+                    Leading evaluation research and ruleset design. Former Research Lead at OpenAI.
+                </p>
+                <div class="flex gap-2">
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Research</span>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Safety</span>
+                </div>
+            </div>
+
+            <!-- General Counsel -->
+            <div class="group">
+                <div class="aspect-square bg-slate-100 mb-6 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="General Counsel" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                </div>
+                <h3 class="text-2xl font-serif font-bold text-slate-900">Victoria Graves</h3>
+                <p class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-4">General Counsel</p>
+                <p class="text-sm text-slate-600 mb-4">
+                    Managing global legal affairs and regulatory compliance. Expert in AI ethics policy.
+                </p>
+                <div class="flex gap-2">
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Legal</span>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Policy</span>
+                </div>
+            </div>
+
+            <!-- Head of Ops -->
+            <div class="group">
+                <div class="aspect-square bg-slate-100 mb-6 overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Ops" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500">
+                </div>
+                <h3 class="text-2xl font-serif font-bold text-slate-900">Marcus Reed</h3>
+                <p class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-4">Head of Platform Operations</p>
+                <p class="text-sm text-slate-600 mb-4">
+                    Ensuring 99.99% uptime for global evaluation workers. Infrastructure pioneer.
+                </p>
+                <div class="flex gap-2">
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Infra</span>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold">Scale</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+` }) %>

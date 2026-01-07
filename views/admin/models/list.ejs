@@ -1,0 +1,733 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Model Registry</h1>
+        <p class="mt-1 text-sm text-gray-500">Manage models, providers, and composite ensembles.</p>
+    </div>
+    <% if (debugPermissions && typeof permissions !== 'undefined') { %>
+        <div class="mb-6 rounded-md bg-slate-900 text-slate-100 text-xs p-4 border border-slate-800">
+            <div class="font-semibold mb-2">Permissions Debug</div>
+            <div class="font-mono break-words">
+                <%= (permissions || []).sort().join(', ') || 'none' %>
+            </div>
+        </div>
+    <% } %>
+
+    <% if (success) { %>
+        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm"><%= success %></div>
+    <% } %>
+    <% if (error) { %>
+        <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
+    <% } %>
+
+    <form method="GET" action="/admin/models" class="mb-8 bg-white rounded-lg shadow border border-gray-200 p-6 grid md:grid-cols-6 gap-4">
+        <div class="md:col-span-2">
+            <label class="block text-xs font-medium text-gray-700 mb-1">Search</label>
+            <input type="text" name="q" value="<%= query.q || '' %>" placeholder="Name or model id" class="w-full px-3 py-2 border border-gray-300 rounded">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Provider</label>
+            <select name="provider" class="w-full px-3 py-2 border border-gray-300 rounded">
+                <option value="">All</option>
+                <% providers.forEach(p => { %>
+                    <option value="<%= p %>" <%= query.provider === p ? 'selected' : '' %>><%= p %></option>
+                <% }) %>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Capability</label>
+            <select name="capability" class="w-full px-3 py-2 border border-gray-300 rounded">
+                <option value="">All</option>
+                <% capabilities.forEach(c => { %>
+                    <option value="<%= c %>" <%= query.capability === c ? 'selected' : '' %>><%= c %></option>
+                <% }) %>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Kind</label>
+            <select name="kind" class="w-full px-3 py-2 border border-gray-300 rounded">
+                <option value="">All</option>
+                <option value="SINGLE" <%= query.kind === 'SINGLE' ? 'selected' : '' %>>Single</option>
+                <option value="COMPOSITE" <%= query.kind === 'COMPOSITE' ? 'selected' : '' %>>Composite</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Active</label>
+            <select name="active" class="w-full px-3 py-2 border border-gray-300 rounded">
+                <option value="">All</option>
+                <option value="true" <%= query.active === 'true' ? 'selected' : '' %>>Active</option>
+                <option value="false" <%= query.active === 'false' ? 'selected' : '' %>>Inactive</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Owner</label>
+            <select name="owner" class="w-full px-3 py-2 border border-gray-300 rounded">
+                <option value="">All</option>
+                <option value="system" <%= query.owner === 'system' ? 'selected' : '' %>>System</option>
+                <% owners.forEach(o => { %>
+                    <option value="<%= o.id %>" <%= query.owner === o.id ? 'selected' : '' %>><%= o.email %></option>
+                <% }) %>
+            </select>
+        </div>
+        <div class="md:col-span-6 flex items-center gap-3">
+            <button class="btn btn-sm btn-primary">Apply Filters</button>
+            <a href="/admin/models" class="btn btn-sm btn-secondary">Reset</a>
+        </div>
+    </form>
+
+    <% if (typeof can === 'function' && can('admin.models.edit')) { %>
+    <div class="grid lg:grid-cols-2 gap-6 mb-8">
+        <form action="/admin/models" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-gray-900">Create Single Model</h3>
+                <span class="text-xs text-gray-500">Provider backed</span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Provider</label>
+                    <input type="text" name="api_provider" placeholder="openai, anthropic, mock" required class="w-full px-3 py-2 border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Provider Model ID</label>
+                    <input type="text" name="api_model_id" required class="w-full px-3 py-2 border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Owner</label>
+                    <select name="owner_id" class="w-full px-3 py-2 border border-gray-300 rounded">
+                        <option value="system">System</option>
+                        <% owners.forEach(o => { %>
+                            <option value="<%= o.id %>"><%= o.email %></option>
+                        <% }) %>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Capabilities (comma separated)</label>
+                <input type="text" name="capabilities" class="w-full px-3 py-2 border border-gray-300 rounded">
+            </div>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="is_active" class="rounded border-gray-300" checked>
+                Active
+            </label>
+            <div class="text-right">
+                <button class="btn btn-sm btn-primary">Create Model</button>
+            </div>
+        </form>
+
+        <form action="/admin/models/composite" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-gray-900">Create Composite Model</h3>
+                <span class="text-xs text-gray-500">Combine existing models</span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Strategy</label>
+                    <select name="strategy" class="w-full px-3 py-2 border border-gray-300 rounded">
+                        <option value="ROUND_ROBIN">Round robin</option>
+                        <option value="RANDOM">Weighted random</option>
+                        <option value="FALLBACK">Fallback</option>
+                        <option value="PIPELINE">Pipeline</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Owner</label>
+                    <select name="owner_id" class="w-full px-3 py-2 border border-gray-300 rounded">
+                        <option value="system">System</option>
+                        <% owners.forEach(o => { %>
+                            <option value="<%= o.id %>"><%= o.email %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Capabilities (optional)</label>
+                    <input type="text" name="capabilities" placeholder="Defaults to member union" class="w-full px-3 py-2 border border-gray-300 rounded">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-2">Members</label>
+                <div class="border border-gray-200 rounded max-h-60 overflow-y-auto">
+                    <table class="min-w-full text-xs" data-pipeline-table="create">
+                        <thead class="bg-gray-50 text-gray-500 uppercase">
+                            <tr>
+                                <th class="p-2 text-left">Use</th>
+                                <th class="p-2 text-left">Model</th>
+                                <th class="p-2 text-left">Weight</th>
+                                <th class="p-2 text-left">Order</th>
+                                <th class="p-2 text-left pipeline-only hidden">Pipeline</th>
+                                <th class="p-2 text-left pipeline-only hidden">Prompt Template</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <% singleModels.forEach(m => { %>
+                                <tr draggable="true" data-model-id="<%= m.id %>">
+                                    <td class="p-2">
+                                        <input type="checkbox" name="member_ids" value="<%= m.id %>">
+                                    </td>
+                                    <td class="p-2">
+                                        <div class="font-medium text-gray-700"><%= m.name %></div>
+                                        <div class="text-[11px] text-gray-400"><%= m.api_provider %> / <%= m.api_model_id %></div>
+                                    </td>
+                                    <td class="p-2">
+                                        <input type="number" min="1" name="weight_<%= m.id %>" value="1" class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                    </td>
+                                    <td class="p-2">
+                                        <input type="number" min="0" name="position_<%= m.id %>" value="0" class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                    </td>
+                                    <td class="p-2 pipeline-only hidden">
+                                        <input type="checkbox" name="pipeline_member_ids" value="<%= m.id %>">
+                                        <input type="number" min="0" name="pipeline_position_<%= m.id %>" value="0" class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                    </td>
+                                    <td class="p-2 pipeline-only hidden">
+                                        <input type="text" name="pipeline_prompt_<%= m.id %>" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="{{system}} {{input}}">
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mt-2 text-[11px] text-gray-500 pipeline-only hidden">Drag rows to reorder pipeline steps. Prompts support {{system}}, {{history}}, {{input}}.</p>
+            </div>
+            <div class="pipeline-only hidden">
+                <label class="block text-xs font-medium text-gray-700 mb-2">Pipeline Canvas</label>
+                <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-3">
+                    <div class="flex items-center gap-2 overflow-x-auto py-2" data-pipeline-canvas="create">
+                        <div class="text-[11px] text-gray-400">Add pipeline steps above to populate the canvas.</div>
+                    </div>
+                </div>
+                <p class="mt-2 text-[11px] text-gray-500">Drag nodes to change order. Order syncs to pipeline positions.</p>
+            </div>
+            <div class="pipeline-only hidden" data-pipeline-inspector>
+                <label class="block text-xs font-medium text-gray-700 mb-2">Step Inspector</label>
+                <div class="rounded border border-gray-200 bg-white p-4 space-y-3">
+                    <div class="text-xs text-gray-500">Selected step: <span class="font-semibold text-gray-800" data-pipeline-step-name>None</span></div>
+                    <div>
+                        <label class="block text-[11px] font-medium text-gray-600 mb-1">Prompt Template</label>
+                        <textarea rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-xs" data-pipeline-prompt-editor placeholder="{{system}}&#10;{{input}}"></textarea>
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-[11px] text-gray-500">
+                        <button type="button" class="btn btn-xs btn-secondary" data-token="{{system}}">Insert {{system}}</button>
+                        <button type="button" class="btn btn-xs btn-secondary" data-token="{{history}}">Insert {{history}}</button>
+                        <button type="button" class="btn btn-xs btn-secondary" data-token="{{input}}">Insert {{input}}</button>
+                    </div>
+                </div>
+            </div>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" name="is_active" class="rounded border-gray-300" checked>
+                Active
+            </label>
+            <div class="text-right">
+                <button class="btn btn-sm btn-primary">Create Composite</button>
+            </div>
+        </form>
+    </div>
+    <% } %>
+
+    <% if (selectedModel) { %>
+    <form action="/admin/models/<%= selectedModel.id %>" method="POST" class="mb-8 bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="flex items-center justify-between">
+            <h3 class="font-bold text-gray-900">Edit Model</h3>
+            <div class="flex items-center gap-2">
+                <span class="px-2 py-1 text-xs rounded bg-gray-100 font-mono"><%= selectedModel.kind %></span>
+                <% if (typeof can === 'function' && can('admin.models.edit')) { %>
+                    <button formaction="/admin/models/<%= selectedModel.id %>/delete" class="btn btn-xs btn-danger" onclick="return confirm('Delete model?')">Delete</button>
+                <% } %>
+            </div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                <input type="text" name="name" value="<%= selectedModel.name %>" required class="w-full px-3 py-2 border border-gray-300 rounded">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Owner</label>
+                <select name="owner_id" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <option value="system" <%= !selectedModel.owner_id ? 'selected' : '' %>>System</option>
+                    <% owners.forEach(o => { %>
+                        <option value="<%= o.id %>" <%= selectedModel.owner_id === o.id ? 'selected' : '' %>><%= o.email %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <% if (selectedModel.kind === 'SINGLE') { %>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Provider</label>
+                <input type="text" name="api_provider" value="<%= selectedModel.api_provider %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Provider Model ID</label>
+                <input type="text" name="api_model_id" value="<%= selectedModel.api_model_id %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+            </div>
+            <% } else { %>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Strategy</label>
+                <select name="strategy" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <option value="ROUND_ROBIN" <%= selectedModel.composite && selectedModel.composite.strategy === 'ROUND_ROBIN' ? 'selected' : '' %>>Round robin</option>
+                    <option value="RANDOM" <%= selectedModel.composite && selectedModel.composite.strategy === 'RANDOM' ? 'selected' : '' %>>Weighted random</option>
+                    <option value="FALLBACK" <%= selectedModel.composite && selectedModel.composite.strategy === 'FALLBACK' ? 'selected' : '' %>>Fallback</option>
+                    <option value="PIPELINE" <%= selectedModel.composite && selectedModel.composite.strategy === 'PIPELINE' ? 'selected' : '' %>>Pipeline</option>
+                </select>
+            </div>
+            <% } %>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+            <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded"><%= selectedModel.description || '' %></textarea>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Capabilities (comma separated)</label>
+            <input type="text" name="capabilities" value="<%= (selectedModel.capabilities || []).join(', ') %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+        </div>
+        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" name="is_active" class="rounded border-gray-300" <%= selectedModel.is_active ? 'checked' : '' %>>
+            Active
+        </label>
+
+        <% if (selectedModel.kind === 'COMPOSITE') { %>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-2">Members</label>
+                <div class="border border-gray-200 rounded max-h-60 overflow-y-auto">
+                    <table class="min-w-full text-xs" data-pipeline-table="edit">
+                        <thead class="bg-gray-50 text-gray-500 uppercase">
+                            <tr>
+                                <th class="p-2 text-left">Use</th>
+                                <th class="p-2 text-left">Model</th>
+                                <th class="p-2 text-left">Weight</th>
+                                <th class="p-2 text-left">Order</th>
+                                <th class="p-2 text-left pipeline-only hidden">Pipeline</th>
+                                <th class="p-2 text-left pipeline-only hidden">Prompt Template</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <% singleModels.forEach(m => { 
+                                const existing = selectedModel.composite && selectedModel.composite.members.find(mem => mem.member_model_id === m.id);
+                                const pipeline = selectedModel.composite && selectedModel.composite.pipeline_steps.find(step => step.member_model_id === m.id);
+                            %>
+                                <tr draggable="true" data-model-id="<%= m.id %>">
+                                    <td class="p-2">
+                                        <input type="checkbox" name="member_ids" value="<%= m.id %>" <%= existing ? 'checked' : '' %>>
+                                    </td>
+                                    <td class="p-2">
+                                        <div class="font-medium text-gray-700"><%= m.name %></div>
+                                        <div class="text-[11px] text-gray-400"><%= m.api_provider %> / <%= m.api_model_id %></div>
+                                    </td>
+                                    <td class="p-2">
+                                        <input type="number" min="1" name="weight_<%= m.id %>" value="<%= existing ? existing.weight : 1 %>" class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                    </td>
+                                    <td class="p-2">
+                                        <input type="number" min="0" name="position_<%= m.id %>" value="<%= existing ? existing.position : 0 %>" class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                    </td>
+                                    <td class="p-2 pipeline-only hidden">
+                                        <input type="checkbox" name="pipeline_member_ids" value="<%= m.id %>" <%= pipeline ? 'checked' : '' %>>
+                                        <input type="number" min="0" name="pipeline_position_<%= m.id %>" value="<%= pipeline ? pipeline.position : 0 %>" class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                    </td>
+                                    <td class="p-2 pipeline-only hidden">
+                                        <input type="text" name="pipeline_prompt_<%= m.id %>" value="<%= pipeline && pipeline.prompt_template ? pipeline.prompt_template : '' %>" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="{{system}} {{input}}">
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mt-2 text-[11px] text-gray-500 pipeline-only hidden">Drag rows to reorder pipeline steps. Prompts support {{system}}, {{history}}, {{input}}.</p>
+            </div>
+            <div class="pipeline-only hidden">
+                <label class="block text-xs font-medium text-gray-700 mb-2">Pipeline Canvas</label>
+                <div class="rounded border border-dashed border-gray-300 bg-gray-50 p-3">
+                    <div class="flex items-center gap-2 overflow-x-auto py-2" data-pipeline-canvas="edit">
+                        <div class="text-[11px] text-gray-400">Add pipeline steps above to populate the canvas.</div>
+                    </div>
+                </div>
+                <p class="mt-2 text-[11px] text-gray-500">Drag nodes to change order. Order syncs to pipeline positions.</p>
+            </div>
+            <div class="pipeline-only hidden" data-pipeline-inspector>
+                <label class="block text-xs font-medium text-gray-700 mb-2">Step Inspector</label>
+                <div class="rounded border border-gray-200 bg-white p-4 space-y-3">
+                    <div class="text-xs text-gray-500">Selected step: <span class="font-semibold text-gray-800" data-pipeline-step-name>None</span></div>
+                    <div>
+                        <label class="block text-[11px] font-medium text-gray-600 mb-1">Prompt Template</label>
+                        <textarea rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-xs" data-pipeline-prompt-editor placeholder="{{system}}&#10;{{input}}"></textarea>
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-[11px] text-gray-500">
+                        <button type="button" class="btn btn-xs btn-secondary" data-token="{{system}}">Insert {{system}}</button>
+                        <button type="button" class="btn btn-xs btn-secondary" data-token="{{history}}">Insert {{history}}</button>
+                        <button type="button" class="btn btn-xs btn-secondary" data-token="{{input}}">Insert {{input}}</button>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+        <% if (typeof can === 'function' && can('admin.models.edit')) { %>
+        <div class="text-right">
+            <button class="btn btn-sm btn-primary">Save Changes</button>
+        </div>
+        <% } %>
+    </form>
+    <% } %>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kind</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Provider</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Capabilities</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                <% models.map(m => { %>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-bold text-gray-900"><%= m.name %></div>
+                            <div class="text-xs font-mono text-gray-500"><%= m.api_model_id %></div>
+                            <% if (m.kind === 'COMPOSITE' && m.composite) { %>
+                                <div class="mt-1 text-[11px] text-gray-500">
+                                    Members: <%= m.composite.members.map(mem => mem.member.name).join(', ') %>
+                                </div>
+                            <% } %>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs rounded bg-gray-100 font-mono"><%= m.kind %></span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs rounded bg-gray-100 font-mono"><%= m.api_provider %></span>
+                        </td>
+                        <td class="px-6 py-4 text-xs text-gray-500 max-w-xs truncate">
+                            <%= (m.capabilities || []).join(', ') %>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <%= m.owner ? m.owner.email : 'System' %>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <span class="px-2 py-1 text-xs rounded <%= m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' %>">
+                                <%= m.is_active ? 'Active' : 'Inactive' %>
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <% if (typeof can === 'function' && can('admin.models.edit')) { %>
+                                <a href="/admin/models?model=<%= m.id %>" class="btn btn-xs btn-secondary">Edit</a>
+                            <% } %>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        (() => {
+            const setupPipelineTable = (table) => {
+                let dragRow = null;
+                const form = table.closest('form');
+                const canvas = form ? form.querySelector('[data-pipeline-canvas]') : null;
+                const inspector = form ? form.querySelector('[data-pipeline-inspector]') : null;
+                const inspectorName = inspector ? inspector.querySelector('[data-pipeline-step-name]') : null;
+                const inspectorPrompt = inspector ? inspector.querySelector('[data-pipeline-prompt-editor]') : null;
+                let selectedId = null;
+
+                const updatePositions = () => {
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach((row, idx) => {
+                        const id = row.getAttribute('data-model-id');
+                        const input = table.querySelector(`input[name="pipeline_position_${id}"]`);
+                        if (input) input.value = idx;
+                    });
+                };
+
+                const buildCanvas = () => {
+                    if (!canvas) return;
+                    const selected = Array.from(table.querySelectorAll('tbody tr')).filter(row => {
+                        const pipelineInput = row.querySelector('input[name="pipeline_member_ids"]');
+                        return pipelineInput && pipelineInput.checked;
+                    });
+                    canvas.innerHTML = '';
+                    if (selected.length === 0) {
+                        const empty = document.createElement('div');
+                        empty.className = 'text-[11px] text-gray-400';
+                        empty.textContent = 'Add pipeline steps above to populate the canvas.';
+                        canvas.appendChild(empty);
+                        return;
+                    }
+                    selected
+                        .sort((a, b) => {
+                            const idA = a.getAttribute('data-model-id');
+                            const idB = b.getAttribute('data-model-id');
+                            const posA = parseInt(table.querySelector(`input[name="pipeline_position_${idA}"]`)?.value || '0', 10);
+                            const posB = parseInt(table.querySelector(`input[name="pipeline_position_${idB}"]`)?.value || '0', 10);
+                            return posA - posB;
+                        })
+                        .forEach((row, idx) => {
+                            const id = row.getAttribute('data-model-id');
+                            const nameEl = row.querySelector('td:nth-child(2) .font-medium');
+                            const subEl = row.querySelector('td:nth-child(2) .text-[11px]');
+                            const card = document.createElement('div');
+                            card.className = 'min-w-[180px] bg-white border border-gray-200 rounded px-3 py-2 shadow-sm cursor-move';
+                            card.setAttribute('draggable', 'true');
+                            card.setAttribute('data-model-id', id);
+                            card.innerHTML = `<div class="text-xs font-semibold text-gray-800">${nameEl ? nameEl.textContent : 'Model'}</div>
+                                <div class="text-[10px] text-gray-400">${subEl ? subEl.textContent : ''}</div>`;
+                            canvas.appendChild(card);
+                            if (idx < selected.length - 1) {
+                                const arrow = document.createElement('div');
+                                arrow.className = 'text-gray-300 text-lg';
+                                arrow.textContent = '->';
+                                canvas.appendChild(arrow);
+                            }
+                        });
+                };
+
+                const selectStep = (id) => {
+                    selectedId = id;
+                    if (!id || !inspectorName || !inspectorPrompt) return;
+                    const row = table.querySelector(`tbody tr[data-model-id="${id}"]`);
+                    if (!row) return;
+                    const nameEl = row.querySelector('td:nth-child(2) .font-medium');
+                    inspectorName.textContent = nameEl ? nameEl.textContent : 'Model';
+                    const promptInput = table.querySelector(`input[name="pipeline_prompt_${id}"]`);
+                    inspectorPrompt.value = promptInput ? promptInput.value : '';
+                    table.querySelectorAll('tbody tr').forEach(r => r.classList.remove('bg-blue-50'));
+                    row.classList.add('bg-blue-50');
+                    if (canvas) {
+                        canvas.querySelectorAll('[data-model-id]').forEach(c => c.classList.remove('ring-2', 'ring-blue-400'));
+                        const card = canvas.querySelector(`[data-model-id="${id}"]`);
+                        if (card) card.classList.add('ring-2', 'ring-blue-400');
+                    }
+                };
+
+                const syncInspector = () => {
+                    if (!inspectorPrompt || !selectedId) return;
+                    const promptInput = table.querySelector(`input[name="pipeline_prompt_${selectedId}"]`);
+                    if (promptInput) promptInput.value = inspectorPrompt.value;
+                };
+
+                table.addEventListener('dragstart', (event) => {
+                    const target = event.target.closest('tr');
+                    if (!target) return;
+                    dragRow = target;
+                    event.dataTransfer.effectAllowed = 'move';
+                });
+                table.addEventListener('dragover', (event) => {
+                    event.preventDefault();
+                });
+                table.addEventListener('drop', (event) => {
+                    event.preventDefault();
+                    const target = event.target.closest('tr');
+                    if (!target || !dragRow || target === dragRow) return;
+                    const tbody = table.querySelector('tbody');
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    const dragIndex = rows.indexOf(dragRow);
+                    const targetIndex = rows.indexOf(target);
+                    if (dragIndex < targetIndex) {
+                        tbody.insertBefore(dragRow, target.nextSibling);
+                    } else {
+                        tbody.insertBefore(dragRow, target);
+                    }
+                    updatePositions();
+                    buildCanvas();
+                });
+
+                table.addEventListener('pipeline:refresh', () => {
+                    updatePositions();
+                    buildCanvas();
+                });
+
+                table.addEventListener('click', (event) => {
+                    const row = event.target.closest('tr');
+                    if (!row) return;
+                    const id = row.getAttribute('data-model-id');
+                    if (id) selectStep(id);
+                });
+
+                if (canvas) {
+                    let dragCard = null;
+                    canvas.addEventListener('dragstart', (event) => {
+                        const target = event.target.closest('[data-model-id]');
+                        if (!target) return;
+                        dragCard = target;
+                        event.dataTransfer.effectAllowed = 'move';
+                    });
+                    canvas.addEventListener('dragover', (event) => {
+                        event.preventDefault();
+                    });
+                    canvas.addEventListener('drop', (event) => {
+                        event.preventDefault();
+                        const target = event.target.closest('[data-model-id]');
+                        if (!target || !dragCard || target === dragCard) return;
+                        const cards = Array.from(canvas.querySelectorAll('[data-model-id]'));
+                        const dragIndex = cards.indexOf(dragCard);
+                        const targetIndex = cards.indexOf(target);
+                        if (dragIndex < targetIndex) {
+                            canvas.insertBefore(dragCard, target.nextSibling);
+                        } else {
+                            canvas.insertBefore(dragCard, target);
+                        }
+                        const ordered = Array.from(canvas.querySelectorAll('[data-model-id]'));
+                        ordered.forEach((card, idx) => {
+                            const id = card.getAttribute('data-model-id');
+                            const input = table.querySelector(`input[name="pipeline_position_${id}"]`);
+                            if (input) input.value = idx;
+                        });
+                        buildCanvas();
+                    });
+                    canvas.addEventListener('click', (event) => {
+                        const card = event.target.closest('[data-model-id]');
+                        if (!card) return;
+                        selectStep(card.getAttribute('data-model-id'));
+                    });
+                }
+
+                if (inspectorPrompt) {
+                    inspectorPrompt.addEventListener('input', () => {
+                        syncInspector();
+                    });
+                }
+                if (inspector) {
+                    inspector.querySelectorAll('[data-token]').forEach(button => {
+                        button.addEventListener('click', () => {
+                            if (!inspectorPrompt) return;
+                            const token = button.getAttribute('data-token') || '';
+                            const start = inspectorPrompt.selectionStart || 0;
+                            const end = inspectorPrompt.selectionEnd || 0;
+                            const value = inspectorPrompt.value || '';
+                            inspectorPrompt.value = value.slice(0, start) + token + value.slice(end);
+                            inspectorPrompt.focus();
+                            inspectorPrompt.selectionStart = inspectorPrompt.selectionEnd = start + token.length;
+                            syncInspector();
+                        });
+                    });
+                }
+
+                updatePositions();
+                buildCanvas();
+            };
+
+            const syncPipelineMembers = (root, enabled) => {
+                const rows = root.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const memberInput = row.querySelector('input[name="member_ids"]');
+                    const pipelineInput = row.querySelector('input[name="pipeline_member_ids"]');
+                    if (!memberInput || !pipelineInput) return;
+                    if (enabled) {
+                        pipelineInput.checked = memberInput.checked;
+                    } else {
+                        pipelineInput.checked = false;
+                    }
+                });
+            };
+
+            const togglePipeline = (root) => {
+                const strategySelect = root.querySelector('select[name="strategy"]');
+                if (!strategySelect) return;
+                const pipelineFields = root.querySelectorAll('.pipeline-only');
+                const show = () => {
+                    const enabled = strategySelect.value === 'PIPELINE';
+                    pipelineFields.forEach(el => el.classList.toggle('hidden', !enabled));
+                    syncPipelineMembers(root, enabled);
+                    const table = root.querySelector('[data-pipeline-table]');
+                    if (table) {
+                        table.dispatchEvent(new Event('pipeline:refresh'));
+                    }
+                };
+                strategySelect.addEventListener('change', show);
+                show();
+
+                root.addEventListener('change', (event) => {
+                    const target = event.target;
+                    if (!target || !target.matches('input[name="member_ids"]')) return;
+                    if (strategySelect.value !== 'PIPELINE') return;
+                    const row = target.closest('tr');
+                    if (!row) return;
+                    const pipelineInput = row.querySelector('input[name="pipeline_member_ids"]');
+                    if (pipelineInput) pipelineInput.checked = target.checked;
+                });
+
+                root.addEventListener('change', (event) => {
+                    const target = event.target;
+                    if (!target || !target.matches('input[name="pipeline_member_ids"]')) return;
+                    const table = root.querySelector('[data-pipeline-table]');
+                    if (!table) return;
+                    const updateCanvasEvent = new Event('pipeline:refresh');
+                    table.dispatchEvent(updateCanvasEvent);
+                });
+            };
+
+            const validatePipeline = (form) => {
+                const strategySelect = form.querySelector('select[name="strategy"]');
+                const errorBox = form.querySelector('[data-pipeline-errors]');
+                if (!strategySelect || !errorBox) return true;
+                if (strategySelect.value !== 'PIPELINE') {
+                    errorBox.classList.add('hidden');
+                    errorBox.innerHTML = '';
+                    return true;
+                }
+                const selected = Array.from(form.querySelectorAll('input[name="pipeline_member_ids"]:checked'));
+                const errors = [];
+                if (selected.length < 2) {
+                    errors.push('Pipeline requires at least two steps.');
+                }
+                const rows = form.querySelectorAll('tbody tr');
+                rows.forEach(row => row.classList.remove('bg-red-50'));
+                selected
+                    .sort((a, b) => {
+                        const posA = parseInt(form.querySelector(`input[name="pipeline_position_${a.value}"]`)?.value || '0', 10);
+                        const posB = parseInt(form.querySelector(`input[name="pipeline_position_${b.value}"]`)?.value || '0', 10);
+                        return posA - posB;
+                    })
+                    .forEach((input, idx) => {
+                        const id = input.value;
+                        const prompt = form.querySelector(`input[name="pipeline_prompt_${id}"]`);
+                        if (idx < selected.length - 1 && (!prompt || !prompt.value.trim())) {
+                            errors.push(`Step ${idx + 1} is missing a prompt template.`);
+                            const row = form.querySelector(`tr[data-model-id="${id}"]`);
+                            if (row) row.classList.add('bg-red-50');
+                        }
+                    });
+                if (errors.length > 0) {
+                    errorBox.classList.remove('hidden');
+                    errorBox.innerHTML = `<ul class="list-disc pl-5">${errors.map(e => `<li>${e}</li>`).join('')}</ul>`;
+                    return false;
+                }
+                errorBox.classList.add('hidden');
+                errorBox.innerHTML = '';
+                return true;
+            };
+
+            document.querySelectorAll('[data-pipeline-table]').forEach(table => {
+                setupPipelineTable(table);
+            });
+
+            document.querySelectorAll('form[action="/admin/models/composite"], form[action^="/admin/models/"][method="POST"]').forEach(form => {
+                if (form.action.includes('/models/') && form.action.includes('/delete')) return;
+                if (!form.querySelector('[data-pipeline-table]')) return;
+                togglePipeline(form);
+                if (!form.querySelector('[data-pipeline-errors]')) {
+                    const errorBox = document.createElement('div');
+                    errorBox.className = 'mb-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs p-3 hidden';
+                    errorBox.setAttribute('data-pipeline-errors', 'true');
+                    form.insertBefore(errorBox, form.firstChild);
+                }
+                form.addEventListener('submit', (event) => {
+                    if (!validatePipeline(form)) {
+                        event.preventDefault();
+                    }
+                });
+                form.addEventListener('change', () => validatePipeline(form));
+            });
+        })();
+    </script>
+<%- include('../../partials/admin_footer') %>

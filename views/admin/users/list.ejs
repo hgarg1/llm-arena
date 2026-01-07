@@ -1,0 +1,200 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-8 flex justify-between items-center" x-data="{ createModal: false }">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
+            <p class="mt-1 text-sm text-gray-500">View, search, and manage platform users.</p>
+        </div>
+        <div class="flex gap-2">
+            <% if (typeof can === 'function' && can('admin.users.export')) { %>
+            <a href="/admin/users/export" class="btn btn-sm btn-secondary flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Export Excel
+            </a>
+            <% } %>
+            <% if (typeof can === 'function' && can('admin.users.edit')) { %>
+            <button @click="createModal = true" class="btn btn-sm btn-primary flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Create User
+            </button>
+            <% } %>
+        </div>
+
+        <!-- Create User Modal -->
+        <% if (typeof can === 'function' && can('admin.users.edit')) { %>
+        <div x-show="createModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" style="display: none;">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 m-4" @click.away="createModal = false">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Create New User</h3>
+                <form action="/admin/users/create" method="POST" class="space-y-4">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Name (Optional)</label>
+                        <input type="text" name="name" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Role</label>
+                            <select name="role" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <option value="USER">User</option>
+                                <option value="ADMIN">Admin</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Plan</label>
+                            <select name="plan_id" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <option value="">No plan</option>
+                                <% plans.forEach(plan => { %>
+                                    <option value="<%= plan.id %>"><%= plan.name %></option>
+                                <% }) %>
+                            </select>
+                            <div class="text-[11px] text-gray-500 mt-1">Admins are always set to the enterprise plan.</div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Initial Password</label>
+                        <input type="password" name="password" required class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" @click="createModal = false" class="btn btn-sm btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Create User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <% } %>
+    </div>
+
+        <!-- Search & Filter Toolbar -->
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <form action="/admin/users" method="GET" class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                    <input type="text" name="q" value="<%= query.q || '' %>" class="w-full pl-10 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="Search by name or email...">
+                </div>
+                
+                <div class="w-full md:w-48">
+                    <select name="role" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                        <option value="">All Roles</option>
+                        <option value="USER" <%= query.role === 'USER' ? 'selected' : '' %>>User</option>
+                        <option value="ADMIN" <%= query.role === 'ADMIN' ? 'selected' : '' %>>Admin</option>
+                    </select>
+                </div>
+    
+                <div class="w-full md:w-48">
+                    <select name="plan_id" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                        <option value="">All Plans</option>
+                        <option value="none" <%= query.plan_id === 'none' ? 'selected' : '' %>>No Plan</option>
+                        <% plans.forEach(plan => { %>
+                            <option value="<%= plan.id %>" <%= query.plan_id === plan.id ? 'selected' : '' %>><%= plan.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+    
+                <div class="flex items-center gap-2">
+                    <button class="btn btn-sm btn-primary flex items-center justify-center">Apply</button>
+                    <% if (query.q || query.role || query.tier || query.plan_id) { %>
+                    <a href="/admin/users" class="btn btn-sm btn-secondary flex items-center justify-center">Reset</a>
+                    <% } %>
+                </div>
+            </form>
+        </div>
+    
+        <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stats</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <% users.map(u => { %>
+                        <tr class="hover:bg-gray-50 group transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center">
+                                    <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
+                                        <%= u.name ? u.name.charAt(0).toUpperCase() : u.email.charAt(0).toUpperCase() %>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900"><%= u.name || 'Unknown' %></div>
+                                        <div class="text-sm text-gray-500"><%= u.email %></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex flex-col gap-1">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full w-fit <%= u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800' %>">
+                                        <%= u.role %>
+                                    </span>
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full w-fit <%= u.tier === 'PRO' ? 'bg-blue-100 text-blue-800' : (u.tier === 'ENTERPRISE' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-600') %>">
+                                        <%= u.tier %>
+                                    </span>
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full w-fit bg-slate-100 text-slate-600">
+                                        <%= u.plan ? u.plan.name : 'No Plan' %>
+                                    </span>
+                                    <% if (u.banned) { %>
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full w-fit bg-red-100 text-red-800">BANNED</span>
+                                    <% } %>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900 flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    <%= u._count.matches %> Matches
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">Last seen: <%= new Date(u.updated_at).toLocaleDateString() %></div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <%= new Date(u.created_at).toLocaleDateString() %>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <% if (u.role !== 'ADMIN') { %>
+                                        <% if (u.banned) { %>
+                                            <% if (typeof can === 'function' && can('admin.users.unban')) { %>
+                                            <form action="/admin/users/<%= u.id %>/unban" method="POST" class="inline">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <button class="text-green-600 hover:text-green-900 font-bold">Unban</button>
+                                            </form>
+                                            <% } %>
+                                        <% } else { %>
+                                            <% if (typeof can === 'function' && can('admin.users.ban')) { %>
+                                            <form action="/admin/users/<%= u.id %>/ban" method="POST" class="inline" data-confirm="Ban this user?">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <button class="text-red-600 hover:text-red-900">Ban</button>
+                                            </form>
+                                            <% } %>
+                                        <% } %>
+                                    <% } %>
+                                    <a href="/admin/users/<%= u.id %>" class="text-indigo-600 hover:text-indigo-900 font-medium">Details</a>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+            <% if (users.length === 0) { %>
+                <div class="p-8 text-center text-gray-500">No users found matching your filters.</div>
+            <% } %>
+        </div>
+        <%- include('../../partials/admin_footer') %>
+        <script>
+            (function () {
+                document.querySelectorAll('form[data-confirm]').forEach(formEl => {
+                    formEl.addEventListener('submit', (event) => {
+                        const message = formEl.getAttribute('data-confirm') || 'Are you sure?';
+                        if (!confirm(message)) {
+                            event.preventDefault();
+                        }
+                    });
+                });
+            })();
+        </script>

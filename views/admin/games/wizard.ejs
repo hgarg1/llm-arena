@@ -1,0 +1,496 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Game Builder</h1>
+        <p class="mt-1 text-sm text-gray-500">Iterate on your game definition and save drafts.</p>
+    </div>
+
+    <% if (success) { %>
+        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm"><%= success %></div>
+    <% } %>
+    <% if (error) { %>
+        <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
+    <% } %>
+
+    <div class="grid lg:grid-cols-4 gap-6">
+        <aside class="lg:col-span-1 bg-white rounded-lg shadow border border-gray-200 p-4">
+            <h3 class="text-xs font-bold uppercase text-gray-500 mb-3">Steps</h3>
+            <nav class="space-y-2 text-sm">
+                <a href="/admin/games/<%= game.id %>?step=basics" class="block px-3 py-2 rounded <%= step === 'basics' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">1. Basics</a>
+                <a href="/admin/games/<%= game.id %>?step=config" class="block px-3 py-2 rounded <%= step === 'config' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">2. Match Config</a>
+                <a href="/admin/games/<%= game.id %>?step=uiux" class="block px-3 py-2 rounded <%= step === 'uiux' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">3. UI / UX</a>
+                <a href="/admin/games/<%= game.id %>?step=review" class="block px-3 py-2 rounded <%= step === 'review' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">4. Review & Publish</a>
+            </nav>
+        </aside>
+
+        <div class="lg:col-span-3 space-y-6">
+            <% if (step === 'basics') { %>
+                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="step" value="basics">
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Game Name</label>
+                            <input type="text" name="name" value="<%= game.name %>" class="w-full px-3 py-2 border border-gray-300 rounded" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Game Key</label>
+                            <input type="text" name="key" value="<%= game.key %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Short Description</label>
+                        <input type="text" name="description_short" value="<%= game.description_short || '' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Long Description</label>
+                        <textarea name="description_long" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded"><%= game.description_long || '' %></textarea>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Roles (comma separated)</label>
+                            <input type="text" name="roles" value="<%= (game.roles || []).join(', ') %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Capabilities (comma separated)</label>
+                            <input type="text" name="capabilities" value="<%= (game.capabilities || []).join(', ') %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Max Players</label>
+                        <input type="number" min="1" name="max_players" value="<%= game.max_players || '' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button>
+                        <button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button>
+                    </div>
+                </form>
+            <% } %>
+
+            <% if (step === 'config') { %>
+                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4" x-data="matchConfigForm(<%= Math.max(game.settings.length, 1) %>)" @submit.prevent="if (validate()) $el.submit()">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="step" value="config">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-gray-900">Match Config Settings</h3>
+                        <button type="button" class="btn btn-xs btn-secondary" @click="rows++">Add Setting</button>
+                    </div>
+                    <p class="text-xs text-gray-500">Fields adapt to each setting type. Enum options are required for Enum types.</p>
+                    <div x-show="errors.length" x-cloak class="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                        <div class="font-semibold mb-1">Fix these issues before saving:</div>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <template x-for="err in errors" :key="err">
+                                <li x-text="err"></li>
+                            </template>
+                        </ul>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-xs">
+                            <thead class="text-gray-500 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="p-2 text-left">Key</th>
+                                    <th class="p-2 text-left">Type</th>
+                                    <th class="p-2 text-left">Min</th>
+                                    <th class="p-2 text-left">Max</th>
+                                    <th class="p-2 text-left">Default</th>
+                                    <th class="p-2 text-left">Tier</th>
+                                    <th class="p-2 text-left">Enum Options</th>
+                                    <th class="p-2 text-left">Help Text</th>
+                                    <th class="p-2 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                <% const settings = game.settings || []; %>
+                                <% for (let i = 0; i < Math.max(settings.length, 1); i++) { 
+                                    const s = settings[i] || {};
+                                %>
+                                <tr x-data="{ type: '<%= s.type || 'TEXT' %>' }" data-setting-row>
+                                    <td class="p-2"><input type="text" name="setting_key" value="<%= s.key || '' %>" class="w-40 px-2 py-1 border border-gray-300 rounded" data-field="key"></td>
+                                    <td class="p-2">
+                                        <select name="setting_type" class="w-28 px-2 py-1 border border-gray-300 rounded" x-model="type" data-field="type">
+                                            <option value="BOOLEAN" <%= s.type === 'BOOLEAN' ? 'selected' : '' %>>Boolean</option>
+                                            <option value="INT" <%= s.type === 'INT' ? 'selected' : '' %>>Int</option>
+                                            <option value="FLOAT" <%= s.type === 'FLOAT' ? 'selected' : '' %>>Float</option>
+                                            <option value="ENUM" <%= s.type === 'ENUM' ? 'selected' : '' %>>Enum</option>
+                                            <option value="TEXT" <%= s.type === 'TEXT' ? 'selected' : '' %>>Text</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-2">
+                                        <input type="number" name="setting_min" value="<%= s.min_value ?? '' %>" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="min">
+                                    </td>
+                                    <td class="p-2">
+                                        <input type="number" name="setting_max" value="<%= s.max_value ?? '' %>" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="max">
+                                    </td>
+                                    <td class="p-2">
+                                        <input type="text" name="setting_default" value="<%= s.default_value ?? '' %>" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'TEXT' || type === 'ENUM'" x-cloak :disabled="!(type === 'TEXT' || type === 'ENUM')" data-field="default">
+                                        <input type="number" name="setting_default" value="<%= s.default_value ?? '' %>" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="default">
+                                        <select name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'BOOLEAN'" x-cloak :disabled="type !== 'BOOLEAN'" data-field="default">
+                                            <option value="">-</option>
+                                            <option value="true" <%= s.default_value === true ? 'selected' : '' %>>true</option>
+                                            <option value="false" <%= s.default_value === false ? 'selected' : '' %>>false</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-2">
+                                        <select name="setting_tier" class="w-28 px-2 py-1 border border-gray-300 rounded">
+                                            <option value="FREE" <%= s.tier_required === 'FREE' ? 'selected' : '' %>>Free</option>
+                                            <option value="PRO" <%= s.tier_required === 'PRO' ? 'selected' : '' %>>Pro</option>
+                                            <option value="ENTERPRISE" <%= s.tier_required === 'ENTERPRISE' ? 'selected' : '' %>>Enterprise</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-2">
+                                        <input type="text" name="setting_enum" value="<%= (s.enum_options || []).join(', ') %>" class="w-36 px-2 py-1 border border-gray-300 rounded" x-show="type === 'ENUM'" x-cloak :disabled="type !== 'ENUM'" data-field="enum">
+                                    </td>
+                                    <td class="p-2"><input type="text" name="setting_help" value="<%= s.help_text || '' %>" class="w-48 px-2 py-1 border border-gray-300 rounded"></td>
+                                    <td class="p-2">
+                                        <button type="button" class="btn btn-xs btn-ghost text-red-600" @click="disableRow($event)">Delete</button>
+                                    </td>
+                                </tr>
+                                <% } %>
+                                <template x-for="idx in Array.from({ length: rows - <%= Math.max(settings.length, 1) %> }, (_, i) => i)" :key="idx">
+                                    <tr x-data="{ type: 'TEXT' }" data-setting-row>
+                                        <td class="p-2"><input type="text" name="setting_key" class="w-40 px-2 py-1 border border-gray-300 rounded" data-field="key"></td>
+                                        <td class="p-2">
+                                            <select name="setting_type" class="w-28 px-2 py-1 border border-gray-300 rounded" x-model="type" data-field="type">
+                                                <option value="BOOLEAN">Boolean</option>
+                                                <option value="INT">Int</option>
+                                                <option value="FLOAT">Float</option>
+                                                <option value="ENUM">Enum</option>
+                                                <option value="TEXT">Text</option>
+                                            </select>
+                                        </td>
+                                        <td class="p-2">
+                                            <input type="number" name="setting_min" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="min">
+                                        </td>
+                                        <td class="p-2">
+                                            <input type="number" name="setting_max" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="max">
+                                        </td>
+                                        <td class="p-2">
+                                            <input type="text" name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'TEXT' || type === 'ENUM'" x-cloak :disabled="!(type === 'TEXT' || type === 'ENUM')" data-field="default">
+                                            <input type="number" name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="default">
+                                            <select name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'BOOLEAN'" x-cloak :disabled="type !== 'BOOLEAN'" data-field="default">
+                                                <option value="">-</option>
+                                                <option value="true">true</option>
+                                                <option value="false">false</option>
+                                            </select>
+                                        </td>
+                                        <td class="p-2">
+                                            <select name="setting_tier" class="w-28 px-2 py-1 border border-gray-300 rounded">
+                                                <option value="FREE">Free</option>
+                                                <option value="PRO">Pro</option>
+                                                <option value="ENTERPRISE">Enterprise</option>
+                                            </select>
+                                        </td>
+                                        <td class="p-2">
+                                            <input type="text" name="setting_enum" class="w-36 px-2 py-1 border border-gray-300 rounded" x-show="type === 'ENUM'" x-cloak :disabled="type !== 'ENUM'" data-field="enum">
+                                        </td>
+                                        <td class="p-2"><input type="text" name="setting_help" class="w-48 px-2 py-1 border border-gray-300 rounded"></td>
+                                        <td class="p-2">
+                                            <button type="button" class="btn btn-xs btn-ghost text-red-600" @click="disableRow($event)">Delete</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button>
+                        <button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button>
+                    </div>
+                </form>
+            <% } %>
+
+            <% if (step === 'uiux') { %>
+                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="step" value="uiux">
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Create Form Layout (JSON)</label>
+                            <textarea name="create_form_layout" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.create_form_layout ? JSON.stringify(game.ui_schema.create_form_layout, null, 2) : '' %></textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Summary Template (JSON)</label>
+                            <textarea name="summary_template" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.summary_template ? JSON.stringify(game.ui_schema.summary_template, null, 2) : '' %></textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Labels (JSON)</label>
+                            <textarea name="labels" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.labels ? JSON.stringify(game.ui_schema.labels, null, 2) : '' %></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button>
+                        <button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button>
+                    </div>
+                </form>
+            <% } %>
+
+            <% if (step === 'review') { %>
+                <div class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900"><%= game.name %></h3>
+                            <p class="text-sm text-gray-500 font-mono"><%= game.key %></p>
+                        </div>
+                        <span class="px-2 py-1 text-xs rounded <%= game.status === 'LIVE' ? 'bg-green-100 text-green-700' : (game.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' : (game.status === 'RETIRED' ? 'bg-gray-200 text-gray-600' : 'bg-amber-100 text-amber-700')) %>">
+                            <%= game.status %>
+                        </span>
+                    </div>
+
+                    <% if (diffSummary) { %>
+                        <div class="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                            <div class="font-semibold mb-2">Draft Diff <span class="text-xs text-slate-400">(<%= diffSummary.title %>)</span></div>
+                            <ul class="list-disc pl-5">
+                                <% diffSummary.items.forEach(item => { %>
+                                    <li><%= item %></li>
+                                <% }) %>
+                            </ul>
+                            <% if (diffSummary.updated_at) { %>
+                                <div class="text-[11px] text-slate-500 mt-2">Latest revision: <%= new Date(diffSummary.updated_at).toLocaleString() %></div>
+                            <% } %>
+                        </div>
+                    <% } %>
+
+                    <% if (warnings && warnings.length > 0) { %>
+                        <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm p-4">
+                            <div class="font-semibold mb-2">Validation Warnings</div>
+                            <ul class="list-disc pl-5">
+                                <% warnings.forEach(w => { %>
+                                    <li><%= w %></li>
+                                <% }) %>
+                            </ul>
+                        </div>
+                    <% } %>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="text-xs font-bold text-gray-500 uppercase mb-2">Roles</div>
+                            <div class="text-sm text-gray-700"><%= (game.roles || []).join(', ') || 'None' %></div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-gray-500 uppercase mb-2">Capabilities</div>
+                            <div class="text-sm text-gray-700"><%= (game.capabilities || []).join(', ') || 'None' %></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-bold text-gray-500 uppercase mb-2">Match Config Settings</div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-xs">
+                                <thead class="text-gray-500 uppercase bg-gray-50">
+                                    <tr>
+                                        <th class="p-2 text-left">Key</th>
+                                        <th class="p-2 text-left">Type</th>
+                                        <th class="p-2 text-left">Default</th>
+                                        <th class="p-2 text-left">Tier</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    <% (game.settings || []).forEach(s => { %>
+                                        <tr>
+                                            <td class="p-2 font-mono"><%= s.key %></td>
+                                            <td class="p-2"><%= s.type %></td>
+                                            <td class="p-2"><%= s.default_value === null ? '-' : JSON.stringify(s.default_value) %></td>
+                                            <td class="p-2"><%= s.tier_required %></td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-bold text-gray-500 uppercase mb-2">Create Form Preview</div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <% (uiPreview || []).forEach(field => { %>
+                                <div class="rounded border border-gray-200 p-3 bg-white">
+                                    <div class="text-[11px] text-gray-500 uppercase"><%= field.type %></div>
+                                    <div class="text-sm font-medium text-gray-900"><%= field.label %></div>
+                                    <div class="text-[11px] text-gray-400"><%= field.key %> <% if (field.tier) { %> - <%= field.tier %><% } %></div>
+                                </div>
+                            <% }) %>
+                            <% if (!uiPreview || uiPreview.length === 0) { %>
+                                <div class="text-sm text-gray-500">No UI preview available.</div>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg border border-dashed border-gray-200 p-4 bg-slate-50">
+                        <div class="text-xs font-bold text-gray-500 uppercase mb-2">UI/UX Preview (JSON)</div>
+                        <pre class="text-[11px] text-gray-600 whitespace-pre-wrap"><%= game.ui_schema ? JSON.stringify(game.ui_schema, null, 2) : 'No UI schema saved yet.' %></pre>
+                    </div>
+
+                    <div class="rounded-lg border border-gray-200 p-4 bg-white">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <div class="text-xs font-bold text-gray-500 uppercase">Engine Artifact</div>
+                                <div class="text-sm text-gray-700">
+                                    <%= engineArtifact ? 'Latest artifact available' : 'No artifact generated yet' %>
+                                </div>
+                            </div>
+                            <% if (engineArtifact) { %>
+                                <span class="px-2 py-1 text-xs rounded <%= engineArtifact.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' : (engineArtifact.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700') %>">
+                                    <%= engineArtifact.status %>
+                                </span>
+                            <% } %>
+                        </div>
+                        <div class="text-[11px] text-gray-500">
+                            <%= engineArtifact && engineArtifact.notes ? engineArtifact.notes : 'Generate an engine bundle (spec + code + tests) from this game definition.' %>
+                        </div>
+                        <% if (engineArtifact) { %>
+                            <div class="mt-4" x-data="{ tab: 'code' }">
+                                <div class="flex flex-wrap gap-2 text-xs mb-3">
+                                    <button type="button" class="btn btn-xs" :class="tab === 'code' ? 'btn-secondary' : 'btn-ghost'" @click="tab = 'code'">Code</button>
+                                    <button type="button" class="btn btn-xs" :class="tab === 'spec' ? 'btn-secondary' : 'btn-ghost'" @click="tab = 'spec'">Spec</button>
+                                    <button type="button" class="btn btn-xs" :class="tab === 'tests' ? 'btn-secondary' : 'btn-ghost'" @click="tab = 'tests'">Tests</button>
+                                </div>
+                                <div class="border border-gray-200 rounded bg-slate-50 p-3 max-h-80 overflow-auto">
+                                    <pre class="text-[11px] text-gray-700 whitespace-pre-wrap" x-show="tab === 'code'"><%= engineArtifact.code_ts || 'No code generated.' %></pre>
+                                    <pre class="text-[11px] text-gray-700 whitespace-pre-wrap" x-show="tab === 'spec'"><%= engineArtifact.spec ? JSON.stringify(engineArtifact.spec, null, 2) : 'No spec generated.' %></pre>
+                                    <pre class="text-[11px] text-gray-700 whitespace-pre-wrap" x-show="tab === 'tests'"><%= engineArtifact.tests_ts || 'No tests generated.' %></pre>
+                                </div>
+                            </div>
+                        <% } %>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <form action="/admin/games/<%= game.id %>/engine/generate" method="POST">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <button class="btn btn-xs btn-secondary">Generate Engine</button>
+                            </form>
+                            <% if (engineArtifact && engineArtifact.status !== 'PUBLISHED') { %>
+                                <form action="/admin/games/<%= game.id %>/engine/publish" method="POST" onsubmit="return confirm('Publish engine to codebase?');">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <button class="btn btn-xs btn-primary">Publish Engine</button>
+                                </form>
+                            <% } %>
+                            <form action="/admin/games/<%= game.id %>/simulate" method="POST">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <button class="btn btn-xs btn-ghost">Run 5-Turn Dry Run</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg border border-gray-200 p-4 bg-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs font-bold text-gray-500 uppercase">Simulation Output</div>
+                            <div class="text-[11px] text-gray-400">Dummy players, 5 turns max</div>
+                        </div>
+                        <% if (simulationEvents && simulationEvents.length) { %>
+                            <pre class="text-[11px] text-gray-700 whitespace-pre-wrap max-h-80 overflow-auto bg-slate-50 border border-slate-200 rounded p-3"><%= JSON.stringify(simulationEvents, null, 2) %></pre>
+                        <% } else { %>
+                            <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">Run a dry run before publishing.</div>
+                        <% } %>
+                    </div>
+
+                    <% if (typeof can === 'function' && can('admin.games.publish')) { %>
+                    <form action="/admin/games/<%= game.id %>/publish" method="POST" class="grid md:grid-cols-3 gap-4 items-end">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Schedule (optional)</label>
+                            <input type="datetime-local" name="publish_at" class="w-full px-3 py-2 border border-gray-300 rounded">
+                            <p class="text-[11px] text-gray-500 mt-1">Leave empty to publish immediately.</p>
+                        </div>
+                        <div class="flex gap-2 justify-end">
+                            <button name="action" value="schedule" class="btn btn-sm btn-secondary">Schedule</button>
+                            <button name="action" value="publish" class="btn btn-sm btn-primary">Publish Now</button>
+                            <button name="action" value="retire" class="btn btn-sm btn-danger">Retire</button>
+                        </div>
+                    </form>
+                    <% } %>
+                </div>
+            <% } %>
+        </div>
+    </div>
+<%- include('../../partials/admin_footer') %>
+<script>
+    function matchConfigForm(initialRows) {
+        return {
+            rows: initialRows,
+            errors: [],
+            disableRow(event) {
+                const row = event.target.closest('tr');
+                if (!row) return;
+                row.querySelectorAll('input, select, textarea').forEach(el => {
+                    if (el.name) {
+                        el.disabled = true;
+                        if (el.type === 'text' || el.type === 'number') el.value = '';
+                    }
+                });
+                row.classList.add('opacity-50');
+                row.style.display = 'none';
+            },
+            validate() {
+                this.errors = [];
+                const rows = Array.from(document.querySelectorAll('tr[data-setting-row]'));
+                const seenKeys = new Set();
+                rows.forEach((row, index) => {
+                    const keyEl = row.querySelector('[data-field="key"]:not([disabled])');
+                    if (!keyEl) return;
+                    const key = (keyEl.value || '').trim();
+                    const typeEl = row.querySelector('[data-field="type"]:not([disabled])');
+                    const type = typeEl ? typeEl.value : 'TEXT';
+                    const minEl = row.querySelector('[data-field="min"]:not([disabled])');
+                    const maxEl = row.querySelector('[data-field="max"]:not([disabled])');
+                    const enumEl = row.querySelector('[data-field="enum"]:not([disabled])');
+                    const defaultEl = row.querySelector('[data-field="default"]:not([disabled])');
+                    const defaultValue = defaultEl ? String(defaultEl.value || '').trim() : '';
+                    const label = key ? `Setting "${key}"` : `Row ${index + 1}`;
+
+                    if (!key && (defaultValue || (enumEl && enumEl.value) || (minEl && minEl.value) || (maxEl && maxEl.value))) {
+                        this.errors.push(`${label}: key is required.`);
+                        return;
+                    }
+                    if (!key) return;
+                    if (seenKeys.has(key)) {
+                        this.errors.push(`${label}: duplicate key.`);
+                    } else {
+                        seenKeys.add(key);
+                    }
+
+                    if (!/^[a-zA-Z0-9_.-]+$/.test(key)) {
+                        this.errors.push(`${label}: key should be alphanumeric, ".", "-", or "_".`);
+                    }
+
+                    if (type === 'INT' || type === 'FLOAT') {
+                        if (minEl && minEl.value && isNaN(Number(minEl.value))) {
+                            this.errors.push(`${label}: min must be a number.`);
+                        }
+                        if (maxEl && maxEl.value && isNaN(Number(maxEl.value))) {
+                            this.errors.push(`${label}: max must be a number.`);
+                        }
+                        const minVal = minEl && minEl.value !== '' ? Number(minEl.value) : null;
+                        const maxVal = maxEl && maxEl.value !== '' ? Number(maxEl.value) : null;
+                        if (minVal !== null && maxVal !== null && minVal > maxVal) {
+                            this.errors.push(`${label}: min cannot be greater than max.`);
+                        }
+                        if (defaultValue) {
+                            const def = Number(defaultValue);
+                            if (isNaN(def)) {
+                                this.errors.push(`${label}: default must be numeric.`);
+                            } else {
+                                if (minVal !== null && def < minVal) this.errors.push(`${label}: default below min.`);
+                                if (maxVal !== null && def > maxVal) this.errors.push(`${label}: default above max.`);
+                            }
+                        }
+                    }
+
+                    if (type === 'ENUM') {
+                        const enumRaw = enumEl ? String(enumEl.value || '').trim() : '';
+                        const options = enumRaw.split(',').map(v => v.trim()).filter(Boolean);
+                        if (options.length === 0) {
+                            this.errors.push(`${label}: enum options required.`);
+                        }
+                        if (defaultValue && options.length > 0 && !options.includes(defaultValue)) {
+                            this.errors.push(`${label}: default must be one of the enum options.`);
+                        }
+                    }
+
+                    if (type === 'BOOLEAN' && defaultValue) {
+                        if (defaultValue !== 'true' && defaultValue !== 'false') {
+                            this.errors.push(`${label}: default must be true or false.`);
+                        }
+                    }
+                });
+
+                return this.errors.length === 0;
+            }
+        };
+    }
+</script>

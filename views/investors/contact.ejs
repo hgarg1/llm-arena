@@ -1,0 +1,50 @@
+<%- include('../layouts/investor', { body: `
+    <div class="grid md:grid-cols-2 min-h-[calc(100vh-80px)]">
+        <div class="bg-slate-900 text-white p-16 flex flex-col justify-center">
+            <h1 class="text-4xl font-serif mb-6">Contact Investor Relations</h1>
+            <p class="text-slate-400 text-lg mb-12">
+                For inquiries regarding financial performance, governance, or shareholder services.
+            </p>
+            
+            <div class="space-y-8">
+                <div>
+                    <h4 class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-2">General Inquiries</h4>
+                    <a href="mailto:ir@llmarena.com" class="text-2xl font-serif italic hover:text-blue-300">ir@llmarena.com</a>
+                </div>
+                <div>
+                    <h4 class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-2">Transfer Agent</h4>
+                    <p class="text-lg">Computershare Trust Company, N.A.</p>
+                    <p class="text-slate-400">PO Box 505000, Louisville, KY 40233</p>
+                </div>
+                <div>
+                    <h4 class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-2">Media Relations</h4>
+                    <a href="mailto:press@llmarena.com" class="text-lg hover:text-blue-300">press@llmarena.com</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-16 flex flex-col justify-center">
+            <form class="space-y-6 max-w-md w-full mx-auto">
+                <div>
+                    <label class="block text-xs uppercase tracking-widest text-slate-500 font-bold mb-2">Name</label>
+                    <input type="text" class="w-full border-b-2 border-slate-200 py-2 focus:outline-none focus:border-slate-900 transition-colors bg-transparent placeholder-slate-300" placeholder="Jane Doe">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-widest text-slate-500 font-bold mb-2">Organization</label>
+                    <input type="text" class="w-full border-b-2 border-slate-200 py-2 focus:outline-none focus:border-slate-900 transition-colors bg-transparent placeholder-slate-300" placeholder="Fund / Agency">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-widest text-slate-500 font-bold mb-2">Email</label>
+                    <input type="email" class="w-full border-b-2 border-slate-200 py-2 focus:outline-none focus:border-slate-900 transition-colors bg-transparent placeholder-slate-300" placeholder="jane@example.com">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-widest text-slate-500 font-bold mb-2">Message</label>
+                    <textarea rows="4" class="w-full border-b-2 border-slate-200 py-2 focus:outline-none focus:border-slate-900 transition-colors bg-transparent placeholder-slate-300 resize-none" placeholder="How can we help?"></textarea>
+                </div>
+                <button class="px-8 py-4 bg-slate-900 text-white font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-colors w-full">
+                    Submit Inquiry
+                </button>
+            </form>
+        </div>
+    </div>
+` }) %>

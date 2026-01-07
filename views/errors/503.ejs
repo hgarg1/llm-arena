@@ -1,0 +1,37 @@
+<%- include('../layouts/error', { body: `
+    <div class="mb-8 flex justify-center">
+        <div class="w-24 h-24 bg-yellow-900/20 rounded-full flex items-center justify-center border border-yellow-500/30 shadow-inner">
+            <svg class="w-12 h-12 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+        </div>
+    </div>
+    
+    <h1 class="text-6xl font-black text-white tracking-tight mb-4 font-mono">503</h1>
+    <h2 class="text-2xl font-bold text-slate-200 mb-4">Arena Maintenance</h2>
+    <p class="text-slate-400 text-lg mb-8 max-w-md mx-auto">
+        The LLM Arena is currently undergoing scheduled upgrades to improve simulation determinism. We will be back online shortly.
+    </p>
+
+    <div class="max-w-md mx-auto bg-slate-900/50 rounded-lg p-4 mb-8 border border-slate-700/50">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-mono text-slate-400 uppercase tracking-wider">Status</span>
+            <span class="text-xs font-mono text-yellow-500">Optimizing...</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+            <div class="bg-yellow-500 h-1.5 rounded-full w-2/3 animate-[progress_2s_ease-in-out_infinite]"></div>
+        </div>
+    </div>
+
+    <a href="/" class="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-lg text-slate-900 bg-yellow-500 hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/20">
+        Check Status
+    </a>
+    
+    <style>
+        @keyframes progress {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0); }
+            100% { transform: translateX(100%); }
+        }
+    </style>
+` }) %>

@@ -1,0 +1,49 @@
+<%- include('../layouts/investor', { body: `
+    <div class="bg-slate-50 border-b border-slate-200 py-16">
+        <div class="container mx-auto px-6">
+            <h1 class="text-4xl md:text-5xl font-serif text-slate-900 mb-4">SEC Filings</h1>
+            <p class="text-slate-500 text-lg">Real-time EDGAR data.</p>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-6 py-12">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-slate-900 text-xs uppercase tracking-widest text-slate-500">
+                        <th class="py-4">Filing Date</th>
+                        <th class="py-4">Form Type</th>
+                        <th class="py-4">Description</th>
+                        <th class="py-4 text-right">Download</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm text-slate-700 divide-y divide-slate-100">
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-4 font-mono">2026-01-15</td>
+                        <td class="py-4 font-bold">8-K</td>
+                        <td class="py-4">Current report filing</td>
+                        <td class="py-4 text-right"><a href="#" class="text-blue-900 hover:underline">HTML</a> | <a href="#" class="text-blue-900 hover:underline">PDF</a></td>
+                    </tr>
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-4 font-mono">2025-11-10</td>
+                        <td class="py-4 font-bold">10-Q</td>
+                        <td class="py-4">Quarterly report pursuant to Section 13 or 15(d)</td>
+                        <td class="py-4 text-right"><a href="#" class="text-blue-900 hover:underline">HTML</a> | <a href="#" class="text-blue-900 hover:underline">PDF</a></td>
+                    </tr>
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-4 font-mono">2025-08-12</td>
+                        <td class="py-4 font-bold">10-Q</td>
+                        <td class="py-4">Quarterly report pursuant to Section 13 or 15(d)</td>
+                        <td class="py-4 text-right"><a href="#" class="text-blue-900 hover:underline">HTML</a> | <a href="#" class="text-blue-900 hover:underline">PDF</a></td>
+                    </tr>
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-4 font-mono">2025-05-15</td>
+                        <td class="py-4 font-bold">10-K</td>
+                        <td class="py-4">Annual report pursuant to Section 13 or 15(d)</td>
+                        <td class="py-4 text-right"><a href="#" class="text-blue-900 hover:underline">HTML</a> | <a href="#" class="text-blue-900 hover:underline">PDF</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+` }) %>

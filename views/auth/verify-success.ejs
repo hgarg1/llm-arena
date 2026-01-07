@@ -1,0 +1,27 @@
+<%- include('../partials/header_layout') %>
+    <div class="min-h-[calc(100vh-60px)] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-background">
+        <div class="sm:mx-auto sm:w-full sm:max-w-md">
+            <div class="card p-8 text-center">
+                <% if (state === 'success') { %>
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6 animate-[bounce_1s_ease-in-out_1]">
+                        <svg class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-primary mb-2">Email Verified</h2>
+                    <p class="text-secondary mb-6">Your email address has been successfully verified.</p>
+                    <a href="/account" class="btn btn-primary w-full justify-center">Go to Dashboard</a>
+                <% } else { %>
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 mb-6">
+                        <svg class="h-10 w-10 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-primary mb-2">Verification Failed</h2>
+                    <p class="text-secondary mb-6">This link is invalid or has expired.</p>
+                    <a href="/account" class="btn btn-secondary w-full justify-center">Return to Settings</a>
+                <% } %>
+            </div>
+        </div>
+    </div>
+<%- include('../partials/footer_layout') %>

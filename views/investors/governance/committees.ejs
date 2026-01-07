@@ -1,0 +1,74 @@
+<%- include('../../layouts/investor', { body: `
+    <div class="bg-slate-50 border-b border-slate-200 py-16">
+        <div class="container mx-auto px-6">
+            <h1 class="text-4xl md:text-5xl font-serif text-slate-900 mb-4">Committee Composition</h1>
+            <p class="text-slate-500 text-lg">Detailed breakdown of board committee assignments.</p>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-6 py-16">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-slate-900 text-xs uppercase tracking-widest text-slate-500">
+                        <th class="py-4 w-1/4">Director</th>
+                        <th class="py-4 text-center w-1/6">Audit</th>
+                        <th class="py-4 text-center w-1/6">Compensation</th>
+                        <th class="py-4 text-center w-1/6">Nominating & Gov</th>
+                        <th class="py-4 text-center w-1/6">AI Safety</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm text-slate-900 divide-y divide-slate-100">
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-4 font-bold font-serif text-lg">Dr. Elena Rostova</td>
+                        <td class="py-4 text-center"></td>
+                        <td class="py-4 text-center"></td>
+                        <td class="py-4 text-center">Member</td>
+                        <td class="py-4 text-center font-bold bg-slate-100">Chair</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-4 font-bold font-serif text-lg">Marcus Thorne</td>
+                        <td class="py-4 text-center font-bold bg-slate-100">Chair</td>
+                        <td class="py-4 text-center">Member</td>
+                        <td class="py-4 text-center"></td>
+                        <td class="py-4 text-center"></td>
+                    </tr>
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-4 font-bold font-serif text-lg">Sarah Chen</td>
+                        <td class="py-4 text-center"></td>
+                        <td class="py-4 text-center"></td>
+                        <td class="py-4 text-center"></td>
+                        <td class="py-4 text-center">Member</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-4 font-bold font-serif text-lg">David Kim</td>
+                        <td class="py-4 text-center">Member</td>
+                        <td class="py-4 text-center font-bold bg-slate-100">Chair</td>
+                        <td class="py-4 text-center">Member</td>
+                        <td class="py-4 text-center"></td>
+                    </tr>
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-4 font-bold font-serif text-lg">Olivia Vance</td>
+                        <td class="py-4 text-center">Member</td>
+                        <td class="py-4 text-center"></td>
+                        <td class="py-4 text-center font-bold bg-slate-100">Chair</td>
+                        <td class="py-4 text-center">Member</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-12 p-6 bg-slate-50 border border-slate-200">
+            <h4 class="font-bold text-slate-900 mb-2">Committee Charters</h4>
+            <div class="flex gap-4 text-sm text-blue-900">
+                <a href="#" class="hover:underline">Audit Charter</a>
+                <span class="text-slate-300">|</span>
+                <a href="#" class="hover:underline">Compensation Charter</a>
+                <span class="text-slate-300">|</span>
+                <a href="#" class="hover:underline">Nominating & Governance Charter</a>
+                <span class="text-slate-300">|</span>
+                <a href="#" class="hover:underline">AI Safety Charter</a>
+            </div>
+        </div>
+    </div>
+` }) %>

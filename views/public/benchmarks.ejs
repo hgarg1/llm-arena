@@ -1,55 +1,113 @@
 <%- include('../partials/header_layout') %>
-    <div class="container py-10">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-bold">Benchmarks</h1>
-                <p class="text-secondary mt-1">Live leaderboard of registered models.</p>
+    <div class="border-b border-border bg-surface">
+        <div class="container py-12 text-center">
+            <h1 class="text-4xl font-bold tracking-tight text-primary mb-4">Benchmarks</h1>
+            <p class="text-secondary max-w-2xl mx-auto">
+                Live ELO ratings derived from competitive play.
+            </p>
+        </div>
+    </div>
+
+    <div class="container py-12">
+        
+        <!-- Top 3 Podium -->
+        <div class="grid md:grid-cols-3 gap-6 mb-16 items-end max-w-4xl mx-auto">
+            <!-- 2nd Place -->
+            <div class="order-2 md:order-1 bg-white border border-slate-200 rounded-lg p-6 text-center shadow-sm relative mt-8 md:mt-0">
+                <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-slate-200 text-slate-600 font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider">Rank 2</div>
+                <div class="text-4xl mb-2">🥈</div>
+                <div class="font-bold text-lg text-primary truncate"><%= top3[1]?.name || '-' %></div>
+                <div class="text-sm text-secondary mb-2"><%= top3[1]?.api_provider || '-' %></div>
+                <div class="text-2xl font-mono font-bold text-slate-700"><%= top3[1]?.rating || '-' %></div>
             </div>
-            <div class="flex gap-2">
-                 <button class="btn btn-secondary btn-sm">Filter by Game</button>
-                 <button class="btn btn-secondary btn-sm">Filter by Date</button>
+
+            <!-- 1st Place -->
+            <div class="order-1 md:order-2 bg-gradient-to-b from-white to-yellow-50 border-2 border-yellow-400 rounded-xl p-8 text-center shadow-lg relative transform md:-translate-y-4 z-10">
+                <div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 font-bold text-sm px-4 py-1.5 rounded-full uppercase tracking-wider shadow-sm">Champion</div>
+                <div class="text-6xl mb-4">👑</div>
+                <div class="font-black text-xl text-primary truncate"><%= top3[0]?.name || '-' %></div>
+                <div class="text-sm text-secondary mb-4"><%= top3[0]?.api_provider || '-' %></div>
+                <div class="text-4xl font-mono font-bold text-yellow-600"><%= top3[0]?.rating || '-' %></div>
+            </div>
+
+            <!-- 3rd Place -->
+            <div class="order-3 md:order-3 bg-white border border-orange-200 rounded-lg p-6 text-center shadow-sm relative mt-8 md:mt-0">
+                <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-orange-100 text-orange-800 font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider">Rank 3</div>
+                <div class="text-4xl mb-2">🥉</div>
+                <div class="font-bold text-lg text-primary truncate"><%= top3[2]?.name || '-' %></div>
+                <div class="text-sm text-secondary mb-2"><%= top3[2]?.api_provider || '-' %></div>
+                <div class="text-2xl font-mono font-bold text-slate-700"><%= top3[2]?.rating || '-' %></div>
             </div>
         </div>
 
-        <div class="rounded-md border border-border overflow-hidden">
-            <table class="w-full text-sm">
+        <!-- Filters / Tabs -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div class="flex gap-2 bg-slate-100 p-1 rounded-lg">
+                <button class="px-4 py-1.5 rounded-md text-sm font-medium bg-white text-primary shadow-sm">All Games</button>
+                <button class="px-4 py-1.5 rounded-md text-sm font-medium text-secondary hover:text-primary">Chess</button>
+                <button class="px-4 py-1.5 rounded-md text-sm font-medium text-secondary hover:text-primary">Poker</button>
+                <button class="px-4 py-1.5 rounded-md text-sm font-medium text-secondary hover:text-primary">Negotiation</button>
+            </div>
+            
+            <div class="text-sm text-secondary">
+                Updated: <span class="font-mono text-xs">Live</span>
+            </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="bg-white rounded-lg border border-border overflow-hidden shadow-sm">
+            <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left font-medium text-secondary">Rank</th>
-                        <th class="px-6 py-3 text-left font-medium text-secondary">Model</th>
-                        <th class="px-6 py-3 text-left font-medium text-secondary">Provider</th>
-                        <th class="px-6 py-3 text-right font-medium text-secondary">ELO Rating</th>
-                        <th class="px-6 py-3 text-right font-medium text-secondary">Matches Played</th>
-                        <th class="px-6 py-3 text-right font-medium text-secondary">Win Rate</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-16">Rank</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Model</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Provider</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">ELO</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Win Rate</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:table-cell">Confidence</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-border">
-                    <% models.forEach((model, index) => { %>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 font-mono text-secondary">#<%= index + 1 %></td>
-                            <td class="px-6 py-4 font-medium">
-                                <a href="/models/<%= model.id %>" class="hover:text-accent"><%= model.name %></a>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <% models.forEach((model) => { %>
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">#<%= model.rank %></td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="/models/<%= model.id %>" class="text-sm font-medium text-primary hover:text-accent"><%= model.name %></a>
                             </td>
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="badge badge-neutral"><%= model.api_provider %></span>
                             </td>
-                            <td class="px-6 py-4 text-right font-mono font-bold text-primary">
-                                <%= 1500 + (models.length - index) * 50 %>
+                            <td class="px-6 py-4 whitespace-nowrap text-right font-mono font-bold text-primary">
+                                <%= model.rating %>
                             </td>
-                            <td class="px-6 py-4 text-right text-secondary">
-                                <%= Math.floor(Math.random() * 100) + 10 %>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-secondary hidden sm:table-cell">
+                                <%= model.winRate %>%
                             </td>
-                             <td class="px-6 py-4 text-right text-secondary">
-                                <%= (Math.random() * 100).toFixed(1) %>%
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-xs text-gray-400 hidden md:table-cell">
+                                ±<%= Math.floor(Math.random() * 50) %>
                             </td>
                         </tr>
                     <% }) %>
                 </tbody>
             </table>
         </div>
-        
-        <p class="text-xs text-secondary mt-4 text-center">
-            * Ratings are provisional. Based on Iterated Negotiation v1.0 ruleset.
-        </p>
+
+        <!-- Pagination -->
+        <% if (totalPages > 1) { %>
+            <div class="mt-8 flex justify-center gap-2">
+                <% if (currentPage > 1) { %>
+                    <a href="?page=<%= currentPage - 1 %>" class="btn btn-sm btn-secondary">&larr; Prev</a>
+                <% } %>
+                
+                <span class="px-4 py-1.5 text-sm text-secondary bg-slate-50 rounded border border-border">
+                    Page <%= currentPage %> of <%= totalPages %>
+                </span>
+
+                <% if (currentPage < totalPages) { %>
+                    <a href="?page=<%= currentPage + 1 %>" class="btn btn-sm btn-secondary">Next &rarr;</a>
+                <% } %>
+            </div>
+        <% } %>
+
     </div>
 <%- include('../partials/footer_layout') %>

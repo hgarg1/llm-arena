@@ -1,0 +1,296 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Subscription Plans</h1>
+        <p class="text-sm text-gray-500">Create, validate, and evolve customer plans without code deployments.</p>
+    </div>
+
+    <% if (success) { %>
+        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm"><%= success %></div>
+    <% } %>
+    <% if (error) { %>
+        <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
+    <% } %>
+
+    <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Active Plans</div>
+            <div class="mt-2 text-2xl font-bold text-gray-900"><%= plans.filter(p => p.is_active).length %></div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Total Plans</div>
+            <div class="mt-2 text-2xl font-bold text-gray-900"><%= plans.length %></div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Highest Level</div>
+            <div class="mt-2 text-2xl font-bold text-gray-900"><%= plans.length ? Math.max(...plans.map(p => p.level)) : 0 %></div>
+        </div>
+    </div>
+
+    <% if (typeof can === 'function' && can('admin.plans.edit')) { %>
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="font-semibold text-gray-900">Create a New Plan</h3>
+                <p class="text-xs text-gray-500">Plans require strong descriptions for clarity and compliance.</p>
+            </div>
+            <div class="text-[11px] text-gray-400">All fields validated</div>
+        </div>
+        <div id="planCreateError" class="hidden mb-4 rounded-md bg-red-50 p-3 border border-red-200 text-red-700 text-xs"></div>
+        <form id="planCreateForm" action="/admin/plans" method="POST" class="grid md:grid-cols-2 gap-4" data-validate="plan">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div>
+                <label class="text-xs font-medium text-gray-600">Key (lowercase, dashes)</label>
+                <input type="text" name="key" placeholder="business" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required pattern="[a-z0-9_-]{3,}" minlength="3" maxlength="40">
+                <div class="text-[11px] text-gray-400 mt-1">Used in APIs and entitlements. 3-40 chars.</div>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Display Name</label>
+                <input type="text" name="name" placeholder="Business" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required minlength="3" maxlength="50">
+            </div>
+            <div class="md:col-span-2">
+                <label class="text-xs font-medium text-gray-600">Short Description (15+ chars)</label>
+                <input type="text" name="description_short" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required minlength="15" maxlength="140">
+            </div>
+            <div class="md:col-span-2">
+                <label class="text-xs font-medium text-gray-600">Long Description (40+ chars)</label>
+                <textarea name="description_long" rows="3" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required minlength="40" maxlength="600"></textarea>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Price (cents)</label>
+                <input type="number" name="price_cents" min="0" step="1" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="4900">
+                <div class="text-[11px] text-gray-400 mt-1">Leave empty for custom pricing.</div>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Currency</label>
+                <input type="text" name="currency" value="USD" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" pattern="[A-Z]{3}" maxlength="3">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Interval</label>
+                <input type="text" name="interval" value="month" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" maxlength="20">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Level (1+)</label>
+                <input type="number" name="level" min="1" step="1" value="1" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required>
+            </div>
+            <div class="flex items-center gap-2 mt-6">
+                <input type="checkbox" name="is_active" checked>
+                <span class="text-sm text-gray-600">Active</span>
+            </div>
+            <div class="md:col-span-2 text-right">
+                <button class="btn btn-sm btn-primary">Create Plan</button>
+            </div>
+        </form>
+    </div>
+    <% } %>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+        <% plans.forEach(plan => { %>
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-5 flex flex-col">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-gray-900"><%= plan.name %></div>
+                        <div class="text-[11px] text-gray-500 font-mono"><%= plan.key %></div>
+                    </div>
+                    <span class="px-2 py-1 text-[10px] rounded <%= plan.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600' %>">
+                        <%= plan.is_active ? 'Active' : 'Inactive' %>
+                    </span>
+                </div>
+                <div class="mt-3 text-xs text-gray-500"><%= plan.description_short %></div>
+                <div class="mt-3 text-xs text-gray-400"><%= plan.description_long %></div>
+                <div class="mt-4 flex items-center justify-between text-sm text-gray-700">
+                    <div class="font-semibold">
+                        <% if (plan.price_cents) { %>
+                            $<%= (plan.price_cents / 100).toFixed(2) %> / <%= plan.interval %>
+                        <% } else { %>
+                            Custom
+                        <% } %>
+                    </div>
+                    <div class="text-[11px] text-gray-500">Level <%= plan.level %></div>
+                </div>
+                <div class="mt-4 flex items-center gap-2">
+                    <% if (typeof can === 'function' && can('admin.plans.edit')) { %>
+                        <button type="button" class="btn btn-xs btn-secondary" data-action="edit-plan"
+                            data-id="<%= plan.id %>"
+                            data-key="<%= plan.key %>"
+                            data-name="<%= plan.name %>"
+                            data-short="<%= (plan.description_short || '').replace(/\"/g, '&quot;') %>"
+                            data-long="<%= (plan.description_long || '').replace(/\"/g, '&quot;') %>"
+                            data-price="<%= plan.price_cents || '' %>"
+                            data-currency="<%= plan.currency %>"
+                            data-interval="<%= plan.interval %>"
+                            data-level="<%= plan.level %>"
+                            data-active="<%= plan.is_active ? 'true' : 'false' %>">
+                            Edit
+                        </button>
+                        <form action="/admin/plans/<%= plan.id %>/delete" method="POST" data-confirm="Delete this plan?">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button class="btn btn-xs btn-ghost text-red-600">Delete</button>
+                        </form>
+                    <% } else { %>
+                        <span class="text-[11px] text-gray-400">No permission to edit</span>
+                    <% } %>
+                </div>
+            </div>
+        <% }) %>
+        <% if (plans.length === 0) { %>
+            <div class="col-span-full text-sm text-gray-500">No plans found.</div>
+        <% } %>
+    </div>
+<%- include('../../partials/admin_footer') %>
+
+<div id="planModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-xl border border-gray-200">
+            <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div class="font-semibold text-gray-900">Edit Plan</div>
+                <button type="button" class="text-xs uppercase tracking-widest text-gray-500" data-action="close-modal">Close</button>
+            </div>
+            <div id="planEditError" class="hidden m-4 rounded-md bg-red-50 p-3 border border-red-200 text-red-700 text-xs"></div>
+            <form id="planEditForm" method="POST" class="p-4 grid md:grid-cols-2 gap-4" data-validate="plan">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <div>
+                    <label class="text-xs font-medium text-gray-600">Key</label>
+                    <input id="planKey" type="text" name="key" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required pattern="[a-z0-9_-]{3,}" minlength="3" maxlength="40">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-600">Display Name</label>
+                    <input id="planName" type="text" name="name" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required minlength="3" maxlength="50">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-xs font-medium text-gray-600">Short Description</label>
+                    <input id="planShort" type="text" name="description_short" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required minlength="15" maxlength="140">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-xs font-medium text-gray-600">Long Description</label>
+                    <textarea id="planLong" name="description_long" rows="3" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required minlength="40" maxlength="600"></textarea>
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-600">Price (cents)</label>
+                    <input id="planPrice" type="number" name="price_cents" min="0" step="1" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-600">Currency</label>
+                    <input id="planCurrency" type="text" name="currency" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" pattern="[A-Z]{3}" maxlength="3">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-600">Interval</label>
+                    <input id="planInterval" type="text" name="interval" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" maxlength="20">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-gray-600">Level</label>
+                    <input id="planLevel" type="number" name="level" min="1" step="1" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" required>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input id="planActive" type="checkbox" name="is_active">
+                    <span class="text-sm text-gray-600">Active</span>
+                </div>
+                <div class="md:col-span-2 text-right">
+                    <button class="btn btn-sm btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const modal = document.getElementById('planModal');
+        const form = document.getElementById('planEditForm');
+        const errorBox = document.getElementById('planEditError');
+        const createForm = document.getElementById('planCreateForm');
+        const createError = document.getElementById('planCreateError');
+
+        const openModal = (data) => {
+            if (!form || !modal) return;
+            form.action = `/admin/plans/${data.id}/update`;
+            document.getElementById('planKey').value = data.key || '';
+            document.getElementById('planName').value = data.name || '';
+            document.getElementById('planShort').value = data.short || '';
+            document.getElementById('planLong').value = data.long || '';
+            document.getElementById('planPrice').value = data.price || '';
+            document.getElementById('planCurrency').value = data.currency || 'USD';
+            document.getElementById('planInterval').value = data.interval || 'month';
+            document.getElementById('planLevel').value = data.level || '1';
+            document.getElementById('planActive').checked = data.active === 'true';
+            if (errorBox) errorBox.classList.add('hidden');
+            modal.classList.remove('hidden');
+        };
+
+        document.querySelectorAll('[data-action="edit-plan"]').forEach(button => {
+            button.addEventListener('click', () => {
+                openModal({
+                    id: button.getAttribute('data-id'),
+                    key: button.getAttribute('data-key'),
+                    name: button.getAttribute('data-name'),
+                    short: button.getAttribute('data-short'),
+                    long: button.getAttribute('data-long'),
+                    price: button.getAttribute('data-price'),
+                    currency: button.getAttribute('data-currency'),
+                    interval: button.getAttribute('data-interval'),
+                    level: button.getAttribute('data-level'),
+                    active: button.getAttribute('data-active')
+                });
+            });
+        });
+
+        document.querySelectorAll('[data-action="close-modal"]').forEach(button => {
+            button.addEventListener('click', () => {
+                if (modal) modal.classList.add('hidden');
+            });
+        });
+
+        document.querySelectorAll('[data-confirm]').forEach(formEl => {
+            formEl.addEventListener('submit', (event) => {
+                const message = formEl.getAttribute('data-confirm') || 'Are you sure?';
+                if (!confirm(message)) {
+                    event.preventDefault();
+                }
+            });
+        });
+
+        const validatePlanForm = (formEl, errorEl) => {
+            if (!formEl) return true;
+            const errors = [];
+            const key = formEl.querySelector('input[name="key"]').value.trim();
+            const name = formEl.querySelector('input[name="name"]').value.trim();
+            const shortDesc = formEl.querySelector('input[name="description_short"]').value.trim();
+            const longDesc = formEl.querySelector('textarea[name="description_long"]').value.trim();
+            const level = parseInt(formEl.querySelector('input[name="level"]').value || '0', 10);
+            const currency = formEl.querySelector('input[name="currency"]').value.trim();
+
+            if (!/^[a-z0-9_-]{3,}$/.test(key)) errors.push('Key must be 3+ chars, lowercase letters, numbers, dashes, or underscores.');
+            if (name.length < 3) errors.push('Name must be at least 3 characters.');
+            if (shortDesc.length < 15) errors.push('Short description must be at least 15 characters.');
+            if (longDesc.length < 40) errors.push('Long description must be at least 40 characters.');
+            if (!Number.isFinite(level) || level < 1) errors.push('Level must be 1 or higher.');
+            if (!/^[A-Z]{3}$/.test(currency)) errors.push('Currency must be a 3-letter ISO code (e.g., USD).');
+
+            if (errors.length > 0) {
+                if (errorEl) {
+                    errorEl.textContent = errors[0];
+                    errorEl.classList.remove('hidden');
+                }
+                return false;
+            }
+            if (errorEl) errorEl.classList.add('hidden');
+            return true;
+        };
+
+        if (createForm) {
+            createForm.addEventListener('submit', (event) => {
+                if (!validatePlanForm(createForm, createError)) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', (event) => {
+                if (!validatePlanForm(form, errorBox)) {
+                    event.preventDefault();
+                }
+            });
+        }
+    })();
+</script>

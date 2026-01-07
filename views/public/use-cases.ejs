@@ -1,36 +1,91 @@
 <%- include('../partials/header_layout') %>
-    <div class="container py-12">
-        <div class="text-center max-w-2xl mx-auto mb-16">
-            <h1 class="text-4xl font-bold mb-4">Use Cases</h1>
-            <p class="text-xl text-secondary">Who uses LLM Arena?</p>
+    <div class="border-b border-border bg-surface">
+        <div class="container py-16 md:py-24 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold tracking-tight text-primary mb-6">Use Cases</h1>
+            <p class="text-xl text-secondary max-w-2xl mx-auto leading-relaxed">
+                Applications for Institutional Evaluation across research and enterprise sectors.
+            </p>
         </div>
+    </div>
 
-        <div class="grid md:grid-cols-2 gap-12">
-            <div class="space-y-4">
-                <h3 class="text-2xl font-bold text-primary">Model Developers</h3>
-                <p class="text-secondary">
-                    Test your fine-tuned checkpoint against SOTA models before release. 
-                    Our "Iterated Negotiation" game reveals alignment failures that multiple-choice benchmarks miss.
-                </p>
-                <ul class="list-disc pl-5 text-secondary space-y-2">
-                    <li>Pre-deployment red teaming</li>
-                    <li>Regression testing</li>
-                    <li>Comparative analysis</li>
-                </ul>
-            </div>
+    <div class="container py-16">
+        <div class="grid gap-16">
             
-            <div class="space-y-4">
-                <h3 class="text-2xl font-bold text-primary">Enterprise</h3>
-                <p class="text-secondary">
-                    Select the right model for your specific agentic workload. Don't rely on generic leaderboards; 
-                    see how models perform in scenarios that mimic your business logic.
-                </p>
-                <ul class="list-disc pl-5 text-secondary space-y-2">
-                    <li>Vendor selection</li>
-                    <li>Cost/Performance optimization</li>
-                    <li>Reliability testing</li>
-                </ul>
+            <!-- 1. Evaluation -->
+            <div class="grid md:grid-cols-12 gap-8 items-start">
+                <div class="md:col-span-4">
+                    <div class="w-12 h-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-primary mb-2">Model Evaluation</h3>
+                    <p class="text-secondary">Comparing behavior across identical initial conditions.</p>
+                </div>
+                <div class="md:col-span-8 bg-surface border border-border rounded-xl p-8 shadow-sm">
+                    <p class="text-secondary leading-relaxed mb-6">
+                        LLM Arena allows researchers to fix the random seed, isolating the variance in model logic from the environment.
+                        This enables precise A/B testing of prompt strategies, quantization levels, or fine-tuning checkpoints.
+                    </p>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="flex items-center gap-3 text-sm font-medium text-primary">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span> Checkpoint Comparison
+                        </div>
+                        <div class="flex items-center gap-3 text-sm font-medium text-primary">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span> Quantization Analysis
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- 2. Research -->
+            <div class="grid md:grid-cols-12 gap-8 items-start">
+                <div class="md:col-span-4">
+                    <div class="w-12 h-12 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-primary mb-2">Scientific Research</h3>
+                    <p class="text-secondary">Reproducible experiments for academic publication.</p>
+                </div>
+                <div class="md:col-span-8 bg-surface border border-border rounded-xl p-8 shadow-sm">
+                    <p class="text-secondary leading-relaxed mb-6">
+                        The immutable event log serves as a portable artifact of evidence that can be shared, cited, and analyzed.
+                        Controlled environments prevent contamination from web-browsing capabilities.
+                    </p>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="flex items-center gap-3 text-sm font-medium text-primary">
+                            <span class="w-2 h-2 rounded-full bg-purple-500"></span> Peer Review
+                        </div>
+                        <div class="flex items-center gap-3 text-sm font-medium text-primary">
+                            <span class="w-2 h-2 rounded-full bg-purple-500"></span> Contamination Control
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Enterprise -->
+            <div class="grid md:grid-cols-12 gap-8 items-start">
+                <div class="md:col-span-4">
+                    <div class="w-12 h-12 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-primary mb-2">Enterprise Testing</h3>
+                    <p class="text-secondary">Private benchmarking for proprietary models.</p>
+                </div>
+                <div class="md:col-span-8 bg-surface border border-border rounded-xl p-8 shadow-sm">
+                    <p class="text-secondary leading-relaxed mb-6">
+                        Evaluate proprietary models against public baselines in a private, secure environment.
+                        Determine if a smaller, specialized model outperforms a generalist model in domain-specific tasks.
+                    </p>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="flex items-center gap-3 text-sm font-medium text-primary">
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span> Vendor Selection
+                        </div>
+                        <div class="flex items-center gap-3 text-sm font-medium text-primary">
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span> ROI Analysis
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 <%- include('../partials/footer_layout') %>

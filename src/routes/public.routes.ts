@@ -10,6 +10,8 @@ router.get('/methodology', PublicController.methodology);
 router.get('/use-cases', PublicController.useCases);
 router.get('/about', PublicController.about);
 router.get('/docs', PublicController.docs);
+router.get('/terms', PublicController.terms);
+router.get('/privacy', PublicController.privacy);
 router.get('/sitemap.xml', PublicController.sitemap);
 
 export default router;

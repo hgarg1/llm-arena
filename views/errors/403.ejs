@@ -1,0 +1,60 @@
+<%- include('../layouts/error', { body: `
+    <div class="mb-8 flex justify-center relative">
+        <!-- Amber Glow -->
+        <div class="absolute inset-0 bg-amber-500/10 blur-xl rounded-full animate-pulse"></div>
+        
+        <div class="w-24 h-24 bg-slate-900 rounded-full flex items-center justify-center border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] relative z-10">
+            <svg class="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+        </div>
+    </div>
+    
+    <div class="space-y-4 relative z-10">
+        <h1 class="text-4xl font-black text-white tracking-widest uppercase font-mono">
+            INSUFFICIENT CLEARANCE
+        </h1>
+        <p class="text-slate-400 text-lg max-w-md mx-auto leading-relaxed">
+            Your current identity profile does not possess the required permissions to access this encrypted node.
+        </p>
+        ${requiredPermission ? `
+        <div class="inline-block px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded text-amber-500 text-xs font-mono uppercase tracking-widest">
+            Required Permission: [${requiredPermission}]
+        </div>` : ''}
+        ${path ? `<div class="text-[11px] text-slate-500 font-mono uppercase tracking-widest">Request: ${method || 'GET'} ${path}</div>` : ''}
+    </div>
+
+    <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="/" class="group relative inline-flex items-center justify-center px-8 py-3 bg-slate-100 text-slate-900 font-bold tracking-wider uppercase rounded-lg transition-all hover:bg-white hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] w-full sm:w-auto">
+            Return to Dashboard
+        </a>
+        
+        <form action="/auth/logout" method="POST" class="w-full sm:w-auto">
+            <input type="hidden" name="_csrf" value="${csrfToken}">
+            <button type="submit" class="inline-flex items-center justify-center px-8 py-3 border border-slate-600 text-slate-300 font-medium rounded-lg hover:bg-slate-800 hover:text-white transition-all w-full">
+                Switch Identity
+            </button>
+        </form>
+    </div>
+
+    ${requiredPermission ? `
+    <div class="mt-10 bg-slate-900/60 border border-slate-700/60 rounded-xl p-5 text-left max-w-xl mx-auto">
+        <div class="text-sm text-slate-200 font-semibold mb-2">Request access</div>
+        <p class="text-xs text-slate-400 mb-4">An admin with approval rights will see this request and can grant it immediately.</p>
+        <form action="/access/request" method="POST" class="space-y-3">
+            <input type="hidden" name="_csrf" value="${csrfToken}">
+            <input type="hidden" name="permission" value="${requiredPermission}">
+            <input type="hidden" name="path" value="${path || ''}">
+            <input type="hidden" name="method" value="${method || ''}">
+            <div>
+                <label class="text-xs text-slate-400">Reason (optional)</label>
+                <textarea name="reason" rows="2" class="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-xs text-slate-100" placeholder="What are you trying to do?"></textarea>
+            </div>
+            <button class="btn btn-sm btn-primary w-full">Request Permission</button>
+        </form>
+    </div>` : ''}
+
+    <div class="mt-12 font-mono text-[10px] text-slate-600 uppercase tracking-[0.2em]">
+        Error Code: 403_FORBIDDEN // POLICY_VIOLATION
+    </div>
+` }) %>

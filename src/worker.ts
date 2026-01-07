@@ -1,16 +1,24 @@
 import { Worker } from 'bullmq';
 import { redisConnection } from './config/redis';
-import { prisma } from './config/db';
 import { MatchRepository } from './repositories/match.repository';
-import { IteratedNegotiationGame } from './game/negotiation';
+import { getGameEngine } from './game/registry';
 import { getModelAdapter } from './game/adapters';
 import { MatchStatus } from '@prisma/client';
+import { settingsService } from './services/settings.service';
+import { matchQueue } from './services/queue';
 
 const matchRepo = new MatchRepository();
 
-const worker = new Worker('match-queue', async job => {
+let maxTurns = 250;
+
+const startWorker = async () => {
+  const settings = await settingsService.getAll();
+  const concurrency = Math.max(1, parseInt(settings.queue_concurrency || '2', 10));
+  maxTurns = Math.max(1, parseInt(settings.queue_max_turns || '250', 10));
+
+  const worker = new Worker('match-queue', async job => {
   console.log(`Processing match ${job.data.matchId}`);
-  const { matchId } = job.data;
+  const { matchId, options } = job.data;
 
   const match = await matchRepo.findById(matchId);
   if (!match) throw new Error('Match not found');
@@ -19,8 +27,10 @@ const worker = new Worker('match-queue', async job => {
   await matchRepo.updateStatus(matchId, MatchStatus.RUNNING);
 
   try {
-    const game = new IteratedNegotiationGame(); // In future, select based on match.game_type
-    let gameState = game.initialize(match.seed);
+    const game = await getGameEngine(match.game_type);
+
+    // Pass options to initialize (e.g. playerCount, dealerIndex)
+    let gameState = (game as any).initialize(match.seed, options); 
 
     // Persist initial events
     for (const event of gameState) {
@@ -37,30 +47,64 @@ const worker = new Worker('match-queue', async job => {
     const adapters = match.participants.map(p => ({
       participantId: p.id,
       adapter: getModelAdapter(p.model.api_provider, p.model.api_model_id),
-      role: `player${match.participants.indexOf(p) + 1}` // simple role assignment
+      role: p.role || `player${match.participants.indexOf(p) + 1}` 
     }));
 
     let result = null;
     let turnCount = 0;
-    const MAX_TURNS = 20; // Safety break
+    while (!result && turnCount < maxTurns) {
+      
+      let activeRole = '';
+      if (match.game_type === 'chess') {
+          const moves = gameState.filter((e: any) => e.type === 'MOVE');
+          activeRole = moves.length % 2 === 0 ? 'white' : 'black';
+      } else if (match.game_type === 'chutes_and_ladders') {
+          if (adapters.length > 0) {
+              activeRole = adapters[0].role;
+          } else {
+              activeRole = 'player1'; 
+          }
+      } else if (match.game_type === 'texas_holdem') {
+          activeRole = `seat${(turnCount % 2) + 1}`; 
+      } else if (match.game_type === 'blackjack') {
+          // Blackjack engine tracks active seat index internally, but worker is stateless loop.
+          // We need to query the state or infer.
+          // Inference: Count PLAYER_TURN_END events.
+          const endedTurns = gameState.filter((e: any) => e.type === 'PLAYER_TURN_END').length;
+          // If all players done, next call to processMove handles dealer automatically? 
+          // Engine logic: if activeSeatIndex >= count, returns result.
+          // So we just need to route to current player.
+          // 0 ended -> seat1. 1 ended -> seat2.
+          const playerCount = match.participants.length || 1;
+          if (endedTurns >= playerCount) {
+              activeRole = 'system'; // Hand back to engine for dealer phase
+          } else {
+              activeRole = `seat${endedTurns + 1}`;
+          }
+      } else {
+          activeRole = `player${(turnCount % 2) + 1}`;
+      }
 
-    while (!result && turnCount < MAX_TURNS) {
-      // Determine whose turn it is
-      // For this simple game, we'll just alternate or let the engine decide
-      // But the engine currently expects a move.
-      // Let's cycle through players.
+      let moveContent = '';
       
-      const activePlayerIndex = turnCount % adapters.length;
-      const activePlayer = adapters[activePlayerIndex];
-      
-      const systemPrompt = game.getSystemPrompt(activePlayer.role);
-      
-      // Call Model
-      const moveContent = await activePlayer.adapter.generateMove(systemPrompt, gameState);
+      if (activeRole === 'system') {
+          // Engine needs a kick to process dealer logic
+          moveContent = 'RESOLVE';
+      } else {
+          const activePlayer = adapters.find(a => a.role === activeRole);
+          
+          if (activePlayer) {
+              const systemPrompt = game.getSystemPrompt(activePlayer.role);
+              moveContent = await activePlayer.adapter.generateMove(systemPrompt, gameState);
+          } else {
+              console.warn(`No player found for role ${activeRole}, defaulting...`);
+              moveContent = 'STAND'; 
+          }
+      }
 
       // Process Move
       const step = game.processMove(gameState, {
-        actor: activePlayer.role,
+        actor: activeRole,
         content: moveContent
       });
 
@@ -90,14 +134,27 @@ const worker = new Worker('match-queue', async job => {
     throw error;
   }
 
-}, { connection: redisConnection as any });
+  }, { connection: redisConnection as any, concurrency });
 
-worker.on('completed', job => {
-  console.log(`Job ${job.id} has completed!`);
+  worker.on('completed', job => {
+    console.log(`Job ${job.id} has completed!`);
+  });
+
+  worker.on('failed', (job, err) => {
+    console.log(`Job ${job?.id} has failed with ${err.message}`);
+  });
+
+  if (settings.queue_auto_clean_enabled === 'true') {
+    const intervalMinutes = Math.max(1, parseInt(settings.queue_auto_clean_interval_minutes || '60', 10));
+    setInterval(async () => {
+      await matchQueue.clean(1000, 100, 'completed');
+      await matchQueue.clean(1000, 100, 'failed');
+    }, intervalMinutes * 60 * 1000);
+  }
+
+  console.log('Worker started...');
+};
+
+startWorker().catch(err => {
+  console.error('Worker failed to start:', err);
 });
-
-worker.on('failed', (job, err) => {
-  console.log(`Job ${job?.id} has failed with ${err.message}`);
-});
-
-console.log('Worker started...');

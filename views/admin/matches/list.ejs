@@ -1,0 +1,62 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Match Operations</h1>
+            <p class="mt-1 text-sm text-gray-500">Monitor and manage game executions.</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="/admin/matches" class="btn btn-sm btn-secondary <%= !filter ? 'bg-slate-200' : '' %>">All</a>
+            <a href="/admin/matches?status=RUNNING" class="btn btn-sm btn-secondary <%= filter==='RUNNING' ? 'bg-blue-100' : '' %>">Running</a>
+            <a href="/admin/matches?status=FAILED" class="btn btn-sm btn-secondary <%= filter==='FAILED' ? 'bg-red-100' : '' %>">Failed</a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Game</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                <% matches.map(m => { %>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap font-mono text-xs text-gray-500">
+                            <a href="/matches/<%= m.id %>" class="hover:underline text-blue-600"><%= m.id.substring(0,8) %></a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><%= m.game_type %></td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                <%= m.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 
+                                  m.status === 'RUNNING' ? 'bg-blue-100 text-blue-800' : 
+                                  m.status === 'FAILED' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800' %>">
+                                <%= m.status %>
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                            <%= new Date(m.created_at).toLocaleString() %>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <% if (m.status === 'RUNNING' || m.status === 'PENDING') { %>
+                                <form action="/admin/matches/<%= m.id %>/cancel" method="POST" class="inline" onsubmit="return confirm('Cancel this match?');">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <button class="text-red-600 hover:text-red-900">Cancel</button>
+                                </form>
+                            <% } %>
+                            <% if (m.status === 'FAILED') { %>
+                                <form action="/admin/matches/<%= m.id %>/retry" method="POST" class="inline">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <button class="text-blue-600 hover:text-blue-900">Retry</button>
+                                </form>
+                            <% } %>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+<%- include('../../partials/admin_footer') %>

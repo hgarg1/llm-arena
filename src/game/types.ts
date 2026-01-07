@@ -20,7 +20,7 @@ export interface GameResult {
 
 export interface GameEngine {
   gameType: string;
-  initialize(seed: number): GameEvent[];
+  initialize(seed: number, options?: any): GameEvent[];
   processMove(gameState: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null };
   getSystemPrompt(role: string): string;
 }

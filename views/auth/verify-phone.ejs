@@ -1,0 +1,53 @@
+<%- include('../partials/header_layout') %>
+    <div class="min-h-[calc(100vh-60px)] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-background">
+        <div class="sm:mx-auto sm:w-full sm:max-w-md">
+            <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-primary">
+                Verify Phone Number
+            </h2>
+            <p class="mt-2 text-center text-sm text-secondary">
+                We sent a 6-digit code to your mobile device
+            </p>
+        </div>
+
+        <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+            <div class="bg-surface py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-border">
+                
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800"><%= error %></h3>
+                            </div>
+                        </div>
+                    </div>
+                <% } %>
+
+                <form action="/auth/verify-phone" method="POST" class="space-y-6">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div>
+                        <label for="code" class="input-label text-center">Verification Code</label>
+                        <div class="mt-1">
+                            <input id="code" name="code" type="text" pattern="[0-9]*" maxlength="6" required 
+                                   class="input-field text-center text-2xl tracking-[0.5em] font-mono"
+                                   placeholder="000000">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <a href="/" class="btn btn-secondary flex-1 flex justify-center py-2.5">
+                            Skip
+                        </a>
+                        <button type="submit" class="btn btn-primary flex-1 flex justify-center py-2.5">
+                            Verify
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<%- include('../partials/footer_layout') %>

@@ -1,0 +1,487 @@
+<%- include('../partials/header_layout') %>
+    <div class="container py-8 max-w-5xl" x-data="{ deleteModal: false }">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold">Account Settings</h1>
+            <p class="text-secondary">Manage your profile, subscription, and preferences.</p>
+        </div>
+
+        <% if (success) { %>
+            <div class="bg-green-50 text-green-700 p-4 rounded mb-6 border border-green-200 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                <%= success %>
+            </div>
+        <% } %>
+
+        <% if (error) { %>
+            <div class="bg-red-50 text-red-700 p-4 rounded mb-6 border border-red-200">
+                <%= error %>
+            </div>
+        <% } %>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+            
+            <!-- Left: Sidebar / Profile -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- User Card -->
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="w-24 h-24 rounded-full bg-slate-200 mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-slate-500 overflow-hidden border-4 border-white shadow-sm">
+                            <% if (user.avatar_url) { %>
+                                <img src="<%= user.avatar_url %>" alt="Avatar" class="w-full h-full object-cover">
+                            <% } else { %>
+                                <%= user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase() %>
+                            <% } %>
+                        </div>
+                        <h3 class="font-bold text-lg text-primary"><%= user.name || 'User' %></h3>
+                        <p class="text-sm text-secondary truncate px-4"><%= user.email %></p>
+                        
+                        <div class="mt-4 flex flex-col gap-2 items-center">
+                            <span class="badge <%= user.tier === 'FREE' ? 'badge-neutral' : (user.tier === 'PRO' ? 'badge-primary' : 'badge-warning') %>">
+                                <%= currentPlanName ? currentPlanName : user.tier %> PLAN
+                            </span>
+                            <% if (user.email_verified) { %>
+                                <span class="badge badge-success flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                    Verified
+                                </span>
+                            <% } else { %>
+                                <form action="/account/verify" method="POST">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <button class="badge badge-warning cursor-pointer hover:bg-yellow-200 transition-colors" title="Click to verify">
+                                        Unverified (Send Email)
+                                    </button>
+                                </form>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="space-y-1">
+                    <a href="#profile" class="block px-4 py-2 bg-white font-medium text-primary rounded-md shadow-sm border border-border">Profile</a>
+                    <a href="#billing" class="block px-4 py-2 text-secondary hover:bg-slate-50 rounded-md">Billing & Plans</a>
+                    <a href="#history" class="block px-4 py-2 text-secondary hover:bg-slate-50 rounded-md">Match History</a>
+                    <a href="#security" class="block px-4 py-2 text-secondary hover:bg-slate-50 rounded-md">Security</a>
+                </nav>
+            </div>
+
+            <!-- Right: Content -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Profile Form -->
+                <section id="profile" class="card">
+                    <div class="card-header bg-slate-50">
+                        <h3 class="font-bold text-primary">Personal Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <form action="/account/profile" method="POST" enctype="multipart/form-data" class="grid gap-6 md:grid-cols-2">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <div class="md:col-span-2">
+                                <label class="input-label">Profile Picture</label>
+                                <div class="flex items-center gap-4">
+                                    <% if (user.avatar_url) { %>
+                                        <img src="<%= user.avatar_url %>" alt="Current Avatar" class="w-12 h-12 rounded-full object-cover border border-border">
+                                    <% } %>
+                                    <input type="file" name="avatar" accept="image/*" class="text-sm text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-primary hover:file:bg-slate-100">
+                                </div>
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="input-label">Email Address</label>
+                                <input type="email" value="<%= user.email %>" disabled class="input-field bg-slate-50 text-slate-500 cursor-not-allowed">
+                            </div>
+                            
+                            <div>
+                                <label for="name" class="input-label">Full Name</label>
+                                <input type="text" name="name" id="name" value="<%= user.name || '' %>" class="input-field">
+                            </div>
+
+                            <div>
+                                <label for="job_title" class="input-label">Job Title</label>
+                                <input type="text" name="job_title" id="job_title" value="<%= user.job_title || '' %>" class="input-field">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label for="company" class="input-label">Company / Organization</label>
+                                <input type="text" name="company" id="company" value="<%= user.company || '' %>" class="input-field">
+                            </div>
+
+                            <div class="md:col-span-2 text-right">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Billing / Subscription -->
+                <section id="billing" class="card">
+                    <div class="card-header bg-slate-50 flex justify-between items-center">
+                        <h3 class="font-bold text-primary">Subscription Plan</h3>
+                        <span class="text-xs text-secondary">Billing managed via Stripe</span>
+                    </div>
+                    <!-- ... billing content ... -->
+                    <div class="card-body">
+                        <% if (!user.email_verified) { %>
+                            <div class="bg-yellow-50 text-yellow-800 p-3 rounded mb-4 text-sm border border-yellow-200">
+                                You must verify your email address before upgrading your plan.
+                            </div>
+                        <% } %>
+                        
+                        <div class="grid md:grid-cols-3 gap-4">
+    <% plans.forEach(plan => { 
+        const isCurrent = currentPlanId === plan.id;
+        const isUpgrade = plan.level > currentPlanLevel;
+        const label = isCurrent ? 'Active' : (isUpgrade ? 'Upgrade' : 'Switch');
+    %>
+        <div class="border rounded-lg p-4 flex flex-col relative <%= isCurrent ? 'border-primary ring-1 ring-primary bg-slate-50' : 'border-border' %>">
+            <% if (isCurrent) { %>
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">Current</div>
+            <% } %>
+            <h4 class="font-bold text-center mb-2"><%= plan.name %></h4>
+            <div class="text-center text-2xl font-bold mb-3">
+                <% if (plan.price_cents) { %>
+                    $<%= (plan.price_cents / 100).toFixed(2) %><span class="text-xs text-secondary font-normal">/<%= plan.interval %></span>
+                <% } else { %>
+                    Custom
+                <% } %>
+            </div>
+            <div class="text-xs text-secondary space-y-2 mb-6 flex-grow">
+                <div class="font-medium text-slate-700"><%= plan.description_short %></div>
+                <div><%= plan.description_long %></div>
+            </div>
+            <% if (isCurrent) { %>
+                <button disabled class="btn btn-sm btn-secondary w-full opacity-50 cursor-not-allowed">Active</button>
+            <% } else { %>
+                <form action="/account/upgrade" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="plan_id" value="<%= plan.id %>">
+                    <button class="btn btn-sm btn-secondary w-full" <%= (!user.email_verified && isUpgrade) ? 'disabled' : '' %>><%= label %></button>
+                </form>
+            <% } %>
+        </div>
+    <% }) %>
+</div>
+</div>
+</section>
+
+                <% if (settings && settings['auth_passkey_enabled'] !== 'false') { %>
+                    <!-- Passkeys -->
+                    <section id="passkeys" class="card">
+                        <div class="card-header bg-slate-50 flex justify-between items-center">
+                            <h3 class="font-bold text-primary">Passkeys</h3>
+                            <span class="text-xs text-secondary">Passwordless Login</span>
+                        </div>
+                        <div class="card-body" x-data="passkeyManager()">
+                            <p class="text-sm text-secondary mb-4">
+                                Use Touch ID, Face ID, or your security key to sign in securely.
+                            </p>
+                            
+                            <div class="space-y-2 mb-4">
+                                <% if (user.passkeys && user.passkeys.length > 0) { %>
+                                    <% user.passkeys.forEach(key => { %>
+                                        <div class="flex justify-between items-center text-sm border border-border p-3 rounded">
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                                                <span class="font-mono text-xs">Credential ...<%= key.credential_id.substring(0, 8) %></span>
+                                            </div>
+                                            <span class="text-xs text-secondary">Added <%= new Date(key.created_at).toLocaleDateString() %></span>
+                                        </div>
+                                    <% }) %>
+                                <% } else { %>
+                                    <div class="text-center py-4 bg-slate-50 rounded border border-dashed border-border text-xs text-secondary">
+                                        No passkeys configured.
+                                    </div>
+                                <% } %>
+                            </div>
+
+                            <button @click="registerPasskey()" class="btn btn-secondary w-full" :disabled="loading">
+                                <span x-show="!loading">Add Passkey</span>
+                                <span x-show="loading">Registering...</span>
+                            </button>
+                            <p x-show="message" x-text="message" class="text-xs mt-2 text-center" :class="success ? 'text-green-600' : 'text-red-600'"></p>
+                        </div>
+                    </section>
+                <% } %>
+
+                <!-- API Keys -->
+                <section id="api-keys" class="card">
+                    <div class="card-header bg-slate-50 flex justify-between items-center">
+                        <h3 class="font-bold text-primary">API Keys</h3>
+                        <span class="text-xs text-secondary">Manage programmatic access</span>
+                    </div>
+                    <div class="card-body">
+                        <% if (typeof newApiKey !== 'undefined' && newApiKey) { %>
+                            <div class="bg-green-100 border border-green-300 rounded p-4 mb-4">
+                                <div class="text-sm font-bold text-green-800 mb-1">New API Key Generated</div>
+                                <p class="text-xs text-green-700 mb-2">Copy this key now. You won't be able to see it again!</p>
+                                <div class="bg-white p-2 rounded border border-green-200 font-mono text-sm flex justify-between items-center">
+                                    <code class="text-primary truncate"><%= newApiKey %></code>
+                                    <button type="button" class="text-xs text-accent hover:underline" data-copy="<%= newApiKey %>">Copy</button>
+                                </div>
+                            </div>
+                        <% } %>
+
+                        <div class="space-y-4">
+                            <% if (user.api_keys && user.api_keys.length > 0) { %>
+                                <div class="divide-y divide-border border border-border rounded-md">
+                                    <% user.api_keys.forEach(key => { %>
+                                        <div class="p-3 flex justify-between items-center">
+                                            <div>
+                                                <div class="font-medium text-sm text-primary"><%= key.name %></div>
+                                                <div class="text-xs text-secondary font-mono">sk-********************<%= key.key_hash.substring(0, 4) %></div>
+                                                <div class="text-[10px] text-gray-400 mt-1">Created <%= new Date(key.created_at).toLocaleDateString() %></div>
+                                            </div>
+                                            <form action="/account/api-keys/delete" method="POST" data-confirm="Revoke this key?">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <input type="hidden" name="id" value="<%= key.id %>">
+                                                <button class="text-xs text-red-600 hover:underline">Revoke</button>
+                                            </form>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } else {
+                                %>
+                                <p class="text-sm text-secondary text-center py-4 bg-slate-50 rounded border border-dashed border-border">
+                                    No API keys generated.
+                                </p>
+                            <% } %>
+
+                            <form action="/account/api-keys" method="POST" class="flex gap-2">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <input type="text" name="name" placeholder="Key Name (e.g. CI/CD)" class="input-field flex-grow" required>
+                                <button class="btn btn-primary whitespace-nowrap">Generate Key</button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Match History -->
+                <section id="history" class="card">
+                    <div class="card-header bg-slate-50">
+                        <h3 class="font-bold text-primary">Your Match History</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 border-b border-border text-xs text-secondary uppercase">
+                                <tr>
+                                    <th class="px-4 py-3">ID</th>
+                                    <th class="px-4 py-3">Game</th>
+                                    <th class="px-4 py-3">Date</th>
+                                    <th class="px-4 py-3 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-border">
+                                <% if (user.matches && user.matches.length > 0) { %>
+                                    <% user.matches.forEach(match => { %>
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="px-4 py-3 font-mono text-xs">
+                                                <a href="/matches/<%= match.id %>" class="text-accent hover:underline"><%= match.id.substring(0,8) %>...</a>
+                                            </td>
+                                            <td class="px-4 py-3"><%= match.game_type %></td>
+                                            <td class="px-4 py-3 text-secondary"><%= new Date(match.created_at).toLocaleDateString() %></td>
+                                            <td class="px-4 py-3 text-right">
+                                                <span class="badge <%= match.status === 'COMPLETED' ? 'badge-success' : 'badge-neutral' %>"><%= match.status %></span>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="4" class="px-4 py-8 text-center text-secondary">No matches created yet.</td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Change Password -->
+                <section id="password" class="card">
+                    <div class="card-header bg-slate-50">
+                        <h3 class="font-bold text-primary">Change Password</h3>
+                    </div>
+                    <div class="card-body">
+                        <form action="/account/password" method="POST" class="space-y-4" x-data="passwordChange()">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <div>
+                                <label class="input-label">Current Password</label>
+                                <input type="password" name="currentPassword" required class="input-field">
+                            </div>
+                            
+                            <div>
+                                <label class="input-label">New Password</label>
+                                <div class="mt-1 relative">
+                                    <input type="password" name="newPassword" x-model="password" required class="input-field">
+                                </div>
+                                <!-- Simple strength indicator reuse -->
+                                <div class="mt-2 text-xs flex gap-2">
+                                    <span :class="password.length >= 12 ? 'text-green-600' : 'text-slate-400'">12+ chars</span>
+                                    <span :class="/[A-Z]/.test(password) ? 'text-green-600' : 'text-slate-400'">Upper</span>
+                                    <span :class="/[a-z]/.test(password) ? 'text-green-600' : 'text-slate-400'">Lower</span>
+                                    <span :class="/[0-9]/.test(password) ? 'text-green-600' : 'text-slate-400'">Number</span>
+                                    <span :class="/[^A-Za-z0-9]/.test(password) ? 'text-green-600' : 'text-slate-400'">Symbol</span>
+                                </div>
+                            </div>
+
+                            <div class="text-right">
+                                <button type="submit" class="btn btn-secondary" :disabled="!isStrong">Update Password</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Danger Zone / Security -->
+                <section id="security" class="card overflow-hidden">
+                    <div class="card-header bg-slate-50">
+                        <h3 class="font-bold text-primary">Security</h3>
+                    </div>
+                    <div class="card-body space-y-6">
+                        
+                        <!-- 2FA -->
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-bold text-sm text-primary">Two-Factor Authentication</h4>
+                                <p class="text-xs text-secondary mt-1">Secure your account with an authenticator app.</p>
+                            </div>
+                            <% if (user.mfa_enabled) { %>
+                                <form action="/account/mfa/disable" method="POST" data-confirm="Disable 2FA? This will reduce your account security.">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <button class="btn btn-sm btn-secondary text-red-600 hover:bg-red-50 border-red-200">Disable 2FA</button>
+                                </form>
+                            <% } else { %>
+                                <a href="/account/mfa/setup" class="btn btn-sm btn-primary">Setup 2FA</a>
+                            <% } %>
+                        </div>
+
+                        <div class="border-t border-border pt-6">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h4 class="font-bold text-sm text-red-700">Delete Account</h4>
+                                    <p class="text-xs text-secondary mt-1">Permanently remove your data.</p>
+                                </div>
+                                <button @click="deleteModal = true" class="btn btn-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-200">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        <!-- Delete Modal -->
+        <div x-show="deleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" style="display: none;">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 m-4" @click.away="deleteModal = false">
+                <h3 class="text-lg font-bold text-red-600 mb-2">Delete Account?</h3>
+                <p class="text-sm text-secondary mb-4">
+                    This action cannot be undone. All your data, including created matches and profile information, will be permanently removed.
+                </p>
+                
+                <form action="/account/delete" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-secondary mb-1">Type "DELETE" to confirm</label>
+                        <input type="text" name="confirmation" class="input-field" placeholder="DELETE" required pattern="DELETE">
+                    </div>
+                    
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="deleteModal = false" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary bg-red-600 hover:bg-red-700 border-transparent text-white">Permanently Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <% if (settings && settings['auth_passkey_enabled'] !== 'false') { %>
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+    <script>
+        function passkeyManager() {
+            return {
+                loading: false,
+                message: '',
+                success: false,
+                async registerPasskey() {
+                    this.loading = true;
+                    this.message = '';
+                    try {
+                        // 1. Get options
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                        const resp = await fetch('/auth/passkey/register/options', { 
+                            method: 'POST',
+                            headers: { 'X-CSRF-Token': csrfToken }
+                        });
+                        const opts = await resp.json();
+                        
+                        // 2. Browser API
+                        const attResp = await SimpleWebAuthnBrowser.startRegistration(opts);
+                        
+                        // 3. Verify
+                        const verifyResp = await fetch('/auth/passkey/register/verify', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken
+                            },
+                            body: JSON.stringify(attResp),
+                        });
+                        
+                        const verification = await verifyResp.json();
+                        if (verification.verified) {
+                            this.success = true;
+                            this.message = 'Passkey added! Reloading...';
+                            setTimeout(() => window.location.reload(), 1000);
+                        } else {
+                            throw new Error(verification.error);
+                        }
+                    } catch (e) {
+                        this.success = false;
+                        this.message = e.message || 'Failed to register passkey';
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+    </script>
+    <% } %>
+    <script>
+        function passwordChange() {
+            return {
+                password: '',
+                get isStrong() {
+                    return this.password.length >= 12 &&
+                           /[A-Z]/.test(this.password) &&
+                           /[a-z]/.test(this.password) &&
+                           /[0-9]/.test(this.password) &&
+                           /[^A-Za-z0-9]/.test(this.password);
+                }
+            }
+        }
+    </script>
+    <script>
+        (function () {
+            document.querySelectorAll('form[data-confirm]').forEach(formEl => {
+                formEl.addEventListener('submit', (event) => {
+                    const message = formEl.getAttribute('data-confirm') || 'Are you sure?';
+                    if (!confirm(message)) {
+                        event.preventDefault();
+                    }
+                });
+            });
+            document.querySelectorAll('[data-copy]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const value = button.getAttribute('data-copy') || '';
+                    if (!value) return;
+                    try {
+                        await navigator.clipboard.writeText(value);
+                        button.textContent = 'Copied';
+                        setTimeout(() => { button.textContent = 'Copy'; }, 1500);
+                    } catch (err) {
+                        button.textContent = 'Failed';
+                        setTimeout(() => { button.textContent = 'Copy'; }, 1500);
+                    }
+                });
+            });
+        })();
+    </script>
+<%- include('../partials/footer_layout') %>
+

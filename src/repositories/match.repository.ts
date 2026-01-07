@@ -17,16 +17,43 @@ export class MatchRepository {
     });
   }
 
-  async findAll(filter?: Prisma.MatchWhereInput) {
-    return prisma.match.findMany({
-      where: filter,
-      include: {
-        participants: { include: { model: true } },
-        tournament: true
-      },
-      orderBy: { created_at: 'desc' },
-      take: 50
-    });
+  async findAll(options?: { search?: string; gameType?: string; status?: MatchStatus; page?: number; limit?: number }) {
+    const where: Prisma.MatchWhereInput = {};
+    const page = options?.page || 1;
+    const limit = options?.limit || 20;
+    const skip = (page - 1) * limit;
+
+    if (options?.gameType) {
+        where.game_type = options.gameType;
+    }
+
+    if (options?.status) {
+        where.status = options.status;
+    }
+
+    if (options?.search) {
+        // Search by Match ID or Participant Model Name
+        where.OR = [
+            { id: { contains: options.search, mode: 'insensitive' } },
+            { participants: { some: { model: { name: { contains: options.search, mode: 'insensitive' } } } } }
+        ];
+    }
+
+    const [matches, total] = await Promise.all([
+        prisma.match.findMany({
+            where,
+            include: {
+                participants: { include: { model: true } },
+                tournament: true
+            },
+            orderBy: { created_at: 'desc' },
+            skip,
+            take: limit
+        }),
+        prisma.match.count({ where })
+    ]);
+
+    return { matches, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async updateStatus(id: string, status: MatchStatus, finishedAt?: Date) {

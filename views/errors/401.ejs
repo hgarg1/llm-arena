@@ -1,0 +1,89 @@
+<%- include('../layouts/error', { body: `
+    <div class="mb-8 flex justify-center relative">
+        <!-- Pulse Effect -->
+        <div class="absolute inset-0 bg-red-500/20 blur-xl rounded-full animate-pulse"></div>
+        
+        <div class="w-24 h-24 bg-slate-900 rounded-2xl flex items-center justify-center border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.5)] relative z-10 transform rotate-45">
+            <div class="transform -rotate-45">
+                <svg class="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <div class="space-y-4 relative z-10">
+        <h1 class="text-4xl font-black text-white tracking-widest uppercase font-mono glitch-text" data-text="ACCESS RESTRICTED">
+            ACCESS RESTRICTED
+        </h1>
+        <p class="text-slate-400 text-lg max-w-md mx-auto leading-relaxed">
+            Security clearance is required to view this sector of the Arena. <br>
+            Please authenticate your identity.
+        </p>
+    </div>
+
+    <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="/auth/login" class="group relative inline-flex items-center justify-center px-8 py-3 bg-red-600 text-white font-bold tracking-wider uppercase rounded-lg overflow-hidden transition-all hover:bg-red-700 hover:shadow-[0_0_20px_rgba(220,38,38,0.4)] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-900 w-full sm:w-auto">
+            <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shine"></span>
+            <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
+            Authenticate
+        </a>
+        
+        <a href="/" class="inline-flex items-center justify-center px-8 py-3 border border-slate-600 text-slate-300 font-medium rounded-lg hover:bg-slate-800 hover:text-white transition-all w-full sm:w-auto">
+            Return to Public Sector
+        </a>
+    </div>
+
+    <div class="mt-12 font-mono text-[10px] text-slate-600 uppercase tracking-[0.2em]">
+        Error Code: 401_UNAUTHORIZED // PROTOCOL_V2
+    </div>
+
+    <style>
+        @keyframes shine {
+            100% { transform: translateX(100%); }
+        }
+        .animate-shine {
+            animation: shine 0.75s;
+        }
+        .glitch-text {
+            position: relative;
+        }
+        .glitch-text::before, .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0f172a; /* Match bg */
+        }
+        .glitch-text::before {
+            left: 2px;
+            text-shadow: -1px 0 red;
+            clip: rect(24px, 550px, 90px, 0);
+            animation: glitch-anim-2 3s infinite linear alternate-reverse;
+        }
+        .glitch-text::after {
+            left: -2px;
+            text-shadow: -1px 0 blue;
+            clip: rect(85px, 550px, 140px, 0);
+            animation: glitch-anim 2.5s infinite linear alternate-reverse;
+        }
+        @keyframes glitch-anim {
+            0% { clip: rect(12px, 9999px, 32px, 0); }
+            20% { clip: rect(89px, 9999px, 96px, 0); }
+            40% { clip: rect(45px, 9999px, 66px, 0); }
+            60% { clip: rect(10px, 9999px, 80px, 0); }
+            80% { clip: rect(92px, 9999px, 34px, 0); }
+            100% { clip: rect(65px, 9999px, 12px, 0); }
+        }
+        @keyframes glitch-anim-2 {
+            0% { clip: rect(65px, 9999px, 100px, 0); }
+            20% { clip: rect(22px, 9999px, 6px, 0); }
+            40% { clip: rect(84px, 9999px, 15px, 0); }
+            60% { clip: rect(10px, 9999px, 14px, 0); }
+            80% { clip: rect(55px, 9999px, 32px, 0); }
+            100% { clip: rect(2px, 9999px, 85px, 0); }
+        }
+    </style>
+` }) %>

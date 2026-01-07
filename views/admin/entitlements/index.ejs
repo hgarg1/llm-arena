@@ -1,0 +1,845 @@
+﻿<%- include('../../partials/admin_header') %>
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Entitlements</h1>
+        <p class="text-sm text-gray-500">Manage feature access by subscription tier with advanced policy controls.</p>
+    </div>
+
+    <% if (success) { %>
+        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm"><%= success %></div>
+    <% } %>
+    <% if (error) { %>
+        <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
+    <% } %>
+
+    <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <% plans.forEach(plan => { %>
+            <div class="rounded-lg border border-gray-200 bg-white p-4">
+                <div class="text-xs uppercase tracking-widest text-gray-500"><%= plan.name %></div>
+                <div class="mt-2 text-2xl font-bold text-gray-900"><%= stats[plan.id].enabled %>/<%= stats[plan.id].total %></div>
+                <div class="text-[11px] text-gray-500">Entitlements enabled</div>
+            </div>
+        <% }) %>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+        <div class="w-full md:w-1/2">
+            <label class="text-xs font-medium text-gray-600">Search entitlements</label>
+            <input id="entitlementSearch" type="text" placeholder="Search by key or description" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+        </div>
+        <div class="w-full md:w-1/3">
+            <label class="text-xs font-medium text-gray-600">Filter by category</label>
+            <select id="entitlementCategory" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                <option value="">All categories</option>
+                <% categories.forEach(cat => { %>
+                    <option value="<%= cat.id %>"><%= cat.name %></option>
+                <% }) %>
+            </select>
+        </div>
+        <div class="text-xs text-gray-500">Toggle columns to enable/disable per plan.</div>
+    </div>
+
+    <% if (typeof can === 'function' && can('admin.entitlements.edit')) { %>
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-6 mb-6">
+        <h3 class="font-semibold text-gray-900 mb-3">Add Entitlement</h3>
+        <form action="/admin/entitlements" method="POST" class="grid md:grid-cols-4 gap-3">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="text" name="key" placeholder="entitlement.key" class="px-3 py-2 border border-gray-300 rounded text-sm" required>
+            <input type="text" name="description" placeholder="Description (10+ chars)" class="px-3 py-2 border border-gray-300 rounded text-sm" required>
+            <select name="value_type" class="px-3 py-2 border border-gray-300 rounded text-sm">
+                <option value="BOOL">bool</option>
+                <option value="NUMBER">number</option>
+                <option value="STRING">string</option>
+                <option value="ENUM">enum</option>
+                <option value="JSON">json</option>
+            </select>
+            <button class="btn btn-sm btn-primary">Add</button>
+            <input type="text" name="default_value" placeholder="Default value (optional)" class="px-3 py-2 border border-gray-300 rounded text-sm md:col-span-2">
+            <input type="text" name="validation_schema" placeholder="Validation schema JSON (optional)" class="px-3 py-2 border border-gray-300 rounded text-sm md:col-span-2">
+        </form>
+    </div>
+    <% } %>
+
+    <% if (typeof can === 'function' && can('admin.entitlements.edit')) { %>
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-6 mb-6">
+        <h3 class="font-semibold text-gray-900 mb-3">Add Category</h3>
+        <form action="/admin/entitlements/categories" method="POST" class="grid md:grid-cols-3 gap-3">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="text" name="key" placeholder="category.key" class="px-3 py-2 border border-gray-300 rounded text-sm" required>
+            <input type="text" name="name" placeholder="Category name" class="px-3 py-2 border border-gray-300 rounded text-sm" required>
+            <input type="text" name="description" placeholder="Description" class="px-3 py-2 border border-gray-300 rounded text-sm">
+            <button class="btn btn-sm btn-secondary md:col-span-3 md:justify-self-start">Add Category</button>
+        </form>
+    </div>
+    <% } %>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <form action="/admin/entitlements/save" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead class="text-gray-500 uppercase bg-gray-50">
+                        <tr>
+                            <th class="p-2 text-left">Entitlement</th>
+                            <% plans.forEach(plan => { %>
+                                <th class="p-2 text-left">
+                                    <div class="flex items-center gap-2">
+                                        <span><%= plan.name %></span>
+                                        <label class="inline-flex items-center gap-1 text-[10px] text-gray-400 normal-case">
+                                            <input type="checkbox" class="tier-toggle" data-tier="<%= plan.id %>">
+                                            All
+                                        </label>
+                                    </div>
+                                </th>
+                            <% }) %>
+                            <th class="p-2 text-left">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y" id="entitlementsTableBody">
+                        <% entitlements.forEach(ent => { %>
+                            <tr data-ent-row data-ent-key="<%= ent.key %>" data-ent-desc="<%= ent.description || '' %>" data-ent-cat="<%= ent.category_id || '' %>">
+                                <td class="p-2">
+                                    <div class="text-sm font-semibold text-gray-800"><%= ent.key %></div>
+                                    <div class="text-[11px] text-gray-500"><%= ent.description || '' %></div>
+                                    <div class="text-[11px] text-gray-400">
+                                        <%= ent.category ? ent.category.name : 'Uncategorized' %> • <%= (ent.value_type || 'BOOL').toLowerCase() %>
+                                    </div>
+                                    <div class="text-[11px] text-gray-400">
+                                        <%= ent.usage_limit ? `${ent.usage_limit} ${ent.usage_unit || ''} / ${ent.usage_period || ''}` : 'Unmetered' %>
+                                    </div>
+                                    <% if (ent.dependencies && ent.dependencies.length) { %>
+                                        <div class="text-[11px] text-gray-400">Depends on: <%= ent.dependencies.map(d => d.depends_on.key).join(', ') %></div>
+                                    <% } %>
+                                </td>
+                                <% plans.forEach(plan => {
+                                    const existing = ent.plans.find(p => p.plan_id === plan.id);
+                                %>
+                                    <td class="p-2">
+                                        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" name="ent_<%= ent.id %>_<%= plan.id %>" data-tier-cell="<%= plan.id %>" <%= existing && existing.enabled ? 'checked' : '' %>>
+                                            <span class="text-xs">Enabled</span>
+                                        </label>
+                                    </td>
+                                <% }) %>
+                                <td class="p-2">
+                                    <% if (typeof can === 'function' && can('admin.entitlements.edit')) { %>
+                                    <div class="flex items-center gap-2 whitespace-nowrap">
+                                        <button type="button" class="btn btn-xs btn-ghost" data-action="open-policy" data-id="<%= ent.id %>">Policy</button>
+                                        <form action="/admin/entitlements/<%= ent.id %>/delete" method="POST" data-action="delete-entitlement">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <button class="btn btn-xs btn-ghost text-red-600">Delete</button>
+                                        </form>
+                                    </div>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <% if (typeof can === 'function' && can('admin.entitlements.edit')) { %>
+                <div class="text-right mt-4">
+                    <button class="btn btn-sm btn-primary">Save Changes</button>
+                </div>
+            <% } %>
+        </form>
+    </div>
+<%- include('../../partials/admin_footer') %>
+
+<div id="entitlementPolicyModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl border border-gray-200">
+            <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                    <div class="text-xs uppercase tracking-widest text-gray-400">Entitlement Policy</div>
+                    <div id="policyModalTitle" class="font-semibold text-gray-900">Edit</div>
+                </div>
+                <button type="button" class="text-xs uppercase tracking-widest text-gray-500" data-action="close-modal">Close</button>
+            </div>
+            <div class="border-b border-gray-100 px-5 py-2 flex flex-wrap gap-2 text-xs font-medium text-gray-500">
+                <button type="button" class="px-3 py-1 rounded border border-gray-200 bg-gray-50 text-gray-700" data-tab="definition">Definition</button>
+                <button type="button" class="px-3 py-1 rounded border border-gray-200" data-tab="policy">Plan Policy</button>
+                <button type="button" class="px-3 py-1 rounded border border-gray-200" data-tab="overrides">Overrides</button>
+                <button type="button" class="px-3 py-1 rounded border border-gray-200" data-tab="history">History</button>
+            </div>
+            <form id="entitlementPolicyForm" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <div class="max-h-[70vh] overflow-y-auto">
+                    <div class="p-5 space-y-4" data-tab-panel="definition">
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Key</label>
+                                <input id="policyKey" name="key" type="text" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" required>
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Category</label>
+                                <select id="policyCategory" name="category_id" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                    <option value="">Uncategorized</option>
+                                    <% categories.forEach(cat => { %>
+                                        <option value="<%= cat.id %>"><%= cat.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Description</label>
+                            <input id="policyDescription" name="description" type="text" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" required>
+                        </div>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Value Type</label>
+                                <select id="policyValueType" name="value_type" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                    <option value="BOOL">bool</option>
+                                    <option value="NUMBER">number</option>
+                                    <option value="STRING">string</option>
+                                    <option value="ENUM">enum</option>
+                                    <option value="JSON">json</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Default Value</label>
+                                <input id="policyDefaultValue" name="default_value" type="text" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <div class="text-[11px] text-red-500 mt-1 hidden" id="policyDefaultError">Invalid JSON value.</div>
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Enum Options</label>
+                                <input id="policyEnumOptions" name="enum_options" type="text" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="value1, value2">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Validation Schema (JSON)</label>
+                            <textarea id="policyValidationSchema" name="validation_schema" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono"></textarea>
+                            <div class="text-[11px] text-red-500 mt-1 hidden" id="policySchemaError">Invalid JSON schema.</div>
+                        </div>
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Usage Limit</label>
+                                <input id="policyUsageLimit" name="usage_limit" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Usage Unit</label>
+                                <input id="policyUsageUnit" name="usage_unit" type="text" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="matches">
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Usage Period</label>
+                                <input id="policyUsagePeriod" name="usage_period" type="text" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="month">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Dependencies</label>
+                            <select id="policyDependencies" name="depends_on" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" multiple>
+                                <% entitlements.forEach(ent => { %>
+                                    <option value="<%= ent.id %>"><%= ent.key %></option>
+                                <% }) %>
+                            </select>
+                            <div class="text-[11px] text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple.</div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 space-y-6 hidden" data-tab-panel="policy">
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-900">Plan Policy Overrides</div>
+                                    <div class="text-[11px] text-gray-500">Configure default values per plan tier.</div>
+                                </div>
+                                <div class="text-[11px] text-gray-400">Value input adapts by type.</div>
+                            </div>
+                            <div class="mt-4 space-y-4">
+                                <% plans.forEach(plan => { %>
+                                    <div class="border border-gray-100 rounded-lg p-3 plan-policy-row" data-plan-id="<%= plan.id %>">
+                                        <div class="flex items-center justify-between">
+                                            <div class="text-sm font-medium text-gray-800"><%= plan.name %></div>
+                                            <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                                                <input type="checkbox" name="plan_enabled_<%= plan.id %>" class="plan-enabled">
+                                                Enabled
+                                            </label>
+                                        </div>
+                                        <div class="mt-3">
+                                            <input type="text" name="plan_value_<%= plan.id %>" class="plan-value-input plan-value-text w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Value">
+                                            <input type="number" name="plan_value_<%= plan.id %>" step="any" class="plan-value-input plan-value-number w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Value">
+                                            <select name="plan_value_<%= plan.id %>" class="plan-value-input plan-value-enum w-full px-3 py-2 border border-gray-300 rounded text-sm"></select>
+                                            <textarea name="plan_value_<%= plan.id %>" rows="4" class="plan-value-input plan-value-json w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono" placeholder='{"limit":1000,"window":"day"}'></textarea>
+                                        </div>
+                                        <div class="text-[11px] text-gray-400 mt-2 plan-value-help"></div>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        </div>
+
+                        <div class="border border-gray-200 rounded-lg p-4" id="policyBuilderSection">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-900">Policy Builder (JSON only)</div>
+                                    <div class="text-[11px] text-gray-500">Compose structured policies and apply them to a plan.</div>
+                                </div>
+                                <select id="policyBuilderPlan" class="text-xs border border-gray-300 rounded px-2 py-1">
+                                    <% plans.forEach(plan => { %>
+                                        <option value="<%= plan.id %>"><%= plan.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="mt-4 grid md:grid-cols-3 gap-4 text-xs">
+                                <div class="border border-gray-100 rounded p-3 space-y-2">
+                                    <div class="font-semibold text-gray-700">Quotas</div>
+                                    <input id="builderQuotaLimit" type="number" min="0" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Limit">
+                                    <input id="builderQuotaWindow" type="text" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Window (minute/day)">
+                                    <input id="builderQuotaScope" type="text" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Scope (user/org)">
+                                    <input id="builderQuotaBurst" type="number" min="0" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Burst">
+                                    <select id="builderQuotaOverage" class="w-full px-2 py-1 border border-gray-300 rounded">
+                                        <option value="">Overage behavior</option>
+                                        <option value="block">block</option>
+                                        <option value="queue">queue</option>
+                                        <option value="degrade">degrade</option>
+                                        <option value="bill_overage">bill_overage</option>
+                                    </select>
+                                </div>
+                                <div class="border border-gray-100 rounded p-3 space-y-2">
+                                    <div class="font-semibold text-gray-700">Access + Concurrency</div>
+                                    <select id="builderAccessMode" class="w-full px-2 py-1 border border-gray-300 rounded">
+                                        <option value="">Access mode</option>
+                                        <option value="hidden">hidden</option>
+                                        <option value="view">view</option>
+                                        <option value="edit">edit</option>
+                                        <option value="admin">admin</option>
+                                        <option value="locked">locked</option>
+                                    </select>
+                                    <input id="builderLockedMessage" type="text" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Locked message">
+                                    <input id="builderUpgradeCta" type="text" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Upgrade CTA">
+                                    <input id="builderConcurrency" type="number" min="0" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Max concurrent">
+                                    <input id="builderQueuePriority" type="text" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Queue priority (low/med/high)">
+                                    <input id="builderWorkerPool" type="text" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Worker pool">
+                                </div>
+                                <div class="border border-gray-100 rounded p-3 space-y-2">
+                                    <div class="font-semibold text-gray-700">Security + Retention</div>
+                                    <input id="builderRetentionDays" type="number" min="0" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Retention days">
+                                    <label class="inline-flex items-center gap-2">
+                                        <input id="builderExportCsv" type="checkbox" class="border border-gray-300">
+                                        Export CSV
+                                    </label>
+                                    <label class="inline-flex items-center gap-2">
+                                        <input id="builderExportRaw" type="checkbox" class="border border-gray-300">
+                                        Raw transcripts
+                                    </label>
+                                    <label class="inline-flex items-center gap-2">
+                                        <input id="builderRequireSso" type="checkbox" class="border border-gray-300">
+                                        Require SSO
+                                    </label>
+                                    <label class="inline-flex items-center gap-2">
+                                        <input id="builderRequireMfa" type="checkbox" class="border border-gray-300">
+                                        Require MFA
+                                    </label>
+                                    <textarea id="builderAllowedIps" rows="2" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Allowed IP ranges (comma separated)"></textarea>
+                                </div>
+                                <div class="border border-gray-100 rounded p-3 space-y-2 md:col-span-3">
+                                    <div class="font-semibold text-gray-700">Lists + Billing</div>
+                                    <input id="builderAllowlist" type="text" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Allowlist (comma separated)">
+                                    <input id="builderDenylist" type="text" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Denylist (comma separated)">
+                                    <input id="builderMatchMode" type="text" class="w-full px-2 py-1 border border-gray-300 rounded" placeholder="Match mode (exact/prefix)">
+                                    <select id="builderBillingOverage" class="w-full px-2 py-1 border border-gray-300 rounded">
+                                        <option value="">Billing overage</option>
+                                        <option value="block">block</option>
+                                        <option value="queue">queue</option>
+                                        <option value="degrade">degrade</option>
+                                        <option value="bill_overage">bill_overage</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex items-center justify-between">
+                                <div class="text-[11px] text-gray-500">Policy builder creates JSON for quotas, lists, access modes, and compliance.</div>
+                                <button type="button" id="policyBuilderApply" class="btn btn-xs btn-primary">Apply to plan</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 space-y-4 hidden" data-tab-panel="overrides">
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="text-sm font-semibold text-gray-900">Create Override</div>
+                            <div class="text-[11px] text-gray-500 mb-3">Overrides apply on top of plan defaults (user > org).</div>
+                            <div class="grid md:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Target Type</label>
+                                    <select id="overrideTargetType" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                        <option value="ORG">Org</option>
+                                        <option value="USER">User</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Target ID</label>
+                                    <input id="overrideTargetId" type="text" class="w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Org or User ID">
+                                </div>
+                                <div class="flex items-end">
+                                    <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                                        <input id="overrideEnabled" type="checkbox" class="border border-gray-300" checked>
+                                        Enabled
+                                    </label>
+                                </div>
+                                <div class="md:col-span-3">
+                                    <label class="text-xs font-medium text-gray-600">Override Value (JSON)</label>
+                                    <textarea id="overrideValue" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono" placeholder='{"limit":500,"window":"day"}'></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Starts At</label>
+                                    <input id="overrideStartsAt" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Ends At</label>
+                                    <input id="overrideEndsAt" type="datetime-local" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="button" id="overrideSubmit" class="btn btn-sm btn-primary">Create Override</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="text-sm font-semibold text-gray-900 mb-2">Active Overrides</div>
+                            <div id="overrideList" class="space-y-2 text-xs text-gray-600">No overrides yet.</div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 space-y-4 hidden" data-tab-panel="history">
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="text-sm font-semibold text-gray-900 mb-2">Audit History</div>
+                            <div id="auditList" class="space-y-2 text-xs text-gray-600">No audit history yet.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-5 py-4 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-[11px] text-gray-500">Changes are audited. Plan toggles are saved separately in the table.</div>
+                    <div class="flex gap-2">
+                        <button type="button" class="btn btn-sm btn-ghost" data-action="close-modal">Cancel</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Save Policy</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const csrfToken = '<%= csrfToken %>';
+        const entitlementsData = <%- JSON.stringify(entitlements.map(ent => ({
+            id: ent.id,
+            key: ent.key,
+            description: ent.description,
+            category_id: ent.category_id,
+            usage_limit: ent.usage_limit,
+            usage_unit: ent.usage_unit,
+            usage_period: ent.usage_period,
+            dependencies: ent.dependencies.map(dep => dep.depends_on_id),
+            value_type: ent.value_type,
+            default_value: ent.default_value,
+            validation_schema: ent.validation_schema,
+            plans: ent.plans.map(plan => ({
+                id: plan.id,
+                plan_id: plan.plan_id,
+                enabled: plan.enabled,
+                value: plan.value
+            }))
+        }))) %>;
+        const overridesData = <%- JSON.stringify(overrides || []) %>;
+        const auditData = <%- JSON.stringify(auditLogs || []) %>;
+
+        const input = document.getElementById('entitlementSearch');
+        const rows = Array.from(document.querySelectorAll('[data-ent-row]'));
+        const catSelect = document.getElementById('entitlementCategory');
+        if (input) {
+            input.addEventListener('input', () => {
+                const term = input.value.toLowerCase().trim();
+                rows.forEach(row => {
+                    const key = (row.getAttribute('data-ent-key') || '').toLowerCase();
+                    const desc = (row.getAttribute('data-ent-desc') || '').toLowerCase();
+                    const cat = row.getAttribute('data-ent-cat') || '';
+                    const selectedCat = catSelect ? catSelect.value : '';
+                    const matchesTerm = !term || key.includes(term) || desc.includes(term);
+                    const matchesCat = !selectedCat || selectedCat === cat;
+                    const visible = matchesTerm && matchesCat;
+                    row.style.display = visible ? '' : 'none';
+                });
+            });
+        }
+        if (catSelect) {
+            catSelect.addEventListener('change', () => {
+                if (input) input.dispatchEvent(new Event('input'));
+            });
+        }
+
+        document.querySelectorAll('.tier-toggle').forEach(toggle => {
+            toggle.addEventListener('change', () => {
+                const tier = toggle.getAttribute('data-tier');
+                document.querySelectorAll(`input[data-tier-cell="${tier}"]`).forEach((checkbox) => {
+                    if (checkbox.closest('[data-ent-row]') && checkbox.closest('[data-ent-row]').style.display === 'none') return;
+                    checkbox.checked = toggle.checked;
+                });
+            });
+        });
+
+        const modal = document.getElementById('entitlementPolicyModal');
+        const form = document.getElementById('entitlementPolicyForm');
+        const modalTitle = document.getElementById('policyModalTitle');
+        const keyInput = document.getElementById('policyKey');
+        const descInput = document.getElementById('policyDescription');
+        const catInput = document.getElementById('policyCategory');
+        const usageLimitInput = document.getElementById('policyUsageLimit');
+        const usageUnitInput = document.getElementById('policyUsageUnit');
+        const usagePeriodInput = document.getElementById('policyUsagePeriod');
+        const depsSelect = document.getElementById('policyDependencies');
+        const valueTypeInput = document.getElementById('policyValueType');
+        const defaultValueInput = document.getElementById('policyDefaultValue');
+        const validationInput = document.getElementById('policyValidationSchema');
+        const enumOptionsInput = document.getElementById('policyEnumOptions');
+        const defaultError = document.getElementById('policyDefaultError');
+        const schemaError = document.getElementById('policySchemaError');
+        const policyBuilderSection = document.getElementById('policyBuilderSection');
+
+        const tabs = Array.from(document.querySelectorAll('[data-tab]'));
+        const panels = Array.from(document.querySelectorAll('[data-tab-panel]'));
+        const openTab = (tabId) => {
+            tabs.forEach(tab => {
+                if (tab.getAttribute('data-tab') === tabId) {
+                    tab.classList.add('bg-gray-50', 'text-gray-700');
+                } else {
+                    tab.classList.remove('bg-gray-50', 'text-gray-700');
+                }
+            });
+            panels.forEach(panel => {
+                panel.classList.toggle('hidden', panel.getAttribute('data-tab-panel') !== tabId);
+            });
+        };
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => openTab(tab.getAttribute('data-tab')));
+        });
+
+        const parseJsonSafe = (raw) => {
+            if (!raw || !raw.trim()) return { ok: true, value: null };
+            try {
+                return { ok: true, value: JSON.parse(raw) };
+            } catch (err) {
+                return { ok: false, value: null };
+            }
+        };
+        const escapeHtml = (value) => String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        const updateValidationIndicators = () => {
+            const type = valueTypeInput ? valueTypeInput.value : 'BOOL';
+            if (defaultValueInput) {
+                if (type === 'JSON') {
+                    const result = parseJsonSafe(defaultValueInput.value);
+                    defaultError.classList.toggle('hidden', result.ok);
+                } else {
+                    defaultError.classList.add('hidden');
+                }
+            }
+            if (validationInput) {
+                const result = parseJsonSafe(validationInput.value);
+                schemaError.classList.toggle('hidden', result.ok || !validationInput.value.trim());
+            }
+        };
+
+        const getEnumOptions = () => {
+            if (enumOptionsInput && enumOptionsInput.value.trim()) {
+                return enumOptionsInput.value.split(',').map(opt => opt.trim()).filter(Boolean);
+            }
+            if (validationInput && validationInput.value.trim()) {
+                const parsed = parseJsonSafe(validationInput.value);
+                if (parsed.ok && parsed.value && Array.isArray(parsed.value.enum)) {
+                    return parsed.value.enum;
+                }
+            }
+            return [];
+        };
+
+        const updatePlanValueInputs = () => {
+            const type = valueTypeInput ? valueTypeInput.value : 'BOOL';
+            const options = getEnumOptions();
+            document.querySelectorAll('.plan-policy-row').forEach(row => {
+                const textInput = row.querySelector('.plan-value-text');
+                const numberInput = row.querySelector('.plan-value-number');
+                const enumInput = row.querySelector('.plan-value-enum');
+                const jsonInput = row.querySelector('.plan-value-json');
+                const help = row.querySelector('.plan-value-help');
+                [textInput, numberInput, enumInput, jsonInput].forEach(input => {
+                    if (input) {
+                        input.classList.add('hidden');
+                        input.disabled = true;
+                    }
+                });
+                if (help) help.textContent = '';
+                if (type === 'NUMBER') {
+                    if (numberInput) {
+                        numberInput.classList.remove('hidden');
+                        numberInput.disabled = false;
+                    }
+                } else if (type === 'STRING') {
+                    if (textInput) {
+                        textInput.classList.remove('hidden');
+                        textInput.disabled = false;
+                    }
+                } else if (type === 'ENUM') {
+                    if (enumInput) {
+                        enumInput.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+                        enumInput.classList.remove('hidden');
+                        enumInput.disabled = false;
+                    }
+                } else if (type === 'JSON') {
+                    if (jsonInput) {
+                        jsonInput.classList.remove('hidden');
+                        jsonInput.disabled = false;
+                    }
+                    if (help) help.textContent = 'JSON policy object (quotas, allowlists, access modes, retention).';
+                } else {
+                    if (help) help.textContent = 'Boolean entitlements use the enabled toggle.';
+                }
+            });
+            if (policyBuilderSection) {
+                policyBuilderSection.classList.toggle('hidden', type !== 'JSON');
+            }
+        };
+
+        const hydratePlanValues = (entitlement) => {
+            const planMap = entitlement.plans.reduce((acc, plan) => {
+                acc[plan.plan_id] = plan;
+                return acc;
+            }, {});
+            document.querySelectorAll('.plan-policy-row').forEach(row => {
+                const planId = row.getAttribute('data-plan-id');
+                const planData = planMap[planId];
+                const enabled = row.querySelector('.plan-enabled');
+                if (enabled) enabled.checked = planData ? planData.enabled : false;
+                const value = planData ? planData.value : null;
+                const textInput = row.querySelector('.plan-value-text');
+                const numberInput = row.querySelector('.plan-value-number');
+                const enumInput = row.querySelector('.plan-value-enum');
+                const jsonInput = row.querySelector('.plan-value-json');
+                if (textInput) textInput.value = value !== null && value !== undefined ? String(value) : '';
+                if (numberInput) numberInput.value = value !== null && value !== undefined ? Number(value) : '';
+                if (enumInput) enumInput.value = value !== null && value !== undefined ? String(value) : '';
+                if (jsonInput) jsonInput.value = value ? JSON.stringify(value, null, 2) : '';
+            });
+        };
+
+        const renderOverrides = (entitlementKey) => {
+            const container = document.getElementById('overrideList');
+            if (!container) return;
+            const items = overridesData.filter(item => item.entitlement_key === entitlementKey);
+            if (!items.length) {
+                container.textContent = 'No overrides yet.';
+                return;
+            }
+            container.innerHTML = items.map(item => {
+                const valueText = item.value ? JSON.stringify(item.value) : '';
+                const createdBy = item.creator ? item.creator.email : 'system';
+                return `
+                    <div class="border border-gray-100 rounded p-2 flex items-center justify-between">
+                        <div>
+                            <div class="text-[11px] text-gray-500">${escapeHtml(item.target_type)} • ${escapeHtml(item.target_id)}</div>
+                            <div class="text-xs text-gray-700">${item.enabled ? 'enabled' : 'disabled'} ${valueText ? '• ' + escapeHtml(valueText) : ''}</div>
+                            <div class="text-[10px] text-gray-400">${escapeHtml(createdBy)}</div>
+                        </div>
+                        <form action="/admin/entitlements/overrides/${item.id}/delete" method="POST" data-action="delete-override">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button class="btn btn-xs btn-ghost text-red-600">Delete</button>
+                        </form>
+                    </div>
+                `;
+            }).join('');
+            container.querySelectorAll('[data-action="delete-override"]').forEach(formEl => {
+                formEl.addEventListener('submit', (event) => {
+                    if (!confirm('Delete this override?')) {
+                        event.preventDefault();
+                    }
+                });
+            });
+        };
+
+        const renderAudit = (entitlementKey) => {
+            const container = document.getElementById('auditList');
+            if (!container) return;
+            const items = auditData.filter(item => item.entitlement_key === entitlementKey).slice(0, 15);
+            if (!items.length) {
+                container.textContent = 'No audit history yet.';
+                return;
+            }
+            container.innerHTML = items.map(item => {
+                const actor = item.actor ? item.actor.email : 'system';
+                const beforeValue = item.before_value ? JSON.stringify(item.before_value) : '';
+                const afterValue = item.after_value ? JSON.stringify(item.after_value) : '';
+                return `
+                    <div class="border border-gray-100 rounded p-2">
+                        <div class="text-[11px] text-gray-500">${escapeHtml(item.action)} • ${escapeHtml(item.target_type)} ${escapeHtml(item.target_id)}</div>
+                        <div class="text-xs text-gray-700">${beforeValue ? `Before: ${escapeHtml(beforeValue)}` : ''} ${afterValue ? `After: ${escapeHtml(afterValue)}` : ''}</div>
+                        <div class="text-[10px] text-gray-400">${escapeHtml(actor)} • ${new Date(item.created_at).toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        document.querySelectorAll('[data-action="open-policy"]').forEach(button => {
+            button.addEventListener('click', () => {
+                const id = button.getAttribute('data-id');
+                const entitlement = entitlementsData.find(ent => ent.id === id);
+                if (!entitlement || !form) return;
+                form.action = `/admin/entitlements/${id}/policy`;
+                if (modalTitle) modalTitle.textContent = entitlement.key;
+                if (keyInput) keyInput.value = entitlement.key || '';
+                if (descInput) descInput.value = entitlement.description || '';
+                if (catInput) catInput.value = entitlement.category_id || '';
+                if (usageLimitInput) usageLimitInput.value = entitlement.usage_limit || '';
+                if (usageUnitInput) usageUnitInput.value = entitlement.usage_unit || '';
+                if (usagePeriodInput) usagePeriodInput.value = entitlement.usage_period || '';
+                if (depsSelect) {
+                    const deps = entitlement.dependencies || [];
+                    Array.from(depsSelect.options).forEach(opt => {
+                        opt.selected = deps.includes(opt.value);
+                    });
+                }
+                if (valueTypeInput) valueTypeInput.value = entitlement.value_type || 'BOOL';
+                if (defaultValueInput) {
+                    if (entitlement.default_value !== null && entitlement.default_value !== undefined) {
+                        defaultValueInput.value = typeof entitlement.default_value === 'object'
+                            ? JSON.stringify(entitlement.default_value)
+                            : String(entitlement.default_value);
+                    } else {
+                        defaultValueInput.value = '';
+                    }
+                }
+                if (validationInput) {
+                    validationInput.value = entitlement.validation_schema ? JSON.stringify(entitlement.validation_schema, null, 2) : '';
+                }
+                if (enumOptionsInput) enumOptionsInput.value = '';
+                updateValidationIndicators();
+                updatePlanValueInputs();
+                hydratePlanValues(entitlement);
+                renderOverrides(entitlement.key);
+                renderAudit(entitlement.key);
+                openTab('definition');
+                if (modal) modal.classList.remove('hidden');
+                const overrideSubmit = document.getElementById('overrideSubmit');
+                if (overrideSubmit) {
+                    overrideSubmit.setAttribute('data-entitlement-id', entitlement.id);
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-action="close-modal"]').forEach(button => {
+            button.addEventListener('click', () => {
+                if (modal) modal.classList.add('hidden');
+            });
+        });
+
+        document.querySelectorAll('[data-action="delete-entitlement"]').forEach(formEl => {
+            formEl.addEventListener('submit', (event) => {
+                if (!confirm('Delete this entitlement?')) {
+                    event.preventDefault();
+                }
+            });
+        });
+
+        if (valueTypeInput) {
+            valueTypeInput.addEventListener('change', () => {
+                updateValidationIndicators();
+                updatePlanValueInputs();
+            });
+        }
+        if (defaultValueInput) defaultValueInput.addEventListener('input', updateValidationIndicators);
+        if (validationInput) validationInput.addEventListener('input', updateValidationIndicators);
+        if (enumOptionsInput) enumOptionsInput.addEventListener('input', updatePlanValueInputs);
+
+        const overrideSubmit = document.getElementById('overrideSubmit');
+        if (overrideSubmit) {
+            overrideSubmit.addEventListener('click', () => {
+                const entitlementId = overrideSubmit.getAttribute('data-entitlement-id');
+                if (!entitlementId) return;
+                const targetType = document.getElementById('overrideTargetType');
+                const targetId = document.getElementById('overrideTargetId');
+                const enabled = document.getElementById('overrideEnabled');
+                const value = document.getElementById('overrideValue');
+                const startsAt = document.getElementById('overrideStartsAt');
+                const endsAt = document.getElementById('overrideEndsAt');
+                const formEl = document.createElement('form');
+                formEl.method = 'POST';
+                formEl.action = `/admin/entitlements/${entitlementId}/overrides`;
+                const addField = (name, val) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = val || '';
+                    formEl.appendChild(input);
+                };
+                addField('_csrf', csrfToken);
+                addField('target_type', targetType.value);
+                addField('target_id', targetId.value);
+                addField('enabled', enabled.checked ? 'on' : '');
+                addField('value', value.value);
+                addField('starts_at', startsAt.value);
+                addField('ends_at', endsAt.value);
+                document.body.appendChild(formEl);
+                formEl.submit();
+            });
+        }
+
+        const policyBuilderApply = document.getElementById('policyBuilderApply');
+        if (policyBuilderApply) {
+            policyBuilderApply.addEventListener('click', () => {
+                const planSelect = document.getElementById('policyBuilderPlan');
+                if (!planSelect) return;
+                const planId = planSelect.value;
+                const policy = {
+                    quota: {
+                        limit: Number(document.getElementById('builderQuotaLimit').value) || undefined,
+                        window: document.getElementById('builderQuotaWindow').value || undefined,
+                        scope: document.getElementById('builderQuotaScope').value || undefined,
+                        burst: Number(document.getElementById('builderQuotaBurst').value) || undefined,
+                        overage_behavior: document.getElementById('builderQuotaOverage').value || undefined
+                    },
+                    access: {
+                        mode: document.getElementById('builderAccessMode').value || undefined,
+                        locked_message: document.getElementById('builderLockedMessage').value || undefined,
+                        upgrade_cta: document.getElementById('builderUpgradeCta').value || undefined
+                    },
+                    concurrency: {
+                        max: Number(document.getElementById('builderConcurrency').value) || undefined,
+                        queue_priority: document.getElementById('builderQueuePriority').value || undefined,
+                        worker_pool: document.getElementById('builderWorkerPool').value || undefined
+                    },
+                    retention: {
+                        days: Number(document.getElementById('builderRetentionDays').value) || undefined,
+                        export_csv: document.getElementById('builderExportCsv').checked,
+                        export_raw: document.getElementById('builderExportRaw').checked
+                    },
+                    security: {
+                        require_sso: document.getElementById('builderRequireSso').checked,
+                        require_mfa: document.getElementById('builderRequireMfa').checked,
+                        allowed_ip_ranges: document.getElementById('builderAllowedIps').value
+                            ? document.getElementById('builderAllowedIps').value.split(',').map(ip => ip.trim()).filter(Boolean)
+                            : undefined
+                    },
+                    lists: {
+                        allowlist: document.getElementById('builderAllowlist').value
+                            ? document.getElementById('builderAllowlist').value.split(',').map(item => item.trim()).filter(Boolean)
+                            : undefined,
+                        denylist: document.getElementById('builderDenylist').value
+                            ? document.getElementById('builderDenylist').value.split(',').map(item => item.trim()).filter(Boolean)
+                            : undefined,
+                        match_mode: document.getElementById('builderMatchMode').value || undefined
+                    },
+                    billing: {
+                        overage_behavior: document.getElementById('builderBillingOverage').value || undefined
+                    }
+                };
+                const row = document.querySelector(`.plan-policy-row[data-plan-id="${planId}"]`);
+                const jsonInput = row ? row.querySelector('.plan-value-json') : null;
+                if (jsonInput) {
+                    jsonInput.value = JSON.stringify(policy, null, 2);
+                }
+            });
+        }
+    })();
+</script>

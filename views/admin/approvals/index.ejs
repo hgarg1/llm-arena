@@ -1,0 +1,136 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Approvals</h1>
+        <p class="text-sm text-gray-500">Review permission requests and grant access instantly.</p>
+    </div>
+
+    <% if (success) { %>
+        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm"><%= success %></div>
+    <% } %>
+    <% if (error) { %>
+        <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
+    <% } %>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
+        <div class="flex flex-wrap gap-2">
+            <a href="/admin/approvals?status=PENDING" class="px-3 py-1 rounded-full text-xs font-semibold <%= status === 'PENDING' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700' %>">Pending <span class="ml-1 text-[10px]"><%= stats.PENDING || 0 %></span></a>
+            <a href="/admin/approvals?status=APPROVED" class="px-3 py-1 rounded-full text-xs font-semibold <%= status === 'APPROVED' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700' %>">Approved <span class="ml-1 text-[10px]"><%= stats.APPROVED || 0 %></span></a>
+            <a href="/admin/approvals?status=DENIED" class="px-3 py-1 rounded-full text-xs font-semibold <%= status === 'DENIED' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700' %>">Denied <span class="ml-1 text-[10px]"><%= stats.DENIED || 0 %></span></a>
+            <a href="/admin/approvals?status=ALL" class="px-3 py-1 rounded-full text-xs font-semibold <%= status === 'ALL' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700' %>">All <span class="ml-1 text-[10px]"><%= (stats.PENDING || 0) + (stats.APPROVED || 0) + (stats.DENIED || 0) %></span></a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
+        <form action="/admin/approvals" method="GET" class="grid lg:grid-cols-6 gap-3 items-end">
+            <div class="lg:col-span-2">
+                <label class="text-xs font-medium text-gray-600">Search</label>
+                <input type="text" name="q" value="<%= query.q || '' %>" placeholder="email or permission key" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Permission</label>
+                <select name="permission" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">All</option>
+                    <% permissions.forEach(key => { %>
+                        <option value="<%= key %>" <%= query.permission === key ? 'selected' : '' %>><%= key %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Requester</label>
+                <select name="requester" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">All</option>
+                    <% requesters.forEach(user => { %>
+                        <option value="<%= user.id %>" <%= query.requester === user.id ? 'selected' : '' %>><%= user.email %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">From</label>
+                <input type="date" name="from" value="<%= query.from || '' %>" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">To</label>
+                <input type="date" name="to" value="<%= query.to || '' %>" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+            </div>
+            <input type="hidden" name="status" value="<%= status %>">
+            <div class="flex gap-2">
+                <button class="btn btn-sm btn-secondary">Apply</button>
+                <% if (query.q || query.permission || query.requester || query.from || query.to || status !== 'PENDING') { %>
+                    <a href="/admin/approvals" class="btn btn-sm btn-ghost">Reset</a>
+                <% } %>
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+        <table class="min-w-full text-xs">
+            <thead class="text-gray-500 uppercase bg-gray-50">
+                <tr>
+                    <th class="p-3 text-left">Requester</th>
+                    <th class="p-3 text-left">Permission</th>
+                    <th class="p-3 text-left">Context</th>
+                    <th class="p-3 text-left">Status</th>
+                    <th class="p-3 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                <% requests.forEach(req => { %>
+                    <tr>
+                        <td class="p-3">
+                            <div class="text-sm font-semibold text-gray-900"><%= req.requester?.email || 'Unknown' %></div>
+                            <div class="text-[11px] text-gray-500"><%= new Date(req.created_at).toLocaleString() %></div>
+                        </td>
+                        <td class="p-3">
+                            <div class="text-sm font-medium text-gray-800"><%= req.permission_key %></div>
+                            <% if (req.reason) { %>
+                                <div class="text-[11px] text-gray-500 mt-1"><%= req.reason %></div>
+                            <% } %>
+                        </td>
+                        <td class="p-3 text-[11px] text-gray-500">
+                            <div><%= req.method || 'GET' %> <%= req.path || '-' %></div>
+                        </td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 text-[10px] rounded <%= req.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : (req.status === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') %>">
+                                <%= req.status %>
+                            </span>
+                            <% if (req.reviewer) { %>
+                                <div class="text-[10px] text-gray-400 mt-1">by <%= req.reviewer.email %></div>
+                            <% } %>
+                        </td>
+                        <td class="p-3">
+                            <% if (req.status === 'PENDING' && typeof can === 'function' && can('admin.approvals.edit')) { %>
+                                <div class="flex items-center gap-2">
+                                    <form action="/admin/approvals/<%= req.id %>/approve" method="POST">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                        <button class="btn btn-xs btn-primary">Approve</button>
+                                    </form>
+                                    <form action="/admin/approvals/<%= req.id %>/deny" method="POST" data-confirm="Deny this request?">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                        <button class="btn btn-xs btn-ghost text-red-600">Deny</button>
+                                    </form>
+                                </div>
+                            <% } else { %>
+                                <span class="text-[11px] text-gray-400">No action</span>
+                            <% } %>
+                        </td>
+                    </tr>
+                <% }) %>
+                <% if (requests.length === 0) { %>
+                    <tr><td class="p-6 text-center text-gray-500" colspan="5">No requests found.</td></tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+<%- include('../../partials/admin_footer') %>
+<script>
+    (function () {
+        document.querySelectorAll('[data-confirm]').forEach(formEl => {
+            formEl.addEventListener('submit', (event) => {
+                const message = formEl.getAttribute('data-confirm') || 'Are you sure?';
+                if (!confirm(message)) {
+                    event.preventDefault();
+                }
+            });
+        });
+    })();
+</script>

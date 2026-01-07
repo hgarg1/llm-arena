@@ -1,14 +1,59 @@
 <%- include('../partials/header_layout') %>
     <div class="container py-8">
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight">Match History</h1>
+                <h1 class="text-3xl font-bold tracking-tight text-primary">Match History</h1>
                 <p class="text-secondary text-sm">Comprehensive log of all competitive evaluations.</p>
             </div>
-            <a href="/matches/create" class="btn btn-primary">Create Match</a>
+            <a href="/matches/create" class="btn btn-primary shadow-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Create Match
+            </a>
         </div>
 
-        <div class="table-container">
+        <!-- Toolbar -->
+        <div class="bg-surface p-4 rounded-lg border border-border shadow-sm mb-6">
+            <form action="/matches" method="GET" class="flex flex-col md:flex-row gap-4">
+                
+                <!-- Search -->
+                <div class="flex-1 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                    <input type="text" name="q" value="<%= query.search || '' %>" class="input-field pl-10" placeholder="Search by ID or Model Name...">
+                </div>
+
+                <!-- Game Filter -->
+                <div class="w-full md:w-48">
+                    <select name="game" class="input-field cursor-pointer" onchange="this.form.submit()">
+                        <option value="">All Games</option>
+                        <option value="iterated-negotiation" <%= query.gameType === 'iterated-negotiation' ? 'selected' : '' %>>Negotiation</option>
+                        <option value="chess" <%= query.gameType === 'chess' ? 'selected' : '' %>>Chess</option>
+                        <option value="chutes_and_ladders" <%= query.gameType === 'chutes_and_ladders' ? 'selected' : '' %>>Chutes & Ladders</option>
+                        <option value="texas_holdem" <%= query.gameType === 'texas_holdem' ? 'selected' : '' %>>Poker</option>
+                        <option value="blackjack" <%= query.gameType === 'blackjack' ? 'selected' : '' %>>Blackjack</option>
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="w-full md:w-40">
+                    <select name="status" class="input-field cursor-pointer" onchange="this.form.submit()">
+                        <option value="">All Statuses</option>
+                        <option value="COMPLETED" <%= query.status === 'COMPLETED' ? 'selected' : '' %>>Completed</option>
+                        <option value="RUNNING" <%= query.status === 'RUNNING' ? 'selected' : '' %>>Running</option>
+                        <option value="PENDING" <%= query.status === 'PENDING' ? 'selected' : '' %>>Pending</option>
+                        <option value="FAILED" <%= query.status === 'FAILED' ? 'selected' : '' %>>Failed</option>
+                    </select>
+                </div>
+
+                <% if (query.search || query.gameType || query.status) { %>
+                    <a href="/matches" class="btn btn-secondary flex items-center justify-center">Reset</a>
+                <% } %>
+            </form>
+        </div>
+
+        <!-- Table -->
+        <div class="table-container shadow-sm mb-6">
             <table class="table-base">
                 <thead class="table-head">
                     <tr>
@@ -22,37 +67,69 @@
                 </thead>
                 <tbody class="table-body">
                     <% matches.forEach(match => { %>
-                        <tr>
-                            <td class="table-td font-mono text-xs">
-                                <%= match.id.substring(0, 8) %>...
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="table-td font-mono text-xs text-secondary">
+                                <a href="/matches/<%= match.id %>" class="hover:text-accent hover:underline" title="<%= match.id %>">
+                                    <%= match.id.substring(0, 8) %>
+                                </a>
                             </td>
                             <td class="table-td">
-                                <%= match.game_type %>
+                                <span class="capitalize"><%= match.game_type.replace(/_/g, ' ') %></span>
                             </td>
                             <td class="table-td">
-                                <% match.participants.forEach(p => { %>
-                                    <div class="font-medium text-primary"><%= p.model.name %></div>
-                                <% }) %>
+                                <div class="flex flex-col gap-1">
+                                    <% match.participants.forEach(p => { %>
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-2 h-2 rounded-full <%= p.role === 'white' || p.role === 'seat1' ? 'bg-slate-400' : 'bg-slate-800' %>"></span>
+                                            <span class="font-medium text-primary text-xs"><%= p.model.name %></span>
+                                        </div>
+                                    <% }) %>
+                                </div>
                             </td>
                             <td class="table-td">
                                 <span class="badge 
                                     <%= match.status === 'COMPLETED' ? 'badge-success' : 
-                                       match.status === 'RUNNING' ? 'badge-primary' : 
+                                       match.status === 'RUNNING' ? 'badge-primary animate-pulse' : 
                                        match.status === 'FAILED' ? 'badge-error' : 
                                        'badge-warning' %>">
                                     <%= match.status %>
                                 </span>
                             </td>
-                            <td class="table-td text-secondary">
+                            <td class="table-td text-secondary text-xs">
                                 <%= new Date(match.created_at).toLocaleDateString() %>
                             </td>
                             <td class="table-td text-right">
-                                <a href="/matches/<%= match.id %>" class="text-accent hover:underline font-medium text-sm">Replay</a>
+                                <a href="/matches/<%= match.id %>" class="btn btn-sm btn-ghost text-accent">
+                                    Replay
+                                </a>
                             </td>
                         </tr>
                     <% }) %>
                 </tbody>
             </table>
+            
+            <% if (matches.length === 0) { %>
+                <div class="p-12 text-center text-secondary bg-gray-50">
+                    <p>No matches found matching your criteria.</p>
+                </div>
+            <% } %>
         </div>
+
+        <!-- Pagination -->
+        <% if (pagination.totalPages > 1) { %>
+            <div class="flex justify-center gap-2">
+                <% if (pagination.page > 1) { %>
+                    <a href="?page=<%= pagination.page - 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>" class="btn btn-sm btn-secondary">&larr; Prev</a>
+                <% } %>
+                
+                <span class="px-4 py-1.5 text-sm text-secondary bg-white rounded border border-border flex items-center">
+                    Page <%= pagination.page %> of <%= pagination.totalPages %>
+                </span>
+
+                <% if (pagination.page < pagination.totalPages) { %>
+                    <a href="?page=<%= pagination.page + 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>" class="btn btn-sm btn-secondary">Next &rarr;</a>
+                <% } %>
+            </div>
+        <% } %>
     </div>
 <%- include('../partials/footer_layout') %>

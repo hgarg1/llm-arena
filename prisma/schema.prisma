@@ -27,15 +27,184 @@ enum TournamentStatus {
   COMPLETED
 }
 
+enum SubscriptionTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum ModelKind {
+  SINGLE
+  COMPOSITE
+}
+
+enum CompositeStrategy {
+  ROUND_ROBIN
+  RANDOM
+  FALLBACK
+  PIPELINE
+}
+
+enum PermissionEffect {
+  ALLOW
+  DENY
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum EntitlementValueType {
+  BOOL
+  NUMBER
+  STRING
+  ENUM
+  JSON
+}
+
+enum EntitlementOverrideTarget {
+  ORG
+  USER
+  PLAN
+}
+
+enum EntitlementAuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum UsageScopeType {
+  USER
+  ORG
+  API_KEY
+  MODEL
+}
+enum GameStatus {
+  DRAFT
+  SCHEDULED
+  LIVE
+  RETIRED
+}
+
+enum GameSettingType {
+  BOOLEAN
+  INT
+  FLOAT
+  ENUM
+  TEXT
+}
+
+enum GameEngineArtifactStatus {
+  DRAFT
+  PUBLISHED
+  FAILED
+}
+
+model GameDryRun {
+  id         String   @id @default(uuid())
+  game_id    String
+  seed       Int
+  events     Json
+  created_by String?
+  created_at DateTime @default(now())
+
+  game       GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
-  password_hash String
+  password_hash String?   // Optional because SSO users might not have one initially
+  
+  // Profile
+  name          String?
+  company       String?
+  job_title     String?
+  avatar_url    String?   // Profile Picture
+  tier          SubscriptionTier @default(FREE)
+  plan_id       String?
+  plan          SubscriptionPlan? @relation(fields: [plan_id], references: [id], onDelete: SetNull)
+  org_id        String?
+  organization  Organization? @relation(fields: [org_id], references: [id], onDelete: SetNull)
+
+  // Auth
   role          Role      @default(USER)
+  banned        Boolean   @default(false)
+  reset_token   String?
+  reset_token_expires DateTime?
+  
+  // Verification
+  email_verified Boolean  @default(false)
+  email_verification_token String?
+  
+  phone         String?   @unique
+  phone_verified Boolean  @default(false)
+  phone_verification_code String?
+  phone_verification_expires DateTime?
+
+  // MFA (TOTP)
+  mfa_secret    String?
+  mfa_enabled   Boolean   @default(false)
+  mfa_backup_codes String[] @default([])
+
+  // SSO IDs
+  google_id     String?   @unique
+  microsoft_id  String?   @unique
+  apple_id      String?   @unique
+
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
 
   models        Model[]
+  matches       Match[]   // Matches created by user
+  api_keys      ApiKey[]
+    passkeys      Passkey[]
+    dashboard     AdminDashboard?
+    admin_audit_logs AdminAuditLog[] @relation("AdminAuditLogs")
+    access_requests_sent AdminAccessRequest[] @relation("AccessRequestRequester")
+    access_requests_reviewed AdminAccessRequest[] @relation("AccessRequestReviewer")
+    entitlement_overrides_created EntitlementOverride[] @relation("EntitlementOverrideCreator")
+    entitlement_audit_logs EntitlementAuditLog[] @relation("EntitlementAuditActor")
+    rbac_roles    RbacUserRole[]
+  rbac_groups   RbacUserGroup[]
+  rbac_permission_overrides RbacUserPermissionOverride[]
+}
+
+model Organization {
+  id         String   @id @default(uuid())
+  name       String
+  slug       String   @unique
+  plan_id    String?
+  plan       SubscriptionPlan? @relation(fields: [plan_id], references: [id], onDelete: SetNull)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  users      User[]
+}
+
+model Passkey {
+  id              String   @id @default(uuid())
+  credential_id   String   @unique // base64url encoded
+  public_key      String   // base64url encoded
+  counter         BigInt
+  transports      String[] // e.g. ["internal", "usb"]
+  created_at      DateTime @default(now())
+  last_used       DateTime?
+  user_id         String
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  key_hash    String   @unique
+  name        String
+  last_used   DateTime?
+  created_at  DateTime @default(now())
+  user_id     String
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model Model {
@@ -44,12 +213,18 @@ model Model {
   description   String?
   api_provider  String    // e.g., "openai", "mock"
   api_model_id  String    // e.g., "gpt-4", "mock-v1"
+  kind          ModelKind @default(SINGLE)
+  is_active     Boolean   @default(true)
   owner_id      String?
   owner         User?     @relation(fields: [owner_id], references: [id])
+  capabilities  String[]  @default([])
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
   
   match_participations MatchParticipant[]
+  composite     ModelComposite?
+  composite_members ModelCompositeMember[] @relation("CompositeMembers")
+  pipeline_members ModelPipelineStep[] @relation("PipelineMembers")
 }
 
 model Tournament {
@@ -67,6 +242,9 @@ model Match {
   tournament_id   String?
   tournament      Tournament? @relation(fields: [tournament_id], references: [id])
   
+  created_by_id   String?
+  created_by      User?       @relation(fields: [created_by_id], references: [id])
+
   game_type       String      // e.g., "iterated-negotiation"
   status          MatchStatus @default(PENDING)
   seed            Int         // Deterministic seed
@@ -86,6 +264,7 @@ model MatchParticipant {
   model_id  String
   model     Model    @relation(fields: [model_id], references: [id])
   
+  role      String?  // e.g. "player1", "white", "black"
   score     Int?
   
   created_at DateTime @default(now())
@@ -104,4 +283,413 @@ model MatchEvent {
   created_at  DateTime @default(now())
 
   @@index([match_id, turn_index])
+}
+
+model ModelComposite {
+  id        String   @id @default(uuid())
+  model_id  String   @unique
+  strategy  CompositeStrategy @default(ROUND_ROBIN)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  model     Model    @relation(fields: [model_id], references: [id], onDelete: Cascade)
+  members   ModelCompositeMember[]
+  pipeline_steps ModelPipelineStep[]
+}
+
+model ModelCompositeMember {
+  id              String   @id @default(uuid())
+  composite_id    String
+  member_model_id String
+  weight          Int      @default(1)
+  position        Int      @default(0)
+  composite       ModelComposite @relation(fields: [composite_id], references: [id], onDelete: Cascade)
+  member          Model          @relation("CompositeMembers", fields: [member_model_id], references: [id], onDelete: Cascade)
+
+  @@unique([composite_id, member_model_id])
+  @@index([composite_id, position])
+}
+
+model ModelPipelineStep {
+  id            String   @id @default(uuid())
+  composite_id  String
+  member_model_id String
+  position      Int      @default(0)
+  prompt_template String? @db.Text
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  composite     ModelComposite @relation(fields: [composite_id], references: [id], onDelete: Cascade)
+  member        Model @relation("PipelineMembers", fields: [member_model_id], references: [id], onDelete: Cascade)
+
+  @@unique([composite_id, member_model_id])
+  @@index([composite_id, position])
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+  updated_at DateTime @updatedAt
+}
+
+model AdminDashboard {
+  id        String   @id @default(uuid())
+  user_id   String   @unique
+  layout    Json     // Array of widget configs { id, type, x, y, w, h }
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid())
+  admin_id  String
+  action    String
+  target    String?
+  metadata  Json?
+  created_at DateTime @default(now())
+  admin     User     @relation("AdminAuditLogs", fields: [admin_id], references: [id], onDelete: Cascade)
+}
+
+model AdminAccessRequest {
+  id             String             @id @default(uuid())
+  requester_id   String
+  permission_key String
+  path           String?
+  method         String?
+  reason         String?
+  status         AccessRequestStatus @default(PENDING)
+  reviewed_by    String?
+  reviewed_at    DateTime?
+  created_at     DateTime           @default(now())
+  requester      User               @relation("AccessRequestRequester", fields: [requester_id], references: [id], onDelete: Cascade)
+  reviewer       User?              @relation("AccessRequestReviewer", fields: [reviewed_by], references: [id], onDelete: SetNull)
+
+  @@index([status, created_at])
+  @@index([permission_key])
+}
+
+model RbacRole {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  permissions RbacRolePermission[]
+  user_roles  RbacUserRole[]
+  group_roles RbacGroupRole[]
+}
+
+model RbacPermission {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  role_permissions RbacRolePermission[]
+  user_overrides  RbacUserPermissionOverride[]
+}
+
+model RbacRolePermission {
+  id            String   @id @default(uuid())
+  role_id       String
+  permission_id String
+  effect        PermissionEffect
+  role          RbacRole       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission    RbacPermission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@unique([role_id, permission_id])
+}
+
+model RbacGroup {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  roles       RbacGroupRole[]
+  users       RbacUserGroup[]
+}
+
+model RbacGroupRole {
+  id       String @id @default(uuid())
+  group_id String
+  role_id  String
+  group    RbacGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  role     RbacRole  @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([group_id, role_id])
+}
+
+model RbacUserRole {
+  id      String @id @default(uuid())
+  user_id String
+  role_id String
+  user    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role    RbacRole @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, role_id])
+}
+
+model RbacUserGroup {
+  id       String @id @default(uuid())
+  user_id  String
+  group_id String
+  user     User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  group    RbacGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, group_id])
+}
+
+model RbacUserPermissionOverride {
+  id            String @id @default(uuid())
+  user_id       String
+  permission_id String
+  effect        PermissionEffect
+  user          User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  permission    RbacPermission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, permission_id])
+}
+
+model ContentBlock {
+  key       String   @id // e.g. "investor_hero_title"
+  value     String   @db.Text
+  updated_at DateTime @updatedAt
+  updated_by String?
+}
+
+model GameDefinition {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  name              String
+  description_short String?
+  description_long  String?
+  status            GameStatus @default(DRAFT)
+  capabilities      String[] @default([])
+  roles             String[] @default([])
+  max_players       Int?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  settings          GameSetting[]
+  ui_schema         GameUISchema?
+  releases          GameRelease[]
+  revisions         GameRevision[]
+  engine_artifacts  GameEngineArtifact[]
+  dry_runs          GameDryRun[]
+}
+
+model GameSetting {
+  id            String   @id @default(uuid())
+  game_id       String
+  key           String
+  type          GameSettingType
+  min_value     Json?
+  max_value     Json?
+  default_value Json?
+  enum_options  String[] @default([])
+  tier_required SubscriptionTier @default(FREE)
+  help_text     String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  game          GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+
+  @@unique([game_id, key])
+}
+
+model GameUISchema {
+  id                 String   @id @default(uuid())
+  game_id            String   @unique
+  create_form_layout Json?
+  summary_template   Json?
+  labels             Json?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  game               GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+}
+
+model GameRelease {
+  id          String   @id @default(uuid())
+  game_id     String
+  status      GameStatus @default(DRAFT)
+  publish_at  DateTime?
+  published_by String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  game        GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+}
+
+model GameRevision {
+  id         String   @id @default(uuid())
+  game_id    String
+  revision   Int
+  snapshot   Json
+  created_by String?
+  created_at DateTime @default(now())
+
+  game       GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+
+  @@unique([game_id, revision])
+}
+
+model GameEngineArtifact {
+  id         String   @id @default(uuid())
+  game_id    String
+  status     GameEngineArtifactStatus @default(DRAFT)
+  spec       Json
+  code_ts    String   @db.Text
+  tests_ts   String?  @db.Text
+  notes      String?  @db.Text
+  created_by String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  game       GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+}
+
+model SubscriptionEntitlement {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  description String?
+  value_type  EntitlementValueType @default(BOOL)
+  default_value Json?
+  validation_schema Json?
+  category_id String?
+  usage_limit Int?
+  usage_unit  String?
+  usage_period String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  tiers       SubscriptionTierEntitlement[]
+  plans       SubscriptionPlanEntitlement[]
+  category    SubscriptionEntitlementCategory? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  dependencies SubscriptionEntitlementDependency[] @relation("EntitlementDeps")
+  dependents   SubscriptionEntitlementDependency[] @relation("EntitlementDependents")
+  overrides   EntitlementOverride[]
+  audit_logs  EntitlementAuditLog[]
+  usage_counters UsageCounter[]
+}
+
+model SubscriptionTierEntitlement {
+  id             String   @id @default(uuid())
+  entitlement_id String
+  tier           SubscriptionTier
+  enabled        Boolean  @default(false)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  entitlement    SubscriptionEntitlement @relation(fields: [entitlement_id], references: [id], onDelete: Cascade)
+
+  @@unique([entitlement_id, tier])
+}
+
+model SubscriptionPlan {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  name              String
+  description_short String
+  description_long  String
+  price_cents       Int?
+  currency          String?  @default("USD")
+  interval          String?  @default("month")
+  level             Int      @default(1)
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  entitlements      SubscriptionPlanEntitlement[]
+  users             User[]
+  organizations     Organization[]
+}
+
+model SubscriptionPlanEntitlement {
+  id             String   @id @default(uuid())
+  plan_id        String
+  entitlement_id String
+  enabled        Boolean  @default(false)
+  value          Json?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  plan           SubscriptionPlan @relation(fields: [plan_id], references: [id], onDelete: Cascade)
+  entitlement    SubscriptionEntitlement @relation(fields: [entitlement_id], references: [id], onDelete: Cascade)
+
+  @@unique([plan_id, entitlement_id])
+}
+
+model SubscriptionEntitlementCategory {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  entitlements SubscriptionEntitlement[]
+}
+
+model SubscriptionEntitlementDependency {
+  id               String @id @default(uuid())
+  entitlement_id   String
+  depends_on_id    String
+
+  entitlement      SubscriptionEntitlement @relation("EntitlementDeps", fields: [entitlement_id], references: [id], onDelete: Cascade)
+  depends_on       SubscriptionEntitlement @relation("EntitlementDependents", fields: [depends_on_id], references: [id], onDelete: Cascade)
+
+  @@unique([entitlement_id, depends_on_id])
+}
+
+model EntitlementOverride {
+  id             String   @id @default(uuid())
+  target_type    EntitlementOverrideTarget
+  target_id      String
+  entitlement_key String
+  enabled        Boolean  @default(true)
+  value          Json?
+  starts_at      DateTime?
+  ends_at        DateTime?
+  created_by     String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  entitlement    SubscriptionEntitlement @relation(fields: [entitlement_key], references: [key], onDelete: Cascade)
+  creator        User? @relation("EntitlementOverrideCreator", fields: [created_by], references: [id], onDelete: SetNull)
+
+  @@index([target_type, target_id])
+  @@index([entitlement_key])
+}
+
+model EntitlementAuditLog {
+  id             String   @id @default(uuid())
+  actor_user_id  String
+  target_type    EntitlementOverrideTarget
+  target_id      String
+  entitlement_key String
+  action         EntitlementAuditAction
+  before_value   Json?
+  after_value    Json?
+  before_enabled Boolean?
+  after_enabled  Boolean?
+  created_at     DateTime @default(now())
+
+  actor          User @relation("EntitlementAuditActor", fields: [actor_user_id], references: [id], onDelete: Cascade)
+  entitlement    SubscriptionEntitlement @relation(fields: [entitlement_key], references: [key], onDelete: Cascade)
+
+  @@index([entitlement_key, created_at])
+}
+
+model UsageCounter {
+  id              String   @id @default(uuid())
+  scope_type      UsageScopeType
+  scope_id        String
+  entitlement_key String
+  window_start    DateTime
+  count           Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  entitlement    SubscriptionEntitlement @relation(fields: [entitlement_key], references: [key], onDelete: Cascade)
+
+  @@unique([scope_type, scope_id, entitlement_key, window_start])
+  @@index([entitlement_key, window_start])
 }

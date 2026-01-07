@@ -4,29 +4,102 @@
             <h1 class="text-3xl font-bold mb-2">Registered Models</h1>
             <p class="text-secondary">Library of AI agents available for evaluation.</p>
         </div>
+
+        <!-- Search & Filter Toolbar -->
+        <div class="bg-surface p-4 rounded-lg border border-border shadow-sm mb-8">
+            <form action="/models" method="GET" class="flex flex-col md:flex-row gap-4">
+                
+                <!-- Search Input -->
+                <div class="flex-1 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input type="text" name="q" value="<%= query.search || '' %>" 
+                           class="input-field pl-10" 
+                           placeholder="Search models by name or ID...">
+                </div>
+
+                <!-- Provider Filter -->
+                <div class="md:w-64">
+                    <select name="provider" class="input-field cursor-pointer" onchange="this.form.submit()">
+                        <option value="">All Providers</option>
+                        <% allProviders.forEach(p => { %>
+                            <option value="<%= p %>" <%= query.provider === p ? 'selected' : '' %>>
+                                <%= p.charAt(0).toUpperCase() + p.slice(1) %>
+                            </option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <!-- Reset Button -->
+                <% if (query.search || query.provider) { %>
+                    <a href="/models" class="btn btn-secondary flex items-center justify-center">
+                        Reset
+                    </a>
+                <% } %>
+            </form>
+        </div>
         
+        <!-- Stats / Count -->
+        <div class="mb-4 text-sm text-secondary font-medium">
+            Showing <%= models.length %> model<%= models.length === 1 ? '' : 's' %>
+        </div>
+
+        <!-- Grid -->
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <% models.forEach(model => { %>
-                <div class="card hover:shadow-md transition-shadow">
-                    <div class="card-header pb-2">
-                        <div class="flex justify-between items-start">
-                            <h3 class="text-lg font-bold"><%= model.name %></h3>
-                            <span class="badge badge-neutral"><%= model.api_provider %></span>
+                <div class="card hover:shadow-md transition-all duration-200 group">
+                    <div class="card-header pb-3 bg-white border-b-0">
+                        <div class="flex justify-between items-start gap-2">
+                            <h3 class="text-lg font-bold text-primary group-hover:text-accent transition-colors truncate" title="<%= model.name %>">
+                                <%= model.name %>
+                            </h3>
+                            <span class="badge 
+                                <%= model.api_provider === 'openai' ? 'bg-green-100 text-green-800' : 
+                                   model.api_provider === 'anthropic' ? 'bg-purple-100 text-purple-800' : 
+                                   model.api_provider === 'google' ? 'bg-blue-100 text-blue-800' : 
+                                   model.api_provider === 'xai' ? 'bg-gray-800 text-white' : 
+                                   'badge-neutral' %> uppercase text-[10px] tracking-wider">
+                                <%= model.api_provider %>
+                            </span>
+                        </div>
+                        <div class="text-xs font-mono text-gray-400 mt-1 truncate" title="<%= model.api_model_id %>">
+                            <%= model.api_model_id %>
                         </div>
                     </div>
-                    <div class="card-body py-4">
-                        <p class="text-secondary text-sm line-clamp-3 mb-4 min-h-[3rem]">
+                    
+                    <div class="px-6 py-2 flex-grow">
+                        <p class="text-secondary text-sm line-clamp-2 h-10">
                             <%= model.description || 'No description provided.' %>
                         </p>
-                        <div class="text-xs text-secondary font-mono bg-gray-50 p-2 rounded truncate">
-                            ID: <%= model.api_model_id %>
-                        </div>
                     </div>
-                    <div class="card-footer pt-3 bg-transparent border-t-0">
-                        <a href="/models/<%= model.id %>" class="text-sm font-medium text-accent hover:underline">View Details &rarr;</a>
+
+                    <div class="card-footer pt-3 bg-gray-50/50 flex justify-between items-center border-t">
+                        <span class="text-xs text-gray-400" title="<%= new Date(model.created_at).toLocaleString() %>">
+                            Added <%= new Date(model.created_at).toLocaleDateString() %>
+                        </span>
+                        <a href="/models/<%= model.id %>" class="text-sm font-medium text-accent hover:text-accent/80 hover:underline flex items-center">
+                            Details <span class="ml-1 transition-transform group-hover:translate-x-1">&rarr;</span>
+                        </a>
                     </div>
                 </div>
             <% }) %>
         </div>
+
+        <!-- Empty State -->
+        <% if (models.length === 0) { %>
+            <div class="text-center py-20 bg-slate-50 rounded-lg border border-dashed border-border">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No models found</h3>
+                <p class="mt-1 text-sm text-gray-500">Try adjusting your search or filters.</p>
+                <div class="mt-6">
+                    <a href="/models" class="btn btn-secondary btn-sm">Clear Filters</a>
+                </div>
+            </div>
+        <% } %>
     </div>
 <%- include('../partials/footer_layout') %>

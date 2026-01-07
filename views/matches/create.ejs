@@ -1,39 +1,734 @@
 <%- include('../partials/header_layout') %>
     <div class="container py-12">
-        <div class="max-w-xl mx-auto">
-            <div class="mb-8">
-                <a href="/matches" class="text-sm text-secondary hover:text-primary mb-2 inline-block">&larr; Back to Matches</a>
-                <h1 class="text-3xl font-bold">Create New Match</h1>
-                <p class="text-secondary">Configure a new evaluation run.</p>
+        <div class="mb-8">
+            <a href="/matches" class="text-sm text-secondary hover:text-primary mb-2 inline-block">&larr; Back to Matches</a>
+            <h1 class="text-3xl font-bold">Create New Match</h1>
+            <p class="text-secondary">Configure a new evaluation run.</p>
+        </div>
+        
+        <div class="grid lg:grid-cols-3 gap-8" x-data="matchForm()" x-init="init()">
+            <!-- Left: Configuration Form -->
+            <div class="lg:col-span-2">
+                <div class="card">
+                    <div class="card-body">
+                        <form action="/matches" method="POST" class="space-y-6">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            
+                            <!-- Game Selector -->
+                            <div class="mb-6">
+                                <label class="input-label">Game Type</label>
+                                                            <select name="gameType" x-model="game" @change="fetchModels()" class="input-field">
+                                                                <option value="iterated-negotiation">Iterated Negotiation</option>
+                                                                <% const gameKeys = Object.keys(gameCatalog || {}).sort(); %>
+                                                                <% gameKeys.forEach(key => { %>
+                                                                    <option value="<%= key %>"><%= gameCatalog[key].name || key %></option>
+                                                                <% }) %>
+                                                            </select>                                
+                                <!-- Game Descriptions -->
+                                <p class="text-xs text-secondary mt-1" x-show="game === 'chess'">
+                                    Standard Chess. White vs Black. Moves must be UCI (e.g., e2e4).
+                                </p>
+                                <p class="text-xs text-secondary mt-1" x-show="game === 'chutes_and_ladders'">
+                                    Single Player vs Environment. Dice rolls determine movement. First to 100 wins.
+                                </p>
+                            <p class="text-xs text-secondary mt-1" x-show="game === 'texas_holdem'">
+                                No Limit Hold'em. Fixed stack (1000). Blind structure 5/10.
+                            </p>
+                            <p class="text-xs text-secondary mt-1" x-show="game === 'blackjack'">
+                                N-Player Blackjack against Dealer. Tune stack, bet size, dealer rules, and advanced options.
+                            </p>
+                        </div>
+
+                        <!-- Player Count (Poker & Blackjack) -->
+                        <div class="mb-6" x-show="game === 'texas_holdem' || game === 'blackjack'">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="input-label">Number of Players</label>
+                                    <select name="playerCount" x-model.number="playerCount" class="input-field">
+                                        <option value="1" x-show="game === 'blackjack'">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                        <option value="6">6 (Max)</option>
+                                    </select>
+                                </div>
+                                <div x-show="game === 'texas_holdem'">
+                                    <label class="input-label">Initial Dealer Button</label>
+                                    <select name="dealerSeat" class="input-field">
+                                        <option value="random">Random</option>
+                                        <template x-for="i in playerCount" :key="i">
+                                            <option :value="i" x-text="`Seat ${i}`"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Game Configuration (Schema-driven) -->
+                        <div class="mb-6" x-show="gameFields.length">
+                            <div class="rounded border border-border p-4 bg-white">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-xs font-bold uppercase tracking-wider text-secondary">Game Configuration</h3>
+                                    <div class="text-[11px] text-slate-400">Driven by game schema</div>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <template x-for="field in gameFields" :key="field.key">
+                                        <div>
+                                            <label class="input-label flex items-center gap-2">
+                                                <span x-text="field.label"></span>
+                                                <span class="text-[10px] uppercase tracking-widest text-slate-400" x-show="field.tierLabel" x-text="field.tierLabel"></span>
+                                            </label>
+                                            <template x-if="field.input === 'toggle'">
+                                                <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                                    <input type="checkbox" class="rounded border-gray-300" x-model="configValues[field.key]" :disabled="field.locked">
+                                                    <span x-text="field.help"></span>
+                                                </label>
+                                            </template>
+                                            <template x-if="field.input === 'select'">
+                                                <select class="input-field" x-model="configValues[field.key]" :disabled="field.locked">
+                                                    <template x-for="opt in field.options" :key="opt">
+                                                        <option :value="opt" x-text="opt"></option>
+                                                    </template>
+                                                </select>
+                                            </template>
+                                            <template x-if="field.input === 'number'">
+                                                <input type="number" class="input-field" x-model.number="configValues[field.key]" :min="field.min" :max="field.max" :disabled="field.locked">
+                                            </template>
+                                            <template x-if="field.input === 'text'">
+                                                <input type="text" class="input-field" x-model="configValues[field.key]" :disabled="field.locked">
+                                            </template>
+                                            <div class="text-[11px] text-slate-400 mt-1" x-show="field.locked">Upgrade tier to edit.</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Blackjack Settings -->
+                        <div class="mb-6" x-show="game === 'blackjack'">
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="input-label">Starting Stack</label>
+                                    <input type="number" min="1" step="1" name="blackjack_starting_stack" value="1000" class="input-field" x-model.number="blackjackStartingStack">
+                                    <p class="text-xs text-secondary mt-1">Per-player chips at table start.</p>
+                                </div>
+                                <div>
+                                    <label class="input-label">Fixed Bet</label>
+                                    <input type="number" min="1" step="1" name="blackjack_fixed_bet" value="10" class="input-field" x-model.number="blackjackFixedBet">
+                                    <p class="text-xs text-secondary mt-1">Each hand uses the same wager.</p>
+                                </div>
+                                <div>
+                                    <label class="input-label">Dealer Soft 17</label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                        <input type="checkbox" name="blackjack_dealer_hits_soft_17" class="rounded border-gray-300" x-model="blackjackDealerHitsSoft17">
+                                        Dealer hits on soft 17
+                                    </label>
+                                </div>
+                                <div>
+                                    <label class="input-label">Double Down</label>
+                                    <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                        <input type="checkbox" name="blackjack_allow_double" class="rounded border-gray-300" checked x-model="blackjackAllowDouble">
+                                        Allow double on first action
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Blackjack Settings -->
+                        <div class="mb-6" x-show="game === 'blackjack'">
+                            <div class="rounded border border-dashed border-border p-4 bg-slate-50">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-xs font-bold uppercase tracking-wider text-secondary">Advanced Blackjack Settings</h3>
+                                    <% const isEnterprise = user && user.tier === 'ENTERPRISE'; %>
+                                    <span class="text-[10px] font-semibold <%= isEnterprise ? 'text-emerald-600' : 'text-slate-400' %>">
+                                        <%= isEnterprise ? 'Enterprise Enabled' : 'Enterprise Only' %>
+                                    </span>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="input-label">Ruleset Preset</label>
+                                        <select name="blackjack_preset" class="input-field" x-model="blackjackPreset" @change="applyBlackjackPreset(blackjackPreset)" :disabled="!isEnterprise">
+                                            <option value="custom">Custom</option>
+                                            <option value="vegas">Vegas 6D (H17, DAS)</option>
+                                            <option value="european">European No-Hole-Card</option>
+                                            <option value="high_limit">High Limit (S17, LS)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Deck Count</label>
+                                        <input type="number" min="1" max="8" step="1" name="blackjack_deck_count" value="6" class="input-field" x-model.number="blackjackDeckCount" :disabled="!isEnterprise">
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Blackjack Payout (x)</label>
+                                        <input type="number" min="1" max="2" step="0.1" name="blackjack_payout" value="1.5" class="input-field" x-model.number="blackjackPayout" :disabled="!isEnterprise">
+                                        <p class="text-xs text-secondary mt-1">3:2 = 1.5, 6:5 = 1.2</p>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Insurance</label>
+                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                            <input type="checkbox" name="blackjack_allow_insurance" class="rounded border-gray-300" x-model="blackjackAllowInsurance" :disabled="!isEnterprise || blackjackNoHoleCard">
+                                            Offer insurance on dealer Ace
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Surrender</label>
+                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                            <input type="checkbox" name="blackjack_allow_surrender" class="rounded border-gray-300" x-model="blackjackAllowSurrender" :disabled="!isEnterprise">
+                                            Allow late surrender
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Double Down (Any Time)</label>
+                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                            <input type="checkbox" name="blackjack_allow_double_any" class="rounded border-gray-300" x-model="blackjackAllowDoubleAny" :disabled="!isEnterprise">
+                                            Allow double after hits
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Splitting</label>
+                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                            <input type="checkbox" name="blackjack_allow_split" class="rounded border-gray-300" x-model="blackjackAllowSplit" :disabled="!isEnterprise">
+                                            Allow split pairs
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Max Hands</label>
+                                        <input type="number" min="2" max="6" step="1" name="blackjack_max_hands" value="4" class="input-field" x-model.number="blackjackMaxHands" :disabled="!isEnterprise">
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Resplit Aces</label>
+                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                            <input type="checkbox" name="blackjack_allow_resplit_aces" class="rounded border-gray-300" x-model="blackjackAllowResplitAces" :disabled="!isEnterprise">
+                                            Allow resplitting aces
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Double After Split</label>
+                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                            <input type="checkbox" name="blackjack_allow_double_after_split" class="rounded border-gray-300" x-model="blackjackAllowDoubleAfterSplit" :disabled="!isEnterprise">
+                                            Allow double after split
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Dealer Peek</label>
+                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                            <input type="checkbox" name="blackjack_dealer_peek" class="rounded border-gray-300" x-model="blackjackDealerPeek" :disabled="!isEnterprise || blackjackNoHoleCard">
+                                            Check for dealer blackjack
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">No Hole Card</label>
+                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
+                                            <input type="checkbox" name="blackjack_no_hole_card" class="rounded border-gray-300" x-model="blackjackNoHoleCard" :disabled="!isEnterprise || blackjackDealerPeek || blackjackAllowInsurance">
+                                            Dealer draws second card after players
+                                        </label>
+                                    </div>
+                                </div>
+                                <% if (!isEnterprise) { %>
+                                    <div class="mt-3 text-[11px] text-slate-500">Upgrade to Enterprise to unlock advanced rules.</div>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Player Inputs -->
+                        <template x-for="i in (game === 'texas_holdem' || game === 'blackjack' ? playerCount : (game === 'chutes_and_ladders' ? 1 : 2))" :key="i">
+                                <div class="mt-4">
+                                    <label class="input-label" x-text="getPlayerLabel(i)"></label>
+                                    <input type="text" class="input-field mb-2" placeholder="Search models..." x-model="searchTerms[i-1]">
+                                    <select :name="`model${i}Id`" class="input-field" :disabled="loading" x-model="selectedModels[i-1]">
+                                        <option value="">Select a model...</option>
+                                        <template x-for="model in filteredModels(i)" :key="model.id">
+                                            <option :value="model.id" x-text="`${model.name} (${model.api_provider})`"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </template>
+
+                            <div class="pt-6 border-t border-border mt-6">
+                                <h3 class="text-sm font-bold text-primary mb-2">Execution Settings</h3>
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded border border-border">
+                                    <div>
+                                        <div class="text-xs font-bold text-secondary uppercase tracking-wider">Account Tier</div>
+                                        <div class="text-sm font-medium text-primary"><%= user ? user.tier : 'FREE' %></div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs font-bold text-secondary uppercase tracking-wider">Rate Limit</div>
+                                        <div class="text-sm font-medium text-primary">
+                                            <%= (user && user.tier === 'PRO') ? '60 RPM' : ((user && user.tier === 'ENTERPRISE') ? 'Unlimited' : '10 RPM') %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <button type="submit" class="btn btn-primary w-full" :disabled="loading">Start Evaluation</button>
+                            </div>
+                            <input type="hidden" name="game_options" :value="JSON.stringify(configValues)">
+                        </form>
+                    </div>
+                </div>
             </div>
-            
-            <div class="card">
-                <div class="card-body">
-                    <form action="/matches" method="POST" class="space-y-6">
+
+            <!-- Right: Live Summary Panel -->
+            <div class="lg:col-span-1">
+                <div class="card sticky top-24">
+                    <div class="card-header bg-slate-50">
+                        <h3 class="font-bold text-sm text-secondary uppercase tracking-wider">Match Summary</h3>
+                    </div>
+                    <div class="card-body space-y-6">
+                        
+                        <!-- Game Info -->
                         <div>
-                            <label class="input-label">Player 1 (Model)</label>
-                            <select name="model1Id" class="input-field">
-                                <% models.forEach(model => { %>
-                                    <option value="<%= model.id %>"><%= model.name %> (<%= model.api_provider %>)</option>
-                                <% }) %>
-                            </select>
+                            <div class="text-xs text-secondary mb-1">Game Mode</div>
+                            <div class="text-lg font-bold text-primary capitalize" x-text="game.replace(/_/g, ' ').replace(/-/g, ' ')"></div>
+                            <div class="text-xs text-accent mt-1" x-show="game === 'texas_holdem'" x-text="`${playerCount} Players`"></div>
                         </div>
 
+                        <!-- Participants -->
                         <div>
-                            <label class="input-label">Player 2 (Model)</label>
-                            <select name="model2Id" class="input-field">
-                                <% models.forEach(model => { %>
-                                    <option value="<%= model.id %>"><%= model.name %> (<%= model.api_provider %>)</option>
-                                <% }) %>
-                            </select>
+                            <div class="text-xs text-secondary mb-2">Participants</div>
+                            <div class="space-y-2">
+                                <template x-for="(modelId, index) in selectedModels.slice(0, (game === 'texas_holdem' ? playerCount : (game === 'chutes_and_ladders' ? 1 : 2)))" :key="index">
+                                    <div class="flex items-center gap-2 text-sm">
+                                        <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600" x-text="index + 1"></div>
+                                        <div class="truncate font-medium text-primary" x-text="getModelName(modelId) || 'Select Model...'"></div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <div x-show="game === 'blackjack'">
+                            <div class="text-xs text-secondary mb-2">Blackjack Settings</div>
+                            <div class="space-y-2 text-sm text-secondary">
+                                <div class="flex justify-between">
+                                    <span>Players</span>
+                                    <span class="font-mono text-primary" x-text="playerCount"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Starting Stack</span>
+                                    <span class="font-mono text-primary" x-text="blackjackStartingStack"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Fixed Bet</span>
+                                    <span class="font-mono text-primary" x-text="blackjackFixedBet"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Dealer Soft 17</span>
+                                    <span class="font-mono text-primary" x-text="blackjackDealerHitsSoft17 ? 'Hit' : 'Stand'"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Double Down</span>
+                                    <span class="font-mono text-primary" x-text="blackjackAllowDouble ? 'On' : 'Off'"></span>
+                                </div>
+                                <template x-if="isEnterprise">
+                                    <div class="pt-2 border-t border-border">
+                                        <div class="flex justify-between">
+                                            <span>Preset</span>
+                                            <span class="font-mono text-primary" x-text="blackjackPresetLabel()"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Deck Count</span>
+                                            <span class="font-mono text-primary" x-text="blackjackDeckCount"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Blackjack Payout</span>
+                                            <span class="font-mono text-primary" x-text="blackjackPayout"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Insurance</span>
+                                            <span class="font-mono text-primary" x-text="blackjackAllowInsurance ? 'On' : 'Off'"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Surrender</span>
+                                            <span class="font-mono text-primary" x-text="blackjackAllowSurrender ? 'On' : 'Off'"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Split Pairs</span>
+                                            <span class="font-mono text-primary" x-text="blackjackAllowSplit ? 'On' : 'Off'"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Max Hands</span>
+                                            <span class="font-mono text-primary" x-text="blackjackMaxHands"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Resplit Aces</span>
+                                            <span class="font-mono text-primary" x-text="blackjackAllowResplitAces ? 'On' : 'Off'"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Double After Split</span>
+                                            <span class="font-mono text-primary" x-text="blackjackAllowDoubleAfterSplit ? 'On' : 'Off'"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Dealer Peek</span>
+                                            <span class="font-mono text-primary" x-text="blackjackDealerPeek ? 'On' : 'Off'"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>No Hole Card</span>
+                                            <span class="font-mono text-primary" x-text="blackjackNoHoleCard ? 'On' : 'Off'"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template x-if="blackjackWarnings().length">
+                                    <div class="pt-2 border-t border-border text-[11px] text-red-600 space-y-1">
+                                        <template x-for="warning in blackjackWarnings()" :key="warning">
+                                            <div x-text="warning"></div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template x-if="!isEnterprise">
+                                    <div class="pt-2 text-[11px] text-slate-400">Advanced settings locked to Enterprise.</div>
+                                </template>
+                            </div>
+                        </div>
+                        <div x-show="gameFields.length && game !== 'blackjack'">
+                            <div class="text-xs text-secondary mb-2">Game Settings</div>
+                            <div class="space-y-2 text-sm text-secondary">
+                                <template x-for="field in gameFields" :key="field.key">
+                                    <div class="flex justify-between">
+                                        <span x-text="field.label"></span>
+                                        <span class="font-mono text-primary" x-text="formatValue(configValues[field.key], field.input)"></span>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
 
-                        <div class="pt-2">
-                            <button type="submit" class="btn btn-primary w-full">Start Evaluation</button>
+                        <!-- Estimates -->
+                        <div class="pt-4 border-t border-border">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-secondary">Est. Duration</span>
+                                <span class="text-sm font-mono text-primary">~2m 30s</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-secondary">Cost Impact</span>
+                                <span class="badge badge-success">Low</span>
+                            </div>
                         </div>
-                    </form>
+
+                        <div class="bg-blue-50 p-3 rounded text-xs text-blue-700 leading-relaxed border border-blue-100">
+                            <strong>Note:</strong> Match will be queued immediately. Results will be available in the match history once processed by the worker.
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <script>
+        const gameDefaults = <%- JSON.stringify(gameDefaults || {}) %>;
+        const gameCatalog = <%- JSON.stringify(gameCatalog || {}) %>;
+        function matchForm() {
+            return {
+                game: 'iterated-negotiation',
+                models: [],
+                selectedModels: [], // Array to track selected IDs
+                searchTerms: [],
+                loading: false,
+                playerCount: 2,
+                isEnterprise: <%= user && user.tier === 'ENTERPRISE' ? 'true' : 'false' %>,
+                currentTier: '<%= user ? user.tier : 'FREE' %>',
+                configValues: {},
+                gameFields: [],
+                blackjackStartingStack: gameDefaults.blackjack?.settings?.starting_stack ?? 1000,
+                blackjackFixedBet: gameDefaults.blackjack?.settings?.fixed_bet ?? 10,
+                blackjackDealerHitsSoft17: gameDefaults.blackjack?.settings?.dealer_hits_soft_17 ?? false,
+                blackjackAllowDouble: gameDefaults.blackjack?.settings?.allow_double ?? true,
+                blackjackDeckCount: gameDefaults.blackjack?.settings?.deck_count ?? 6,
+                blackjackPayout: gameDefaults.blackjack?.settings?.blackjack_payout ?? 1.5,
+                blackjackAllowInsurance: gameDefaults.blackjack?.settings?.allow_insurance ?? false,
+                blackjackAllowSurrender: gameDefaults.blackjack?.settings?.allow_surrender ?? false,
+                blackjackAllowDoubleAny: gameDefaults.blackjack?.settings?.allow_double_any ?? false,
+                blackjackAllowSplit: gameDefaults.blackjack?.settings?.allow_split ?? false,
+                blackjackMaxHands: gameDefaults.blackjack?.settings?.max_hands ?? 4,
+                blackjackAllowResplitAces: gameDefaults.blackjack?.settings?.allow_resplit_aces ?? false,
+                blackjackAllowDoubleAfterSplit: gameDefaults.blackjack?.settings?.allow_double_after_split ?? false,
+                blackjackDealerPeek: gameDefaults.blackjack?.settings?.dealer_peek ?? false,
+                blackjackNoHoleCard: gameDefaults.blackjack?.settings?.no_hole_card ?? false,
+                blackjackPreset: 'custom',
+                applyingPreset: false,
+                
+                getPlayerLabel(i) {
+                    if (this.game === 'chess') return i === 1 ? 'White (Player 1)' : 'Black (Player 2)';
+                    if (this.game === 'texas_holdem' || this.game === 'blackjack') return `Seat ${i}`;
+                    if (this.game === 'chutes_and_ladders') return 'Player (Model)';
+                    return `Player ${i} (Model)`;
+                },
+
+                getModelName(id) {
+                    const m = this.models.find(m => m.id === id);
+                    return m ? m.name : null;
+                },
+                
+                tierRank(tier) {
+                    if (tier === 'ENTERPRISE') return 3;
+                    if (tier === 'PRO') return 2;
+                    return 1;
+                },
+
+                formatValue(value, input) {
+                    if (input === 'toggle') return value ? 'On' : 'Off';
+                    if (value === undefined || value === null || value === '') return '-';
+                    return value;
+                },
+
+                loadGameConfig(gameKey) {
+                    const game = gameCatalog[gameKey];
+                    if (!game) {
+                        this.gameFields = [];
+                        this.configValues = {};
+                        return;
+                    }
+                    const settings = game.settings || [];
+                    const settingsMap = settings.reduce((map, s) => {
+                        map[s.key] = s;
+                        return map;
+                    }, {});
+
+                    let layout = [];
+                    if (game.ui_schema && Array.isArray(game.ui_schema.create_form_layout)) {
+                        layout = game.ui_schema.create_form_layout;
+                    } else {
+                        layout = settings.map(s => ({ key: s.key, label: s.key, type: s.type }));
+                    }
+
+                    const fields = layout.map(item => {
+                        const key = item.key || '';
+                        const setting = settingsMap[key] || {};
+                        const settingType = setting.type || item.type || 'TEXT';
+                        const input = settingType === 'BOOLEAN' || item.type === 'toggle' ? 'toggle'
+                            : settingType === 'ENUM' ? 'select'
+                            : (settingType === 'INT' || settingType === 'FLOAT' || item.type === 'number') ? 'number'
+                            : 'text';
+                        const requiredTier = item.tier || setting.tier_required || 'FREE';
+                        const locked = this.tierRank(this.currentTier) < this.tierRank(requiredTier);
+                        return {
+                            key,
+                            label: item.label || key,
+                            input,
+                            min: setting.min_value ?? null,
+                            max: setting.max_value ?? null,
+                            options: setting.enum_options || [],
+                            help: setting.help_text || '',
+                            tierLabel: requiredTier !== 'FREE' ? requiredTier : '',
+                            locked
+                        };
+                    }).filter(f => f.key);
+
+                    this.gameFields = fields;
+                    const defaults = gameDefaults[gameKey]?.settings || {};
+                    const values = {};
+                    fields.forEach(field => {
+                        const initial = defaults[field.key] !== undefined ? defaults[field.key] : '';
+                        values[field.key] = initial;
+                    });
+                    this.configValues = values;
+                    if (gameKey === 'blackjack') {
+                        this.syncBlackjackConfig();
+                    }
+                },
+
+                async init() {
+                    await this.fetchModels();
+                    // Initialize array size
+                    this.selectedModels = new Array(6).fill(''); 
+                    this.searchTerms = new Array(6).fill('');
+                    this.loadGameConfig(this.game);
+
+                    this.$watch('game', (value) => {
+                        this.applyGameDefaults(value);
+                        this.loadGameConfig(value);
+                    });
+
+                    this.$watch('blackjackNoHoleCard', (value) => {
+                        if (!this.isEnterprise) return;
+                        if (value) {
+                            this.blackjackDealerPeek = false;
+                            this.blackjackAllowInsurance = false;
+                        }
+                    });
+                    this.$watch('blackjackDealerPeek', (value) => {
+                        if (!this.isEnterprise) return;
+                        if (value) {
+                            this.blackjackNoHoleCard = false;
+                        }
+                    });
+                    this.$watch('blackjackAllowInsurance', (value) => {
+                        if (!this.isEnterprise) return;
+                        if (value) {
+                            this.blackjackNoHoleCard = false;
+                        }
+                    });
+                    const markCustom = () => {
+                        if (this.applyingPreset) return;
+                        this.blackjackPreset = 'custom';
+                    };
+                    [
+                        'blackjackDeckCount',
+                        'blackjackPayout',
+                        'blackjackAllowInsurance',
+                        'blackjackAllowSurrender',
+                        'blackjackAllowDoubleAny',
+                        'blackjackAllowSplit',
+                        'blackjackMaxHands',
+                        'blackjackAllowResplitAces',
+                        'blackjackAllowDoubleAfterSplit',
+                        'blackjackDealerPeek',
+                        'blackjackNoHoleCard',
+                        'blackjackDealerHitsSoft17',
+                        'blackjackAllowDouble',
+                        'blackjackStartingStack',
+                        'blackjackFixedBet'
+                    ].forEach(key => this.$watch(key, () => {
+                        markCustom();
+                        if (this.game === 'blackjack') this.syncBlackjackConfig();
+                    }));
+                },
+
+                syncBlackjackConfig() {
+                    this.configValues.starting_stack = this.blackjackStartingStack;
+                    this.configValues.fixed_bet = this.blackjackFixedBet;
+                    this.configValues.dealer_hits_soft_17 = this.blackjackDealerHitsSoft17;
+                    this.configValues.allow_double = this.blackjackAllowDouble;
+                    this.configValues.deck_count = this.blackjackDeckCount;
+                    this.configValues.blackjack_payout = this.blackjackPayout;
+                    this.configValues.allow_insurance = this.blackjackAllowInsurance;
+                    this.configValues.allow_surrender = this.blackjackAllowSurrender;
+                    this.configValues.allow_double_any = this.blackjackAllowDoubleAny;
+                    this.configValues.allow_split = this.blackjackAllowSplit;
+                    this.configValues.max_hands = this.blackjackMaxHands;
+                    this.configValues.allow_resplit_aces = this.blackjackAllowResplitAces;
+                    this.configValues.allow_double_after_split = this.blackjackAllowDoubleAfterSplit;
+                    this.configValues.dealer_peek = this.blackjackDealerPeek;
+                    this.configValues.no_hole_card = this.blackjackNoHoleCard;
+                },
+                
+                applyGameDefaults(gameKey) {
+                    const defaults = gameDefaults[gameKey]?.settings || {};
+                    if (gameKey === 'texas_holdem') {
+                        const maxPlayers = defaults.max_players ?? 2;
+                        this.playerCount = Math.min(6, Math.max(2, parseInt(maxPlayers, 10)));
+                    }
+                    if (gameKey === 'blackjack') {
+                        this.playerCount = Math.min(6, Math.max(1, this.playerCount || 1));
+                        this.blackjackStartingStack = defaults.starting_stack ?? this.blackjackStartingStack;
+                        this.blackjackFixedBet = defaults.fixed_bet ?? this.blackjackFixedBet;
+                        this.blackjackDealerHitsSoft17 = defaults.dealer_hits_soft_17 ?? this.blackjackDealerHitsSoft17;
+                        this.blackjackAllowDouble = defaults.allow_double ?? this.blackjackAllowDouble;
+                        this.blackjackDeckCount = defaults.deck_count ?? this.blackjackDeckCount;
+                        this.blackjackPayout = defaults.blackjack_payout ?? this.blackjackPayout;
+                        this.blackjackAllowInsurance = defaults.allow_insurance ?? this.blackjackAllowInsurance;
+                        this.blackjackAllowSurrender = defaults.allow_surrender ?? this.blackjackAllowSurrender;
+                        this.blackjackAllowDoubleAny = defaults.allow_double_any ?? this.blackjackAllowDoubleAny;
+                        this.blackjackAllowSplit = defaults.allow_split ?? this.blackjackAllowSplit;
+                        this.blackjackMaxHands = defaults.max_hands ?? this.blackjackMaxHands;
+                        this.blackjackAllowResplitAces = defaults.allow_resplit_aces ?? this.blackjackAllowResplitAces;
+                        this.blackjackAllowDoubleAfterSplit = defaults.allow_double_after_split ?? this.blackjackAllowDoubleAfterSplit;
+                        this.blackjackDealerPeek = defaults.dealer_peek ?? this.blackjackDealerPeek;
+                        this.blackjackNoHoleCard = defaults.no_hole_card ?? this.blackjackNoHoleCard;
+                        this.blackjackPreset = 'custom';
+                        this.syncBlackjackConfig();
+                    }
+                },
+
+                async fetchModels() {
+                    this.loading = true;
+                    try {
+                        const res = await fetch(`/api/models?capability=${this.game}`);
+                        this.models = await res.json();
+                        // Reset selections when game changes? Or keep if possible?
+                        // Reset is safer.
+                        this.selectedModels = new Array(6).fill('');
+                        this.searchTerms = new Array(6).fill('');
+                    } catch (e) {
+                        console.error("Failed to fetch models", e);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                filteredModels(i) {
+                    const term = (this.searchTerms[i - 1] || '').toLowerCase().trim();
+                    if (!term) return this.models;
+                    return this.models.filter(m => {
+                        const hay = `${m.name} ${m.api_provider} ${m.api_model_id || ''}`.toLowerCase();
+                        return hay.includes(term);
+                    });
+                },
+
+                applyBlackjackPreset(preset) {
+                    if (!this.isEnterprise) return;
+                    this.applyingPreset = true;
+                    if (preset === 'vegas') {
+                        this.blackjackDeckCount = 6;
+                        this.blackjackPayout = 1.5;
+                        this.blackjackDealerHitsSoft17 = true;
+                        this.blackjackAllowDouble = true;
+                        this.blackjackAllowDoubleAny = false;
+                        this.blackjackAllowInsurance = true;
+                        this.blackjackAllowSurrender = false;
+                        this.blackjackAllowSplit = true;
+                        this.blackjackMaxHands = 4;
+                        this.blackjackAllowResplitAces = false;
+                        this.blackjackAllowDoubleAfterSplit = true;
+                        this.blackjackDealerPeek = true;
+                        this.blackjackNoHoleCard = false;
+                    } else if (preset === 'european') {
+                        this.blackjackDeckCount = 6;
+                        this.blackjackPayout = 1.5;
+                        this.blackjackDealerHitsSoft17 = false;
+                        this.blackjackAllowDouble = true;
+                        this.blackjackAllowDoubleAny = false;
+                        this.blackjackAllowInsurance = false;
+                        this.blackjackAllowSurrender = false;
+                        this.blackjackAllowSplit = true;
+                        this.blackjackMaxHands = 4;
+                        this.blackjackAllowResplitAces = false;
+                        this.blackjackAllowDoubleAfterSplit = false;
+                        this.blackjackDealerPeek = false;
+                        this.blackjackNoHoleCard = true;
+                    } else if (preset === 'high_limit') {
+                        this.blackjackDeckCount = 2;
+                        this.blackjackPayout = 1.5;
+                        this.blackjackDealerHitsSoft17 = false;
+                        this.blackjackAllowDouble = true;
+                        this.blackjackAllowDoubleAny = true;
+                        this.blackjackAllowInsurance = true;
+                        this.blackjackAllowSurrender = true;
+                        this.blackjackAllowSplit = true;
+                        this.blackjackMaxHands = 6;
+                        this.blackjackAllowResplitAces = true;
+                        this.blackjackAllowDoubleAfterSplit = true;
+                        this.blackjackDealerPeek = true;
+                        this.blackjackNoHoleCard = false;
+                    }
+                    this.blackjackPreset = preset;
+                    this.applyingPreset = false;
+                },
+
+                blackjackPresetLabel() {
+                    if (this.blackjackPreset === 'vegas') return 'Vegas 6D';
+                    if (this.blackjackPreset === 'european') return 'European';
+                    if (this.blackjackPreset === 'high_limit') return 'High Limit';
+                    return 'Custom';
+                },
+
+                blackjackWarnings() {
+                    const warnings = [];
+                    if (this.blackjackFixedBet > this.blackjackStartingStack) {
+                        warnings.push('Fixed bet exceeds starting stack.');
+                    }
+                    if (this.blackjackNoHoleCard && (this.blackjackDealerPeek || this.blackjackAllowInsurance)) {
+                        warnings.push('No-hole-card disables dealer peek and insurance.');
+                    }
+                    if (this.blackjackAllowSplit && this.blackjackMaxHands < 2) {
+                        warnings.push('Max hands must be at least 2 when splitting.');
+                    }
+                    if (this.blackjackPayout < 1.2) {
+                        warnings.push('Blackjack payout is below 6:5.');
+                    }
+                    return warnings;
+                }
+            }
+        }
+    </script>
 <%- include('../partials/footer_layout') %>

@@ -1,0 +1,45 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Content Management</h1>
+        <p class="mt-1 text-sm text-gray-500">Edit text blocks for public-facing pages.</p>
+    </div>
+
+    <div class="space-y-8" x-data="{ activeTab: '<%= Object.keys(groups)[0] %>' }">
+        
+        <!-- Tabs -->
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8 overflow-x-auto">
+                <% Object.keys(groups).forEach(group => { %>
+                    <button @click="activeTab = '<%= group %>'" 
+                            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                            :class="activeTab === '<%= group %>' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'">
+                        <%= group %>
+                    </button>
+                <% }) %>
+            </nav>
+        </div>
+
+        <!-- Content Forms -->
+        <% Object.keys(groups).forEach(group => { %>
+            <div x-show="activeTab === '<%= group %>'" class="grid lg:grid-cols-2 gap-6">
+                <% groups[group].forEach(key => { %>
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-all hover:shadow-md">
+                        <form action="/admin/content/update" method="POST">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="key" value="<%= key %>">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-xs font-bold text-gray-500 uppercase tracking-wider" title="<%= key %>">
+                                    <%= key.split(':').pop().replace(/_/g, ' ') %>
+                                </label>
+                                <% if (typeof can === 'function' && can('admin.content.edit')) { %>
+                                    <button class="text-indigo-600 hover:text-indigo-800 text-xs font-medium px-2 py-1 rounded hover:bg-indigo-50 transition-colors">Save</button>
+                                <% } %>
+                            </div>
+                            <textarea name="value" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-gray-800 resize-y" <%= typeof can === 'function' && can('admin.content.edit') ? '' : 'readonly' %>><%= content[key] %></textarea>
+                        </form>
+                    </div>
+                <% }) %>
+            </div>
+        <% }) %>
+    </div>
+<%- include('../../partials/admin_footer') %>

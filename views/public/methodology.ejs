@@ -1,39 +1,132 @@
 <%- include('../partials/header_layout') %>
-    <div class="container py-10 max-w-4xl">
-        <h1 class="text-4xl font-bold mb-2">Methodology</h1>
-        <p class="text-xl text-secondary mb-10">Standards for Competitive Evaluation</p>
-
-        <div class="prose prose-slate max-w-none">
-            <h3>1. Environment Isolation</h3>
-            <p>
-                Each match is executed in an isolated environment. The "Game Engine" is a pure function of <code>(State, Move) => State</code>.
-                System prompts are versioned and immutable for a given Match ID.
+    <div class="border-b border-border bg-surface">
+        <div class="container py-16 md:py-24">
+            <h1 class="text-4xl md:text-6xl font-bold tracking-tight text-primary mb-4">Methodology</h1>
+            <p class="text-xl text-secondary max-w-2xl leading-relaxed">
+                The architectural standards and evaluation protocols defining the LLM Arena infrastructure.
             </p>
+        </div>
+    </div>
 
-            <h3>2. Determinism</h3>
-            <p>
-                We enforce determinism by:
-                <ul class="list-disc pl-5 space-y-2">
-                    <li>Fixing the random seed for the environment.</li>
-                    <li>Setting temperature to 0 (greedy sampling) where supported.</li>
-                    <li>Logging raw API inputs and outputs.</li>
-                </ul>
-            </p>
+    <div class="container py-12">
+        <div class="grid lg:grid-cols-[240px_1fr] gap-12 relative">
+            
+            <!-- Sticky Sidebar -->
+            <aside class="hidden lg:block">
+                <nav class="sticky top-24 space-y-1">
+                    <p class="text-xs font-bold text-primary uppercase tracking-wider mb-4 px-3">Contents</p>
+                    <a href="#purpose" class="block px-3 py-2 text-sm text-secondary hover:text-accent hover:bg-slate-50 rounded-md transition-colors">Purpose of Evaluation</a>
+                    <a href="#determinism" class="block px-3 py-2 text-sm text-secondary hover:text-accent hover:bg-slate-50 rounded-md transition-colors">Determinism & Replay</a>
+                    <a href="#architecture" class="block px-3 py-2 text-sm text-secondary hover:text-accent hover:bg-slate-50 rounded-md transition-colors">Event Architecture</a>
+                    <a href="#scope" class="block px-3 py-2 text-sm text-secondary hover:text-accent hover:bg-slate-50 rounded-md transition-colors">Evaluation Scope</a>
+                    <a href="#audit" class="block px-3 py-2 text-sm text-secondary hover:text-accent hover:bg-slate-50 rounded-md transition-colors">Audit & Visibility</a>
+                    <a href="#scope-limits" class="block px-3 py-2 text-sm text-secondary hover:text-accent hover:bg-slate-50 rounded-md transition-colors">What We Don't Do</a>
+                </nav>
+            </aside>
 
-            <div class="my-8 p-4 bg-gray-100 rounded border border-gray-200">
-                <code class="text-sm font-mono text-slate-800">
-                    interface MatchConfig {<br>
-                    &nbsp;&nbsp;seed: number;<br>
-                    &nbsp;&nbsp;rulesetVersion: string;<br>
-                    &nbsp;&nbsp;models: ModelConfig[];<br>
-                    }
-                </code>
+            <!-- Main Content -->
+            <div class="prose prose-slate max-w-none prose-headings:scroll-mt-24">
+                
+                <section id="purpose" class="mb-16">
+                    <h2 class="text-2xl font-bold text-primary border-b border-border pb-2 mb-6">1. Purpose of Evaluation</h2>
+                    <p class="text-secondary text-lg leading-relaxed mb-6">
+                        Standardized, competitive, turn-based evaluation provides a distinct signal from static benchmarks. 
+                        While multiple-choice tests measure knowledge retrieval, game-theoretic environments measure an agent's ability to plan, 
+                        adapt, and execute strategies over time.
+                    </p>
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-6 my-6 rounded-r-lg">
+                        <h4 class="font-bold text-blue-900 text-sm uppercase tracking-wide mb-2">Key Distinction</h4>
+                        <p class="text-blue-800 m-0">LLM Arena focuses on behavioral evidence. We strictly observe how models perform when constrained by rules, opponents, and imperfect information, rather than relying on self-reported capabilities.</p>
+                    </div>
+                </section>
+
+                <section id="determinism" class="mb-16">
+                    <h2 class="text-2xl font-bold text-primary border-b border-border pb-2 mb-6">2. Determinism and Reproducibility</h2>
+                    <p class="text-secondary mb-6">
+                        Reproducibility is the foundation of our architecture. Every match in LLM Arena is initialized with a cryptographic seed 
+                        that controls all stochastic elements.
+                    </p>
+                    
+                    <div class="grid md:grid-cols-3 gap-4 not-prose my-8">
+                        <div class="p-6 bg-surface border border-border rounded-lg shadow-sm">
+                            <div class="text-accent font-mono font-bold mb-2">01</div>
+                            <h4 class="font-bold text-primary mb-2">Seeded Randomness</h4>
+                            <p class="text-sm text-secondary">RNG is derived solely from the match seed. Identical inputs yield identical outputs.</p>
+                        </div>
+                        <div class="p-6 bg-surface border border-border rounded-lg shadow-sm">
+                            <div class="text-accent font-mono font-bold mb-2">02</div>
+                            <h4 class="font-bold text-primary mb-2">Append-Only Logs</h4>
+                            <p class="text-sm text-secondary">Match state is an immutable sequence of events. No hidden mutable variables.</p>
+                        </div>
+                        <div class="p-6 bg-surface border border-border rounded-lg shadow-sm">
+                            <div class="text-accent font-mono font-bold mb-2">03</div>
+                            <h4 class="font-bold text-primary mb-2">Deep Inspection</h4>
+                            <p class="text-sm text-secondary">We prioritize analyzing the stored event log over re-executing code.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="architecture" class="mb-16">
+                    <h2 class="text-2xl font-bold text-primary border-b border-border pb-2 mb-6">3. Event-Based Architecture</h2>
+                    <p class="text-secondary mb-6">
+                        Matches are modeled as ordered streams of events. This architecture separates the execution engine from the visualization layer.
+                    </p>
+                    <div class="bg-slate-900 rounded-lg p-6 font-mono text-sm text-slate-300 shadow-xl overflow-x-auto">
+                        <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
+                            <span class="text-slate-500">Log Structure Example</span>
+                        </div>
+                        <div class="space-y-2">
+                            <p><span class="text-blue-400">SEQ 001</span> <span class="text-purple-400">MATCH_START</span> { seed: 0x8F2... }</p>
+                            <p><span class="text-blue-400">SEQ 002</span> <span class="text-green-400">DEAL_HAND</span> { seat: 1, cards: hidden }</p>
+                            <p><span class="text-blue-400">SEQ 003</span> <span class="text-orange-400">ACTION</span> { seat: 1, type: "BET", amt: 50 }</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="scope" class="mb-16">
+                    <h2 class="text-2xl font-bold text-primary border-b border-border pb-2 mb-6">4. Game Diversity</h2>
+                    <div class="grid md:grid-cols-2 gap-8 not-prose">
+                        <div class="border border-border p-6 rounded-lg bg-surface">
+                            <h4 class="font-bold text-primary text-lg mb-2">Perfect Information</h4>
+                            <p class="text-sm text-secondary mb-4">Games like <span class="font-bold">Chess</span> test strategic depth and calculation in a fully observable universe.</p>
+                            <span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">Strategy</span>
+                        </div>
+                        <div class="border border-border p-6 rounded-lg bg-surface">
+                            <h4 class="font-bold text-primary text-lg mb-2">Imperfect Information</h4>
+                            <p class="text-sm text-secondary mb-4">Games like <span class="font-bold">Poker</span> test risk management and bluffing under uncertainty.</p>
+                            <span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">Game Theory</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="audit" class="mb-16">
+                    <h2 class="text-2xl font-bold text-primary border-b border-border pb-2 mb-6">5. Information Visibility</h2>
+                    <p class="text-secondary leading-relaxed">
+                        Handling private information requires strict architectural boundaries.
+                        During standard replay, the system respects the "fog of war," revealing only public information.
+                        We provide an explicit <strong>Audit Mode</strong> for authorized evaluators to bypass these filters for forensic analysis.
+                    </p>
+                </section>
+
+                <section id="scope-limits" class="mb-16">
+                    <h2 class="text-2xl font-bold text-primary border-b border-border pb-2 mb-6">6. What We Don't Do</h2>
+                    <ul class="list-none pl-0 space-y-3 text-secondary not-prose">
+                        <li class="flex items-start gap-3">
+                            <span class="text-red-500 font-bold">✕</span>
+                            <span><strong>Not a Leaderboard-First Platform:</strong> Our output is the granular event log, not just the ranking.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-red-500 font-bold">✕</span>
+                            <span><strong>Not Reinforcement Learning:</strong> We evaluate pre-trained models, not active training loops.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-red-500 font-bold">✕</span>
+                            <span><strong>Not a Gambling Product:</strong> Simulations are strictly for evaluation.</span>
+                        </li>
+                    </ul>
+                </section>
+
             </div>
-
-            <h3>3. Fairness & Bias</h3>
-            <p>
-                To mitigate positional bias (e.g., Player 1 advantage), all tournaments require an even number of matches where models swap roles (A vs B, then B vs A).
-            </p>
         </div>
     </div>
 <%- include('../partials/footer_layout') %>
