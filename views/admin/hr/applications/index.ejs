@@ -1,0 +1,161 @@
+<%- include('../../../partials/admin_header') %>
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Applications</h1>
+        <p class="text-sm text-gray-500">Filter, review, and prioritize high-signal candidates.</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
+        <form method="GET" action="/admin/hr/applications" class="grid md:grid-cols-7 gap-3">
+            <div>
+                <label class="text-xs font-medium text-gray-600">Search</label>
+                <input type="text" name="q" value="<%= query.q || '' %>" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Name or email">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Job</label>
+                <select name="job" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">All jobs</option>
+                    <% jobs.forEach(job => { %>
+                        <option value="<%= job.id %>" <%= query.job === job.id ? 'selected' : '' %>><%= job.title %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Status</label>
+                <select name="status" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">All</option>
+                    <option value="NEW" <%= query.status === 'NEW' ? 'selected' : '' %>>New</option>
+                    <option value="IN_REVIEW" <%= query.status === 'IN_REVIEW' ? 'selected' : '' %>>In Review</option>
+                    <option value="INTERVIEW" <%= query.status === 'INTERVIEW' ? 'selected' : '' %>>Interview</option>
+                    <option value="OFFER" <%= query.status === 'OFFER' ? 'selected' : '' %>>Offer</option>
+                    <option value="HIRED" <%= query.status === 'HIRED' ? 'selected' : '' %>>Hired</option>
+                    <option value="REJECTED" <%= query.status === 'REJECTED' ? 'selected' : '' %>>Rejected</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Interview</label>
+                <select name="interview_status" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">Any</option>
+                    <option value="SCHEDULED" <%= query.interview_status === 'SCHEDULED' ? 'selected' : '' %>>Scheduled</option>
+                    <option value="COMPLETED" <%= query.interview_status === 'COMPLETED' ? 'selected' : '' %>>Completed</option>
+                    <option value="CANCELED" <%= query.interview_status === 'CANCELED' ? 'selected' : '' %>>Canceled</option>
+                    <option value="NO_SHOW" <%= query.interview_status === 'NO_SHOW' ? 'selected' : '' %>>No Show</option>
+                    <option value="RESCHEDULE" <%= query.interview_status === 'RESCHEDULE' ? 'selected' : '' %>>Reschedule</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Min Fit Score</label>
+                <input type="number" name="min_fit" value="<%= typeof query.min_fit !== 'undefined' ? query.min_fit : (averages._avg.ai_fit_score ? averages._avg.ai_fit_score.toFixed(1) : '') %>" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" min="0" max="100" step="0.1">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Min Sentiment</label>
+                <input type="number" name="min_sentiment" value="<%= typeof query.min_sentiment !== 'undefined' ? query.min_sentiment : (averages._avg.ai_sentiment_score ? averages._avg.ai_sentiment_score.toFixed(1) : '') %>" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" min="0" max="100" step="0.1">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Min Review</label>
+                <input type="number" name="min_review" value="<%= typeof query.min_review !== 'undefined' ? query.min_review : (averages._avg.review_score ? averages._avg.review_score.toFixed(1) : '') %>" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" min="0" max="100" step="0.1">
+            </div>
+            <div class="flex items-end">
+                <button class="btn btn-sm btn-primary">Apply</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
+        <form id="bulkActionForm" method="POST" action="/admin/hr/applications/bulk" class="grid md:grid-cols-6 gap-3 items-end">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div>
+                <label class="text-xs font-medium text-gray-600">Bulk Action</label>
+                <select name="action" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">Select action</option>
+                    <option value="set_status">Set status</option>
+                    <option value="send_update">Send update</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Status</label>
+                <select name="status" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">Choose status</option>
+                    <option value="NEW">New</option>
+                    <option value="IN_REVIEW">In Review</option>
+                    <option value="INTERVIEW">Interview</option>
+                    <option value="OFFER">Offer</option>
+                    <option value="HIRED">Hired</option>
+                    <option value="REJECTED">Rejected</option>
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label class="text-xs font-medium text-gray-600">Message</label>
+                <input type="text" name="message" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Optional update for candidate">
+            </div>
+            <div class="space-y-1 text-xs text-gray-600">
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" name="notify_email"> Email
+                </label>
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" name="notify_sms"> SMS
+                </label>
+            </div>
+            <div class="text-right">
+                <button class="btn btn-sm btn-primary">Run</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <input type="checkbox" id="selectAllApps">
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidate</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fit</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sentiment</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Review</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Interview</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                <% applications.forEach(app => { %>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <input type="checkbox" name="application_ids" value="<%= app.id %>" form="bulkActionForm" class="app-select">
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-semibold text-gray-900"><%= app.full_name %></div>
+                            <div class="text-[11px] text-gray-500"><%= app.email %></div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600"><%= app.job.title %></td>
+                        <td class="px-6 py-4 text-xs">
+                            <span class="px-2 py-1 rounded <%= app.status === 'NEW' ? 'bg-amber-100 text-amber-700' : (app.status === 'HIRED' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600') %>"><%= app.status %></span>
+                        </td>
+                        <td class="px-6 py-4 text-xs text-gray-600"><%= app.ai_fit_score !== null ? app.ai_fit_score : 'N/A' %></td>
+                        <td class="px-6 py-4 text-xs text-gray-600"><%= app.ai_sentiment_score !== null ? app.ai_sentiment_score : 'N/A' %></td>
+                        <td class="px-6 py-4 text-xs text-gray-600"><%= app.review_score !== null ? app.review_score : 'N/A' %></td>
+                        <td class="px-6 py-4 text-xs text-gray-600"><%= app.interview_status || 'N/A' %></td>
+                        <td class="px-6 py-4 text-right text-xs">
+                            <a href="/admin/hr/applications/<%= app.id %>" class="text-blue-600 hover:underline">Review</a>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        <% if (applications.length === 0) { %>
+            <div class="p-8 text-center text-gray-500">No applications found.</div>
+        <% } %>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectAll = document.getElementById('selectAllApps');
+            const checkboxes = Array.from(document.querySelectorAll('.app-select'));
+            if (!selectAll) return;
+            selectAll.addEventListener('change', () => {
+                checkboxes.forEach(box => { box.checked = selectAll.checked; });
+            });
+        });
+    </script>
+<%- include('../../../partials/admin_footer') %>

@@ -1,3 +1,4 @@
+/// <reference path="../types/pokersolver.d.ts" />
 import { GameEngine, GameEvent, GameResult, PlayerMove } from './types';
 import { Hand } from 'pokersolver';
 

@@ -1,0 +1,58 @@
+<%- include('../../../partials/admin_header') %>
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Jobs</h1>
+            <p class="text-sm text-gray-500">Manage postings, status, and recruitment performance.</p>
+        </div>
+        <% if (typeof can === 'function' && can('admin.hr.edit')) { %>
+            <a href="/admin/hr/jobs/new" class="btn btn-sm btn-primary">New Job</a>
+        <% } %>
+    </div>
+
+    <% if (success) { %>
+        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm"><%= success %></div>
+    <% } %>
+    <% if (error) { %>
+        <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
+    <% } %>
+
+    <div class="grid lg:grid-cols-2 gap-6">
+        <% jobs.forEach(job => { %>
+            <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="text-xs uppercase tracking-widest text-gray-400"><%= job.department || 'General' %></div>
+                        <div class="text-xl font-semibold text-gray-900 mt-1"><%= job.title %></div>
+                        <div class="text-[11px] text-gray-500 font-mono mt-1"><%= job.slug %></div>
+                    </div>
+                    <span class="px-2 py-1 text-xs rounded <%= job.status === 'PUBLISHED' ? 'bg-emerald-100 text-emerald-700' : (job.status === 'CLOSED' ? 'bg-gray-200 text-gray-600' : 'bg-amber-100 text-amber-700') %>"><%= job.status %></span>
+                </div>
+                <p class="text-sm text-gray-500 mt-3"><%= job.summary %></p>
+                <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
+                    <span><%= job._count.applications %> applications</span>
+                    <span><%= job.location_type %> - <%= job.employment_type %></span>
+                </div>
+                <div class="mt-4 flex items-center gap-2">
+                    <a href="/admin/hr/jobs/<%= job.id %>/edit" class="btn btn-xs btn-secondary">Edit</a>
+                    <a href="/careers/<%= job.slug %>" class="btn btn-xs btn-ghost">View Public</a>
+                    <form action="/admin/hr/jobs/<%= job.id %>/compile" method="POST" data-confirm="Compile resumes for this job?">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-xs btn-ghost">Compile Resumes</button>
+                    </form>
+                </div>
+            </div>
+        <% }) %>
+        <% if (jobs.length === 0) { %>
+            <div class="col-span-full text-sm text-gray-500">No jobs created yet.</div>
+        <% } %>
+    </div>
+<%- include('../../../partials/admin_footer') %>
+
+<script>
+    document.querySelectorAll('[data-confirm]').forEach(formEl => {
+        formEl.addEventListener('submit', (event) => {
+            const message = formEl.getAttribute('data-confirm') || 'Are you sure?';
+            if (!confirm(message)) event.preventDefault();
+        });
+    });
+</script>

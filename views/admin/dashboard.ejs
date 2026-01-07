@@ -1,120 +1,389 @@
 <%- include('../partials/admin_header') %>
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p class="mt-1 text-sm text-gray-500">System overview and health metrics.</p>
-    </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500 truncate">Total Users</p>
-                    <p class="text-2xl font-bold text-gray-900"><%= stats.userCount %></p>
-                </div>
-            </div>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack-all.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Server Data Injection -->
+<script>
+    window.SERVER_DATA = {
+        layout: <%- layout && layout !== 'undefined' && layout !== 'null' ? layout : 'null' %>,
+        stats: <%- JSON.stringify(stats) %>,
+        matchesByGame: <%- JSON.stringify(matchesByGame || []) %>,
+        recentSignups: <%- JSON.stringify(recentSignups || []) %>,
+        recentMatches: <%- JSON.stringify(recentMatches || []) %>,
+        auditLogs: <%- JSON.stringify(auditLogs || []) %>
+    };
+    
+    // Default dashboard layout if none exists
+    if (!window.SERVER_DATA.layout) {
+        window.SERVER_DATA.layout = [
+            // Row 1: Core Stats
+            { id: 'stat-users', x: 0, y: 0, w: 3, h: 2, type: 'stat-card', config: { title: 'Total Users', label: 'Registered', valueKey: 'userCount', color: 'blue' } },
+            { id: 'stat-revenue', x: 3, y: 0, w: 3, h: 2, type: 'stat-card', config: { title: 'Active Subs', label: 'Stripe Active', valueKey: 'activeSubscriptions', color: 'emerald' } },
+            { id: 'stat-models', x: 6, y: 0, w: 3, h: 2, type: 'stat-card', config: { title: 'AI Models', label: 'Registered', valueKey: 'modelCount', color: 'purple' } },
+            { id: 'stat-matches', x: 9, y: 0, w: 3, h: 2, type: 'stat-card', config: { title: 'Matches', label: 'Total Played', valueKey: 'matchCount', color: 'indigo' } },
+            
+            // Row 2: Operations & HR
+            { id: 'stat-queue', x: 0, y: 2, w: 3, h: 2, type: 'stat-card', config: { title: 'Queue Work', label: 'Active/Waiting', valueKeyPath: 'queueCounts', color: 'yellow' } },
+            { id: 'stat-hr', x: 3, y: 2, w: 3, h: 2, type: 'stat-card', config: { title: 'Open Roles', label: 'Published Jobs', valueKey: 'openJobs', color: 'rose' } },
+            { id: 'stat-apps', x: 6, y: 2, w: 3, h: 2, type: 'stat-card', config: { title: 'Applications', label: 'Total Received', valueKey: 'totalApplications', color: 'orange' } },
+            { id: 'stat-approvals', x: 9, y: 2, w: 3, h: 2, type: 'stat-card', config: { title: 'Approvals', label: 'Pending Access', valueKey: 'pendingApprovals', color: 'cyan' } },
+
+            // Row 3: Visuals & Logs
+            { id: 'matches-dist-chart', x: 0, y: 4, w: 4, h: 4, type: 'chart', config: { title: 'Match Distribution', chartType: 'doughnut' } },
+            { id: 'recent-matches-tbl', x: 4, y: 4, w: 4, h: 4, type: 'table', config: { title: 'Recent Match Activity', source: 'recentMatches' } },
+            { id: 'audit-log-tbl', x: 8, y: 4, w: 4, h: 4, type: 'table', config: { title: 'System Security Log', source: 'auditLogs' } },
+
+            // Row 4: Chat & Health
+            { id: 'stat-chat', x: 0, y: 8, w: 3, h: 2, type: 'stat-card', config: { title: 'Chat Traffic', label: 'Messages Today', valueKey: 'messagesToday', color: 'sky' } },
+            { id: 'system-health-widget', x: 3, y: 8, w: 9, h: 2, type: 'system-health' }
+        ];
+    }
+</script>
+
+<div x-data="adminDashboard()" class="relative min-h-screen">
+    <!-- Header -->
+    <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Command Center</h1>
+            <p class="mt-1 text-sm text-gray-500">Live system oversight and administrative orchestration.</p>
         </div>
-
-        <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500 truncate">Registered Models</p>
-                    <p class="text-2xl font-bold text-gray-900"><%= stats.modelCount %></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-green-100 text-green-600">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500 truncate">Total Matches</p>
-                    <p class="text-2xl font-bold text-gray-900"><%= stats.matchCount %></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500 truncate">Queued Jobs</p>
-                    <p class="text-2xl font-bold text-gray-900"><%= stats.queueCounts.waiting + stats.queueCounts.active %></p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid lg:grid-cols-2 gap-8">
-        <!-- Queue Health -->
-        <div class="bg-white rounded-lg shadow border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="font-bold text-gray-900">System Health</h3>
-            </div>
-            <div class="p-6 grid grid-cols-2 gap-4">
-                <div class="bg-slate-50 p-4 rounded text-center">
-                    <div class="text-sm text-gray-500">Active Jobs</div>
-                    <div class="text-xl font-mono font-bold text-blue-600"><%= stats.queueCounts.active %></div>
-                </div>
-                <div class="bg-slate-50 p-4 rounded text-center">
-                    <div class="text-sm text-gray-500">Waiting</div>
-                    <div class="text-xl font-mono font-bold text-yellow-600"><%= stats.queueCounts.waiting %></div>
-                </div>
-                <div class="bg-slate-50 p-4 rounded text-center">
-                    <div class="text-sm text-gray-500">Failed</div>
-                    <div class="text-xl font-mono font-bold text-red-600"><%= stats.queueCounts.failed %></div>
-                </div>
-                <div class="bg-slate-50 p-4 rounded text-center">
-                    <div class="text-sm text-gray-500">Completed</div>
-                    <div class="text-xl font-mono font-bold text-green-600"><%= stats.queueCounts.completed %></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Recent Matches -->
-        <div class="bg-white rounded-lg shadow border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="font-bold text-gray-900">Recent Activity</h3>
-            </div>
-            <div class="p-0 overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Match ID</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created By</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <% recentMatches.forEach(m => { %>
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-gray-500">
-                                    <a href="/matches/<%= m.id %>" class="hover:underline text-blue-600"><%= m.id.substring(0,8) %></a>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                        <%= m.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' %>">
-                                        <%= m.status %>
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                                    <%= m.created_by ? m.created_by.email : 'System' %>
-                                </td>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-            </div>
+        <div class="flex flex-wrap gap-2">
+            <% if (typeof can === 'function' && can('admin.rbac.edit')) { %>
+            <button @click="showAddModal = true" x-show="editing" class="btn btn-sm btn-white border-gray-300 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Add Widget
+            </button>
+            <button @click="toggleEdit()" class="btn btn-sm btn-secondary transition-all" :class="editing ? 'ring-2 ring-yellow-400 bg-yellow-50 border-yellow-200 text-yellow-800' : ''">
+                <span x-text="editing ? 'Lock Dashboard' : 'Rearrange & Customize'"></span >
+            </button>
+            <button @click="saveLayout()" x-show="editing" class="btn btn-sm btn-primary shadow-lg shadow-indigo-500/20">Save Global Layout</button>
+            <% } %>
         </div>
     </div>
+
+    <!-- GridStack Container -->
+    <div class="grid-stack"></div>
+
+    <!-- Add/Edit Widget Modal -->
+    <div x-show="showAddModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm" style="display: none;" x-transition>
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden" @click.away="showAddModal = false">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-900" x-text="editingWidgetId ? 'Configure Widget' : 'Add Dashboard Widget'"></h3>
+                <button @click="showAddModal = false" class="text-gray-400 hover:text-gray-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-2 gap-4" x-show="!editingWidgetId">
+                    <button @click="selectTemplate('stat-card')" class="p-4 border-2 rounded-lg text-left transition-all hover:border-indigo-500 group" :class="newWidget.type === 'stat-card' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-100'">
+                        <div class="w-10 h-10 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg></div>
+                        <div class="font-bold text-sm">Stat Card</div>
+                        <div class="text-[10px] text-gray-500">Real-time counter</div>
+                    </button>
+                    <button @click="selectTemplate('chart')" class="p-4 border-2 rounded-lg text-left transition-all hover:border-indigo-500 group" :class="newWidget.type === 'chart' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-100'">
+                        <div class="w-10 h-10 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg></div>
+                        <div class="font-bold text-sm">Visualizer</div>
+                        <div class="text-[10px] text-gray-500">Distribution analysis</div>
+                    </button>
+                    <button @click="selectTemplate('table')" class="p-4 border-2 rounded-lg text-left transition-all hover:border-indigo-500 group" :class="newWidget.type === 'table' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-100'">
+                        <div class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></div>
+                        <div class="font-bold text-sm">Data Feed</div>
+                        <div class="text-[10px] text-gray-500">Activity & log tables</div>
+                    </button>
+                    <button @click="selectTemplate('system-health')" class="p-4 border-2 rounded-lg text-left transition-all hover:border-indigo-500 group" :class="newWidget.type === 'system-health' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-100'">
+                        <div class="w-10 h-10 rounded bg-rose-100 text-rose-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg></div>
+                        <div class="font-bold text-sm">Vital Signs</div>
+                        <div class="text-[10px] text-gray-500">System connectivity</div>
+                    </button>
+                </div>
+
+                <div x-show="newWidget.type" class="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Customization</label>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Rename Display Title</label>
+                            <input type="text" x-model="newWidget.config.title" 
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                :class="!newWidget.config.title ? 'border-red-300 bg-red-50' : ''">
+                            <p x-show="!newWidget.config.title" class="mt-1 text-[10px] text-red-600">Title is required for the widget.</p>
+                        </div>
+                        
+                        <template x-if="newWidget.type === 'stat-card'">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Metric Source</label>
+                                    <select x-model="newWidget.config.valueKey" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                        <optgroup label="Users">
+                                            <option value="userCount">Total Users</option>
+                                            <option value="activeSubscriptions">Active Subscribers</option>
+                                            <option value="pendingApprovals">Pending Access Requests</option>
+                                        </optgroup>
+                                        <optgroup label="Core Engine">
+                                            <option value="modelCount">Registered Models</option>
+                                            <option value="activeModels">Active Models</option>
+                                            <option value="matchCount">Total Matches</option>
+                                            <option value="runningMatches">Matches Running Now</option>
+                                            <option value="failedMatches">Failed Matches</option>
+                                        </optgroup>
+                                        <optgroup label="Infrastructure">
+                                            <option value="totalApiKeys">Active sk-* Keys</option>
+                                            <option value="accessDeniedCount">Security Denials (403)</option>
+                                        </optgroup>
+                                        <optgroup label="HR & Chat">
+                                            <option value="openJobs">Open Job Roles</option>
+                                            <option value="totalApplications">Total Applications</option>
+                                            <option value="totalChannels">Chat Channels</option>
+                                            <option value="messagesToday">Messages (24h)</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Accent Color</label>
+                                    <select x-model="newWidget.config.color" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                        <option value="indigo">Indigo</option>
+                                        <option value="emerald">Emerald</option>
+                                        <option value="rose">Rose</option>
+                                        <option value="amber">Amber</option>
+                                        <option value="blue">Blue</option>
+                                        <option value="purple">Purple</option>
+                                        <option value="sky">Sky</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="newWidget.type === 'table'">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">System Data Feed</label>
+                                <select x-model="newWidget.config.source" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                    <option value="recentMatches">Recent Match Activity</option>
+                                    <option value="recentSignups">Recent User Signups</option>
+                                    <option value="auditLogs">Security Audit Log</option>
+                                </select>
+                            </div>
+                        </template>
+
+                        <template x-if="newWidget.type === 'chart'">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Visual Style</label>
+                                <select x-model="newWidget.config.chartType" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                    <option value="doughnut">Doughnut (Relative %)</option>
+                                    <option value="bar">Bar Chart (Absolute Volume)</option>
+                                </select>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+                <button @click="showAddModal = false" class="btn btn-sm btn-white">Cancel</button>
+                <button @click="addWidget()" class="btn btn-sm btn-primary" :disabled="!newWidget.type">
+                    <span x-text="editingWidgetId ? 'Update Widget' : 'Inject to Dashboard'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/admin/widget_registry') %>
+
+<script>
+    function adminDashboard() {
+        return {
+            editing: false,
+            showAddModal: false,
+            editingWidgetId: null,
+            grid: null,
+            serverData: window.SERVER_DATA,
+            newWidget: { type: null, config: { title: '', valueKey: 'userCount', source: 'recentMatches', color: 'indigo', chartType: 'doughnut' } },
+
+            init() {
+                setTimeout(() => this.initGrid(), 100);
+            },
+
+            initGrid() {
+                this.grid = GridStack.init({
+                    column: 12,
+                    cellHeight: 100,
+                    margin: 12,
+                    staticGrid: true,
+                    animate: true,
+                    float: true,
+                    handle: '.handle'
+                });
+
+                this.loadLayout();
+            },
+
+            toggleEdit() {
+                this.editing = !this.editing;
+                this.grid.setStatic(!this.editing);
+                document.querySelectorAll('.widget-remove-btn, .widget-config-btn').forEach(b => b.classList.toggle('hidden', !this.editing));
+            },
+
+            loadLayout() {
+                this.serverData.layout.forEach(node => {
+                    this.renderWidget(node);
+                });
+            },
+
+            selectTemplate(type) {
+                this.newWidget.type = type;
+                if (!this.newWidget.config.title) {
+                    this.newWidget.config.title = type.replace('-', ' ').toUpperCase();
+                }
+            },
+
+            renderWidget(node) {
+                const templateId = 'widget-' + node.type;
+                const template = document.getElementById(templateId);
+                if (!template) return;
+
+                let content = template.outerHTML;
+                const widgetId = node.id;
+
+                this.grid.addWidget({
+                    id: widgetId,
+                    x: node.x, y: node.y, w: node.w, h: node.h,
+                    content: content.replace(`id="${templateId}"`, `id="inst-${widgetId}"`),
+                    autoPosition: !node.x && node.x !== 0
+                });
+
+                this.hydrateWidget(widgetId, node);
+            },
+
+            hydrateWidget(id, node) {
+                const el = document.getElementById('inst-' + id);
+                if (!el) return;
+
+                // Set Title (Renaming support)
+                const titleEl = el.querySelector('.widget-title');
+                if (titleEl && node.config?.title) titleEl.textContent = node.config.title;
+
+                // Action Buttons
+                const removeBtn = el.querySelector('.widget-remove-btn');
+                if (removeBtn) {
+                    removeBtn.onclick = () => this.grid.removeWidget(el.closest('.grid-stack-item'));
+                    if (!this.editing) removeBtn.classList.add('hidden');
+                }
+
+                const configBtn = el.querySelector('.widget-config-btn');
+                if (configBtn) {
+                    configBtn.onclick = () => this.editWidget(id, node);
+                    if (!this.editing) configBtn.classList.add('hidden');
+                }
+
+                // Hydration
+                if (node.type === 'stat-card') {
+                    let val = 0;
+                    if (node.config.valueKeyPath === 'queueCounts') {
+                        val = (this.serverData.stats.queueCounts.waiting || 0) + (this.serverData.stats.queueCounts.active || 0);
+                    } else {
+                        val = this.serverData.stats[node.config.valueKey] || 0;
+                    }
+                    el.querySelector('.widget-value').textContent = val.toLocaleString();
+                    el.querySelector('.widget-label').textContent = node.config.label || node.config.title || '';
+                    if (node.config.color) {
+                        const iconCont = el.querySelector('.widget-icon');
+                        iconCont.className = `p-3 rounded-full bg-${node.config.color}-50 text-${node.config.color}-600 widget-icon`;
+                    }
+                }
+
+                if (node.type === 'table') {
+                    const tbody = el.querySelector('.widget-table-body');
+                    const thead = el.querySelector('.widget-table-head');
+                    const data = this.serverData[node.config.source] || [];
+                    
+                    if (node.config.source === 'recentMatches') {
+                        thead.innerHTML = '<th class="px-4 py-2">Match</th><th class="px-4 py-2 text-right">Status</th>';
+                        tbody.innerHTML = data.map(m => `<tr><td class="px-4 py-2 font-mono text-blue-600"><a href="/matches/${m.id}">${m.id.substring(0,8)}</a></td><td class="px-4 py-2 text-right"><span class="px-2 py-0.5 rounded-full ${m.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${m.status}</span></td></tr>`).join('');
+                    } else if (node.config.source === 'recentSignups') {
+                        thead.innerHTML = '<th class="px-4 py-2">User</th><th class="px-4 py-2 text-right">Joined</th>';
+                        tbody.innerHTML = data.map(u => `<tr><td class="px-4 py-2">${u.email} <span class="text-[10px] bg-slate-100 px-1 rounded">${u.tier}</span></td><td class="px-4 py-2 text-right text-gray-400">${new Date(u.created_at).toLocaleDateString()}</td></tr>`).join('');
+                    } else if (node.config.source === 'auditLogs') {
+                        thead.innerHTML = '<th class="px-4 py-2">Admin</th><th class="px-4 py-2 text-right">Action</th>';
+                        tbody.innerHTML = data.map(l => `<tr><td class="px-4 py-2">${l.admin?.email || 'System'}</td><td class="px-4 py-2 text-right font-mono">${l.action}</td></tr>`).join('');
+                    }
+                }
+
+                if (node.type === 'chart') {
+                    const canvas = el.querySelector('canvas');
+                    canvas.id = 'canvas-' + id;
+                    setTimeout(() => {
+                        new Chart(canvas, {
+                            type: node.config.chartType || 'bar',
+                            data: {
+                                labels: this.serverData.matchesByGame.map(g => g.game_type),
+                                datasets: [{
+                                    data: this.serverData.matchesByGame.map(g => g._count.id),
+                                    backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899']
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: node.config.chartType === 'doughnut' } } }
+                        });
+                    }, 50);
+                }
+            },
+
+            editWidget(id, node) {
+                this.editingWidgetId = id;
+                this.newWidget.type = node.type;
+                this.newWidget.config = JSON.parse(JSON.stringify(node.config));
+                this.showAddModal = true;
+            },
+
+            addWidget() {
+                if (this.editingWidgetId) {
+                    const idx = this.serverData.layout.findIndex(n => n.id === this.editingWidgetId);
+                    if (idx > -1) {
+                        this.serverData.layout[idx].config = JSON.parse(JSON.stringify(this.newWidget.config));
+                        // Update DOM directly
+                        this.hydrateWidget(this.editingWidgetId, this.serverData.layout[idx]);
+                    }
+                    this.editingWidgetId = null;
+                } else {
+                    const id = 'w-' + Date.now();
+                    const node = {
+                        id,
+                        type: this.newWidget.type,
+                        config: JSON.parse(JSON.stringify(this.newWidget.config)),
+                        w: this.newWidget.type === 'stat-card' ? 3 : 6,
+                        h: this.newWidget.type === 'stat-card' ? 2 : 4
+                    };
+                    this.serverData.layout.push(node);
+                    this.renderWidget(node);
+                }
+                this.showAddModal = false;
+            },
+
+            async saveLayout() {
+                const gridItems = this.grid.save(false);
+                const currentLayout = gridItems.map(item => {
+                    const existing = this.serverData.layout.find(l => l.id === item.id);
+                    if (existing) {
+                        return { ...existing, x: item.x, y: item.y, w: item.w, h: item.h };
+                    }
+                    return item;
+                });
+
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                    await fetch('/admin/analytics/layout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify({ layout: currentLayout })
+                    });
+                    this.serverData.layout = currentLayout;
+                    this.toggleEdit();
+                    window.adminAlert('Command Center configuration saved successfully.', 'success', 'Saved');
+                } catch(e) {
+                    window.adminAlert('Failed to synchronize dashboard layout.', 'danger', 'Error');
+                }
+            }
+        }
+    }
+</script>
+
+<%- include('../partials/admin_footer') %>
 <%- include('../partials/admin_footer') %>

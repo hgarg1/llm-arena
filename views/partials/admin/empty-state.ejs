@@ -1,0 +1,26 @@
+<div class="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg bg-slate-50 my-6">
+    <div class="mx-auto h-12 w-12 text-slate-400 mb-4">
+        <%- icon || '<svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>' %>
+    </div>
+    <h3 class="mt-2 text-sm font-semibold text-gray-900"><%= title %></h3>
+    <p class="mt-1 text-sm text-gray-500 max-w-sm mx-auto"><%= description %></p>
+    <div class="mt-6 flex justify-center gap-3">
+        <% if (typeof actionUrl !== 'undefined' && actionUrl) { %>
+            <a href="<%= actionUrl %>" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <% if (typeof actionIcon !== 'undefined') { %>
+                    <%- actionIcon %>
+                <% } else { %>
+                    <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                <% } %>
+                <%= actionText || 'Create New' %>
+            </a>
+        <% } %>
+        <% if (typeof secondaryActionUrl !== 'undefined' && secondaryActionUrl) { %>
+            <a href="<%= secondaryActionUrl %>" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <%= secondaryActionText || 'Learn More' %>
+            </a>
+        <% } %>
+    </div>
+</div>

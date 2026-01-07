@@ -13,36 +13,33 @@
 
         <!-- Toolbar -->
         <div class="bg-surface p-4 rounded-lg border border-border shadow-sm mb-6">
-            <form action="/matches" method="GET" class="flex flex-col md:flex-row gap-4">
+            <form action="/matches" method="GET" class="flex flex-col md:flex-row gap-4" id="matchFilters">
                 
                 <!-- Search -->
                 <div class="flex-1 relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     </div>
-                    <input type="text" name="q" value="<%= query.search || '' %>" class="input-field pl-10" placeholder="Search by ID or Model Name...">
+                    <input type="text" name="q" value="<%= query.search || '' %>" class="input-field pl-10" placeholder="Search by ID or Model Name..." id="matchSearch">
                 </div>
 
                 <!-- Game Filter -->
                 <div class="w-full md:w-48">
-                    <select name="game" class="input-field cursor-pointer" onchange="this.form.submit()">
+                    <select name="game" class="input-field cursor-pointer" id="matchGame">
                         <option value="">All Games</option>
-                        <option value="iterated-negotiation" <%= query.gameType === 'iterated-negotiation' ? 'selected' : '' %>>Negotiation</option>
-                        <option value="chess" <%= query.gameType === 'chess' ? 'selected' : '' %>>Chess</option>
-                        <option value="chutes_and_ladders" <%= query.gameType === 'chutes_and_ladders' ? 'selected' : '' %>>Chutes & Ladders</option>
-                        <option value="texas_holdem" <%= query.gameType === 'texas_holdem' ? 'selected' : '' %>>Poker</option>
-                        <option value="blackjack" <%= query.gameType === 'blackjack' ? 'selected' : '' %>>Blackjack</option>
+                        <% games.forEach(game => { %>
+                            <option value="<%= game.key %>" <%= query.gameType === game.key ? 'selected' : '' %>><%= game.name %></option>
+                        <% }) %>
                     </select>
                 </div>
 
                 <!-- Status Filter -->
                 <div class="w-full md:w-40">
-                    <select name="status" class="input-field cursor-pointer" onchange="this.form.submit()">
+                    <select name="status" class="input-field cursor-pointer" id="matchStatus">
                         <option value="">All Statuses</option>
-                        <option value="COMPLETED" <%= query.status === 'COMPLETED' ? 'selected' : '' %>>Completed</option>
-                        <option value="RUNNING" <%= query.status === 'RUNNING' ? 'selected' : '' %>>Running</option>
-                        <option value="PENDING" <%= query.status === 'PENDING' ? 'selected' : '' %>>Pending</option>
-                        <option value="FAILED" <%= query.status === 'FAILED' ? 'selected' : '' %>>Failed</option>
+                        <% statuses.forEach(status => { %>
+                            <option value="<%= status %>" <%= query.status === status ? 'selected' : '' %>><%= status.charAt(0) + status.slice(1).toLowerCase() %></option>
+                        <% }) %>
                     </select>
                 </div>
 
@@ -132,4 +129,32 @@
             </div>
         <% } %>
     </div>
+    <script>
+        (function () {
+            const form = document.getElementById('matchFilters');
+            const search = document.getElementById('matchSearch');
+            const game = document.getElementById('matchGame');
+            const status = document.getElementById('matchStatus');
+            let timer = null;
+
+            const submitWithReset = () => {
+                const params = new URLSearchParams(new FormData(form));
+                params.set('page', '1');
+                window.location.search = params.toString();
+            };
+
+            if (search) {
+                search.addEventListener('input', () => {
+                    clearTimeout(timer);
+                    timer = setTimeout(submitWithReset, 350);
+                });
+            }
+            if (game) {
+                game.addEventListener('change', submitWithReset);
+            }
+            if (status) {
+                status.addEventListener('change', submitWithReset);
+            }
+        })();
+    </script>
 <%- include('../partials/footer_layout') %>

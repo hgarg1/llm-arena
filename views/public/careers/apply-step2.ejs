@@ -1,0 +1,92 @@
+<%- include('../../partials/header_layout') %>
+
+<section class="bg-slate-950 text-white py-12">
+    <div class="container">
+        <div class="text-xs uppercase tracking-[0.3em] text-slate-400">Application</div>
+        <h1 class="text-3xl md:text-4xl font-bold mt-3"><%= job.title %></h1>
+        <p class="text-slate-300 mt-2">We prefilled what we could. Review and submit.</p>
+    </div>
+</section>
+
+<section class="container py-12">
+    <% if (error) { %>
+        <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
+    <% } %>
+    <form action="/careers/<%= job.slug %>/apply/submit" method="POST" class="grid lg:grid-cols-3 gap-8">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-6 space-y-6">
+            <div>
+                <div class="text-sm font-semibold text-slate-900">Basics</div>
+                <div class="grid md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="text-xs font-medium text-slate-600">Full Name</label>
+                        <input type="text" name="full_name" required class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" value="<%= prefill.full_name || '' %>">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600">Email</label>
+                        <input type="email" name="email" required class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" value="<%= prefill.email || '' %>">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600">Phone</label>
+                        <input type="text" name="phone" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" value="<%= prefill.phone || '' %>">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600">Location</label>
+                        <input type="text" name="location" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" value="<%= prefill.location || '' %>">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600">LinkedIn</label>
+                        <input type="text" name="linkedin_url" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" value="<%= prefill.linkedin_url || '' %>">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600">GitHub</label>
+                        <input type="text" name="github_url" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" value="<%= prefill.github_url || '' %>">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600">Portfolio</label>
+                        <input type="text" name="portfolio_url" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" value="<%= prefill.portfolio_url || '' %>">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600">Source</label>
+                        <input type="text" name="source" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" placeholder="Referral, LinkedIn, etc">
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="text-sm font-semibold text-slate-900">Deep Questions</div>
+                <div class="mt-4 space-y-4">
+                    <% questions.forEach(q => { %>
+                        <div>
+                            <label class="text-xs font-medium text-slate-600"><%= q.label %></label>
+                            <% if (q.type === 'LONG_TEXT') { %>
+                                <textarea name="<%= q.key %>" rows="4" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" <%= q.required ? 'required' : '' %>></textarea>
+                            <% } else if (q.type === 'BOOLEAN') { %>
+                                <select name="<%= q.key %>" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm">
+                                    <option value="">Select</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            <% } else { %>
+                                <input type="text" name="<%= q.key %>" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-sm" <%= q.required ? 'required' : '' %>>
+                            <% } %>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+        </div>
+        <div class="space-y-6">
+            <div class="bg-slate-900 text-white rounded-xl p-6">
+                <div class="text-xs uppercase tracking-widest text-slate-400">What happens next</div>
+                <ul class="mt-4 space-y-2 text-sm text-slate-200">
+                    <li>We run a structured review against the role scorecard.</li>
+                    <li>We prioritize clarity, rigor, and mission alignment.</li>
+                    <li>You will receive a response within 5 business days.</li>
+                </ul>
+            </div>
+            <button class="w-full btn btn-primary py-3">Submit Application</button>
+        </div>
+    </form>
+</section>
+
+<%- include('../../partials/footer_layout') %>

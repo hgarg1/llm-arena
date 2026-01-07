@@ -1,0 +1,29 @@
+<%- include('../../partials/header_layout') %>
+
+<section class="bg-slate-950 text-white py-12">
+    <div class="container">
+        <div class="text-xs uppercase tracking-[0.3em] text-slate-400">Application</div>
+        <h1 class="text-3xl md:text-4xl font-bold mt-3">Apply for <%= job.title %></h1>
+        <p class="text-slate-300 mt-2">Start by uploading your resume. We will prefill the application for you.</p>
+    </div>
+</section>
+
+<section class="container py-12">
+    <% if (error) { %>
+        <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
+    <% } %>
+    <% if (typeof success !== 'undefined' && success) { %>
+        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm"><%= success %></div>
+    <% } %>
+    <div class="max-w-2xl bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+        <div class="text-sm font-semibold text-slate-900">Resume Upload</div>
+        <p class="text-xs text-slate-500 mt-2">Supported: PDF, DOCX, TXT. Max 12MB.</p>
+        <form action="/careers/<%= job.slug %>/apply/parse" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="file" name="resume" required class="w-full text-sm">
+            <button class="btn btn-sm btn-primary">Continue</button>
+        </form>
+    </div>
+</section>
+
+<%- include('../../partials/footer_layout') %>

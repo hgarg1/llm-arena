@@ -89,6 +89,43 @@ const DEFAULT_ENTITLEMENTS = [
     value_type: 'BOOL' as const,
     default_value: false,
     validation_schema: { type: 'boolean' }
+  },
+  {
+    key: 'api.key.create',
+    description: 'Allow API key creation',
+    value_type: 'BOOL' as const,
+    default_value: true,
+    validation_schema: { type: 'boolean' }
+  },
+  {
+    key: 'api.key.max',
+    description: 'Max API keys per user',
+    value_type: 'NUMBER' as const,
+    default_value: 3,
+    validation_schema: { type: 'number', minimum: 0 }
+  },
+  {
+    key: 'api.scopes.allowed',
+    description: 'Allowed API scopes',
+    value_type: 'JSON' as const,
+    default_value: ['models.read', 'matches.read', 'matches.write', 'account.read'],
+    validation_schema: { type: 'array', items: { type: 'string' } }
+  },
+  {
+    key: 'api.requests.quota',
+    description: 'API request quota policy',
+    value_type: 'JSON' as const,
+    default_value: { limit: 1000, window: 'day', scope: 'api_key', overage_behavior: 'block' },
+    validation_schema: {
+      type: 'object',
+      required: ['limit', 'window', 'scope', 'overage_behavior'],
+      properties: {
+        limit: { type: 'number', minimum: 0 },
+        window: { type: 'string', enum: ['minute', 'hour', 'day', 'month'] },
+        scope: { type: 'string', enum: ['api_key'] },
+        overage_behavior: { type: 'string', enum: ['block', 'queue', 'degrade', 'bill_overage'] }
+      }
+    }
   }
 ];
 

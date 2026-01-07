@@ -26,7 +26,32 @@ class ContentService {
         // About
         'public:about:mission_title': 'Our Mission',
         'public:about:mission_text': 'As AI systems become more agentic, static evaluation is no longer sufficient.',
-        
+
+        // Careers
+        'public:careers:hero_title': 'Build the evaluation backbone of modern AI.',
+        'public:careers:hero_subtitle': 'We operate at the intersection of infrastructure, research rigor, and enterprise reliability.',
+        'public:careers:hero_lead': 'Join the team shaping how AI is measured.',
+        'public:careers:mission_title': 'Why LLM Arena',
+        'public:careers:mission_text': 'We design systems that can be audited end-to-end, not just demoed.',
+        'public:careers:values_title': 'What we value',
+        'public:careers:value_1': 'Systems thinking with clear metrics and deterministic outcomes.',
+        'public:careers:value_2': 'Ownership from architecture to production.',
+        'public:careers:value_3': 'Relentless focus on integrity, reproducibility, and evidence.',
+        'public:careers:benefits_title': 'Benefits built for builders',
+        'public:careers:benefit_1': 'Competitive compensation with meaningful ownership.',
+        'public:careers:benefit_2': 'Remote-first with intentional in-person collaboration.',
+        'public:careers:benefit_3': 'Wellness and mental health support.',
+        'public:careers:benefit_4': 'Learning budget for conferences and certifications.',
+        'public:careers:benefit_5': 'Modern equipment and secure tooling.',
+        'public:careers:benefit_6': 'Flexible time to support deep work.',
+        'public:careers:process_title': 'Hiring process',
+        'public:careers:process_step_1': 'Resume + application review',
+        'public:careers:process_step_2': 'Role-specific assessment or interview',
+        'public:careers:process_step_3': 'Panel interviews with cross-functional partners',
+        'public:careers:process_step_4': 'Offer and onboarding',
+        'public:careers:cta_title': 'Ready to build with us?',
+        'public:careers:cta_text': 'Explore open roles and apply with confidence.',
+
         // Terms & Privacy (Snippets)
         'public:legal:contact_email': 'legal@llmarena.com',
         'public:legal:address': '123 AI Blvd, San Francisco, CA'

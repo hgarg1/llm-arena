@@ -59,6 +59,7 @@
                 <!-- Navigation -->
                 <nav class="space-y-1">
                     <a href="#profile" class="block px-4 py-2 bg-white font-medium text-primary rounded-md shadow-sm border border-border">Profile</a>
+                    <a href="#notifications" class="block px-4 py-2 text-secondary hover:bg-slate-50 rounded-md">Notifications & Chat</a>
                     <a href="#billing" class="block px-4 py-2 text-secondary hover:bg-slate-50 rounded-md">Billing & Plans</a>
                     <a href="#history" class="block px-4 py-2 text-secondary hover:bg-slate-50 rounded-md">Match History</a>
                     <a href="#security" class="block px-4 py-2 text-secondary hover:bg-slate-50 rounded-md">Security</a>
@@ -108,6 +109,65 @@
 
                             <div class="md:col-span-2 text-right">
                                 <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Notifications & Chat Settings -->
+                <section id="notifications" class="card">
+                    <div class="card-header bg-slate-50">
+                        <h3 class="font-bold text-primary">Notifications & Chat</h3>
+                    </div>
+                    <div class="card-body">
+                        <form action="/account/profile" method="POST" class="space-y-6">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <div class="grid gap-6 md:grid-cols-2">
+                                <div class="space-y-4">
+                                    <% if (settings['user_can_toggle_chat_notifications'] !== 'false') { %>
+                                    <label class="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-slate-50 transition-colors cursor-pointer">
+                                        <input type="checkbox" name="chat_notifications_enabled" class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" <%= user.chat_notifications_enabled ? "checked" : "" %>>
+                                        <div>
+                                            <span class="text-sm font-semibold text-primary block">Enable Notifications</span>
+                                            <span class="text-xs text-secondary block">Show toast alerts for new chat messages.</span>
+                                        </div>
+                                    </label>
+                                    <% } %>
+
+                                    <% if (settings['user_can_toggle_chat_sound'] !== 'false') { %>
+                                    <label class="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-slate-50 transition-colors cursor-pointer">
+                                        <input type="checkbox" name="chat_notifications_sound" class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" <%= user.chat_notifications_sound ? "checked" : "" %>>
+                                        <div>
+                                            <span class="text-sm font-semibold text-primary block">Notification Sound</span>
+                                            <span class="text-xs text-secondary block">Play a subtle sound when a message arrives.</span>
+                                        </div>
+                                    </label>
+                                    <% } %>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <% if (settings['user_can_change_chat_rate_limit'] !== 'false') { %>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-primary mb-1">Anti-Spam Delay (seconds)</label>
+                                        <input type="number" name="chat_notifications_rate_limit" value="<%= user.chat_notifications_rate_limit || 5 %>" min="0" max="60" class="input-field">
+                                        <p class="mt-1 text-[10px] text-secondary">Minimum time between consecutive notification toasts.</p>
+                                    </div>
+                                    <% } %>
+
+                                    <% if (settings['user_can_toggle_chat_presence'] !== 'false') { %>
+                                    <label class="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-slate-50 transition-colors cursor-pointer">
+                                        <input type="checkbox" name="chat_presence_visible" class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" <%= user.chat_presence_visible ? "checked" : "" %>>
+                                        <div>
+                                            <span class="text-sm font-semibold text-primary block">Presence Visibility</span>
+                                            <span class="text-xs text-secondary block">Allow others to see when you are online.</span>
+                                        </div>
+                                    </label>
+                                    <% } %>
+                                </div>
+                            </div>
+
+                            <div class="md:col-span-2 text-right pt-4 border-t border-border">
+                                <button type="submit" class="btn btn-primary">Update Notification Settings</button>
                             </div>
                         </form>
                     </div>
@@ -225,11 +285,18 @@
                             <% if (user.api_keys && user.api_keys.length > 0) { %>
                                 <div class="divide-y divide-border border border-border rounded-md">
                                     <% user.api_keys.forEach(key => { %>
-                                        <div class="p-3 flex justify-between items-center">
+                                        <div class="p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                             <div>
                                                 <div class="font-medium text-sm text-primary"><%= key.name %></div>
-                                                <div class="text-xs text-secondary font-mono">sk-********************<%= key.key_hash.substring(0, 4) %></div>
+                                                <div class="text-xs text-secondary font-mono">sk-<%= key.prefix || key.key_hash.substring(0, 8) %>••••••••</div>
                                                 <div class="text-[10px] text-gray-400 mt-1">Created <%= new Date(key.created_at).toLocaleDateString() %></div>
+                                                <div class="text-[10px] text-gray-400 mt-1">Last used <%= key.last_used ? new Date(key.last_used).toLocaleDateString() : 'Never' %></div>
+                                                <div class="mt-2 flex flex-wrap gap-2 text-[10px]">
+                                                    <span class="px-2 py-0.5 rounded-full <%= key.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : (key.status === 'SUSPENDED' ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600') %>"><%= key.status %></span>
+                                                    <% (key.scopes || []).forEach(scope => { %>
+                                                        <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"><%= scope.scope_key %></span>
+                                                    <% }) %>
+                                                </div>
                                             </div>
                                             <form action="/account/api-keys/delete" method="POST" data-confirm="Revoke this key?">
                                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -246,10 +313,23 @@
                                 </p>
                             <% } %>
 
-                            <form action="/account/api-keys" method="POST" class="flex gap-2">
+                            <form action="/account/api-keys" method="POST" class="grid md:grid-cols-3 gap-3">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                <input type="text" name="name" placeholder="Key Name (e.g. CI/CD)" class="input-field flex-grow" required>
-                                <button class="btn btn-primary whitespace-nowrap">Generate Key</button>
+                                <input type="text" name="name" placeholder="Key Name (e.g. CI/CD)" class="input-field md:col-span-1" required>
+                                <div class="md:col-span-2 border border-border rounded-lg p-3">
+                                    <div class="text-xs text-secondary mb-2">Allowed scopes</div>
+                                    <div class="grid md:grid-cols-2 gap-2 text-xs">
+                                        <% (availableApiScopes || []).forEach(scope => { %>
+                                            <label class="flex items-center gap-2">
+                                                <input type="checkbox" name="scopes" value="<%= scope.key %>" class="rounded border-gray-300" checked>
+                                                <span><%= scope.label %></span>
+                                            </label>
+                                        <% }) %>
+                                    </div>
+                                </div>
+                                <div class="md:col-span-3 flex justify-end">
+                                    <button class="btn btn-primary whitespace-nowrap">Generate Key</button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -409,10 +489,18 @@
                             method: 'POST',
                             headers: { 'X-CSRF-Token': csrfToken }
                         });
+                        if (!resp.ok) {
+                            const err = await resp.json().catch(() => ({}));
+                            throw new Error(err.error || 'Failed to load passkey options');
+                        }
                         const opts = await resp.json();
+                        const publicKey = opts.publicKey?.challenge ? opts.publicKey : opts;
+                        if (!publicKey.challenge) {
+                            throw new Error('Passkey options missing challenge');
+                        }
                         
                         // 2. Browser API
-                        const attResp = await SimpleWebAuthnBrowser.startRegistration(opts);
+                        const attResp = await SimpleWebAuthnBrowser.startRegistration(publicKey);
                         
                         // 3. Verify
                         const verifyResp = await fetch('/auth/passkey/register/verify', {

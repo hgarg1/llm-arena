@@ -6,10 +6,14 @@ export interface GameContext {
 }
 
 export interface GameEvent {
-  turn: number;
-  actor: string; // "player1", "player2", "system"
+  actor: string;
   type: string;
-  payload: any;
+  payload: {
+    content?: string;
+    images?: string[]; // URLs or base64
+    [key: string]: any;
+  };
+  created_at: Date;
 }
 
 export interface GameResult {

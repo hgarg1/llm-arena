@@ -1,0 +1,48 @@
+<%- include('../../partials/header_layout') %>
+
+<section class="bg-slate-950 text-white py-16">
+    <div class="container">
+        <div class="text-xs uppercase tracking-[0.3em] text-slate-400"><%= job.department || 'Careers' %></div>
+        <h1 class="text-4xl md:text-5xl font-bold mt-3"><%= job.title %></h1>
+        <div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-300">
+            <span class="px-3 py-1 bg-white/10 rounded-full"><%= job.location_type %></span>
+            <span class="px-3 py-1 bg-white/10 rounded-full"><%= job.employment_type %></span>
+            <% if (job.location) { %><span class="px-3 py-1 bg-white/10 rounded-full"><%= job.location %></span><% } %>
+            <% if (job.seniority) { %><span class="px-3 py-1 bg-white/10 rounded-full"><%= job.seniority %></span><% } %>
+        </div>
+        <p class="mt-6 text-lg text-slate-300 max-w-3xl"><%= job.summary %></p>
+        <div class="mt-8">
+            <a href="/careers/<%= job.slug %>/apply" class="inline-flex items-center px-6 py-3 bg-white text-slate-900 rounded-full font-semibold">Apply Now</a>
+        </div>
+    </div>
+</section>
+
+<section class="container py-16">
+    <div class="grid lg:grid-cols-3 gap-10">
+        <div class="lg:col-span-2">
+            <h2 class="text-2xl font-semibold text-slate-900 mb-4">Role Overview</h2>
+            <div class="prose prose-slate max-w-none"><%- job.description.replace(/\n/g, '<br>') %></div>
+        </div>
+        <div class="space-y-6">
+            <div class="border border-slate-200 rounded-xl p-6 bg-white">
+                <div class="text-xs uppercase tracking-widest text-slate-400">Hiring Process</div>
+                <ol class="mt-3 space-y-2 text-sm text-slate-600 list-decimal list-inside">
+                    <li>Resume + application review</li>
+                    <li>Technical or role-specific interview</li>
+                    <li>Panel + culture interview</li>
+                    <li>Offer + onboarding</li>
+                </ol>
+            </div>
+            <div class="border border-slate-200 rounded-xl p-6 bg-slate-900 text-white">
+                <div class="text-xs uppercase tracking-widest text-slate-400">What we value</div>
+                <ul class="mt-3 space-y-2 text-sm text-slate-200">
+                    <li>Systems thinking with clear metrics</li>
+                    <li>Ownership from architecture to deployment</li>
+                    <li>Commitment to model evaluation integrity</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<%- include('../../partials/footer_layout') %>

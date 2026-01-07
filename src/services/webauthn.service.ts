@@ -11,6 +11,17 @@ const rpName = 'LLM Arena';
 const rpID = process.env.RP_ID || 'localhost';
 const origin = process.env.APP_URL || `http://${rpID}:3000`;
 
+const toBase64Url = (input: ArrayBuffer | Uint8Array | Buffer | string | undefined) => {
+  if (!input) throw new Error('Missing credential data');
+  if (typeof input === 'string') return input;
+  return Buffer.from(input as any).toString('base64url');
+};
+
+const fromBase64Url = (input: string | undefined) => {
+  if (!input) throw new Error('Missing credential data');
+  return new Uint8Array(Buffer.from(input, 'base64url'));
+};
+
 export class WebAuthnService {
   
   async getRegistrationOptions(userId: string, email: string) {
@@ -22,8 +33,8 @@ export class WebAuthnService {
       userID: new Uint8Array(Buffer.from(userId)),
       userName: email,
       excludeCredentials: userPasskeys.map(key => ({
-        id: key.credential_id, 
-        transports: key.transports as AuthenticatorTransport[] 
+        id: key.credential_id,
+        transports: (key.transports || []) as AuthenticatorTransport[]
       })),
       authenticatorSelection: {
         residentKey: 'preferred',
@@ -42,13 +53,18 @@ export class WebAuthnService {
 
     if (verification.verified && verification.registrationInfo) {
       const info: any = verification.registrationInfo;
-      const { credentialID, credentialPublicKey, counter } = info;
+      const credentialID = info.credentialID || info.credential?.id;
+      const credentialPublicKey = info.credentialPublicKey || info.credential?.publicKey;
+      const counter = info.counter ?? info.credential?.counter ?? 0;
+      if (!credentialID || !credentialPublicKey) {
+        throw new Error('Missing credential data from authenticator');
+      }
       
       await prisma.passkey.create({
         data: {
           user_id: userId,
-          credential_id: credentialID,
-          public_key: Buffer.from(credentialPublicKey).toString('base64'),
+          credential_id: toBase64Url(credentialID),
+          public_key: toBase64Url(credentialPublicKey),
           counter: BigInt(counter),
           transports: body.response.transports || []
         }
@@ -66,6 +82,7 @@ export class WebAuthnService {
   }
 
   async verifyAuthentication(body: any, expectedChallenge: string) {
+    if (!body?.id) throw new Error('Missing passkey credential id');
     const passkey = await prisma.passkey.findFirst({
         where: { credential_id: body.id }
     });
@@ -85,7 +102,7 @@ export class WebAuthnService {
       // I'll try to use `credential` as the property name.
       credential: {
         id: passkey.credential_id,
-        publicKey: new Uint8Array(Buffer.from(passkey.public_key, 'base64')),
+        publicKey: fromBase64Url(passkey.public_key),
         counter: Number(passkey.counter),
         transports: passkey.transports as AuthenticatorTransport[]
       } as any, // Cast to any to bypass strict type check for now if property name mismatch

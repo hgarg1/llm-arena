@@ -11,7 +11,33 @@
         <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
     <% } %>
 
-    <form action="/admin/settings" method="POST" class="space-y-8">
+    <form action="/admin/settings" method="POST" class="space-y-8" x-data="formValidation({
+        global_alert: [{ minLength: 5, message: 'Alert should be at least 5 characters' }],
+        auth_login_attempts: [{ required: true }, { custom: v => v > 0, message: 'Must be greater than 0' }],
+        auth_login_window_minutes: [{ required: true }, { custom: v => v > 0, message: 'Must be greater than 0' }],
+        auth_password_min_length: [{ required: true }, { custom: v => v >= 8, message: 'Min 8 chars' }],
+        session_idle_minutes: [{ required: true }, { custom: v => v >= 5, message: 'Min 5 mins' }],
+        session_remember_days: [{ required: true }, { custom: v => v >= 1, message: 'Min 1 day' }],
+        limit_matches_per_day_free: [{ required: true }, { custom: v => v >= 0 }],
+        limit_matches_per_day_pro: [{ required: true }, { custom: v => v >= 0 }],
+        limit_matches_per_day_enterprise: [{ required: true }, { custom: v => v >= 0 }],
+        queue_retry_attempts: [{ required: true }, { custom: v => v >= 1 }],
+        queue_retry_backoff_ms: [{ required: true }, { custom: v => v >= 0 }],
+        queue_concurrency: [{ required: true }, { custom: v => v >= 1 }]
+    }, {
+        global_alert: '<%= settings["global_alert"] || "" %>',
+        auth_login_attempts: '<%= settings["auth_login_attempts"] || "10" %>',
+        auth_login_window_minutes: '<%= settings["auth_login_window_minutes"] || "15" %>',
+        auth_password_min_length: '<%= settings["auth_password_min_length"] || "12" %>',
+        session_idle_minutes: '<%= settings["session_idle_minutes"] || "60" %>',
+        session_remember_days: '<%= settings["session_remember_days"] || "7" %>',
+        limit_matches_per_day_free: '<%= settings["limit_matches_per_day_free"] || "10" %>',
+        limit_matches_per_day_pro: '<%= settings["limit_matches_per_day_pro"] || "100" %>',
+        limit_matches_per_day_enterprise: '<%= settings["limit_matches_per_day_enterprise"] || "0" %>',
+        queue_retry_attempts: '<%= settings["queue_retry_attempts"] || "3" %>',
+        queue_retry_backoff_ms: '<%= settings["queue_retry_backoff_ms"] || "5000" %>',
+        queue_concurrency: '<%= settings["queue_concurrency"] || "2" %>'
+    })" @submit="submit">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
         <!-- Global Announcements + Maintenance -->
@@ -22,8 +48,14 @@
             <div class="p-6 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Global Alert Banner</label>
-                    <input type="text" name="global_alert" value="<%= settings['global_alert'] || '' %>" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <p class="text-xs text-gray-500 mt-1">Leave empty to disable. Appears on public pages.</p>
+                    <input type="text" name="global_alert" value="<%= settings['global_alert'] || '' %>" 
+                        x-model="fields.global_alert.value"
+                        @blur="onBlur('global_alert')"
+                        @input="onInput('global_alert', $event.target.value)"
+                        :class="getInputClasses('global_alert')"
+                        placeholder="System maintenance soon...">
+                    <p x-show="fields.global_alert.error" x-text="fields.global_alert.error" class="mt-1 text-xs text-red-600 font-medium"></p>
+                    <p x-show="!fields.global_alert.error" class="text-xs text-gray-500 mt-1">Leave empty to disable. Appears on public pages.</p>
                 </div>
                 <label class="inline-flex items-center gap-2 text-sm text-gray-700">
                     <input type="checkbox" name="maintenance_mode" class="rounded border-gray-300" <%= settings['maintenance_mode'] === 'true' ? 'checked' : '' %>>
@@ -48,15 +80,30 @@
                 </label>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Login attempts (per window)</label>
-                    <input type="number" min="1" name="auth_login_attempts" value="<%= settings['auth_login_attempts'] || '10' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="1" name="auth_login_attempts" value="<%= settings['auth_login_attempts'] || '10' %>" 
+                        x-model="fields.auth_login_attempts.value"
+                        @blur="onBlur('auth_login_attempts')"
+                        @input="onInput('auth_login_attempts', $event.target.value)"
+                        :class="getInputClasses('auth_login_attempts')">
+                    <p x-show="fields.auth_login_attempts.error" x-text="fields.auth_login_attempts.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Login window (minutes)</label>
-                    <input type="number" min="1" name="auth_login_window_minutes" value="<%= settings['auth_login_window_minutes'] || '15' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="1" name="auth_login_window_minutes" value="<%= settings['auth_login_window_minutes'] || '15' %>" 
+                        x-model="fields.auth_login_window_minutes.value"
+                        @blur="onBlur('auth_login_window_minutes')"
+                        @input="onInput('auth_login_window_minutes', $event.target.value)"
+                        :class="getInputClasses('auth_login_window_minutes')">
+                    <p x-show="fields.auth_login_window_minutes.error" x-text="fields.auth_login_window_minutes.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Password min length</label>
-                    <input type="number" min="8" name="auth_password_min_length" value="<%= settings['auth_password_min_length'] || '12' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="8" name="auth_password_min_length" value="<%= settings['auth_password_min_length'] || '12' %>" 
+                        x-model="fields.auth_password_min_length.value"
+                        @blur="onBlur('auth_password_min_length')"
+                        @input="onInput('auth_password_min_length', $event.target.value)"
+                        :class="getInputClasses('auth_password_min_length')">
+                    <p x-show="fields.auth_password_min_length.error" x-text="fields.auth_password_min_length.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
                 <div class="space-y-2">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Password requirements</label>
@@ -89,11 +136,21 @@
             <div class="p-6 grid md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Idle timeout (minutes)</label>
-                    <input type="number" min="5" name="session_idle_minutes" value="<%= settings['session_idle_minutes'] || '60' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="5" name="session_idle_minutes" value="<%= settings['session_idle_minutes'] || '60' %>" 
+                        x-model="fields.session_idle_minutes.value"
+                        @blur="onBlur('session_idle_minutes')"
+                        @input="onInput('session_idle_minutes', $event.target.value)"
+                        :class="getInputClasses('session_idle_minutes')">
+                    <p x-show="fields.session_idle_minutes.error" x-text="fields.session_idle_minutes.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Remember me duration (days)</label>
-                    <input type="number" min="1" name="session_remember_days" value="<%= settings['session_remember_days'] || '7' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="1" name="session_remember_days" value="<%= settings['session_remember_days'] || '7' %>" 
+                        x-model="fields.session_remember_days.value"
+                        @blur="onBlur('session_remember_days')"
+                        @input="onInput('session_remember_days', $event.target.value)"
+                        :class="getInputClasses('session_remember_days')">
+                    <p x-show="fields.session_remember_days.error" x-text="fields.session_remember_days.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
             </div>
         </section>
@@ -106,16 +163,31 @@
             <div class="p-6 grid md:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Matches/day (FREE)</label>
-                    <input type="number" min="0" name="limit_matches_per_day_free" value="<%= settings['limit_matches_per_day_free'] || '10' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
-                    <p class="text-[10px] text-gray-500 mt-1">0 = unlimited</p>
+                    <input type="number" min="0" name="limit_matches_per_day_free" value="<%= settings['limit_matches_per_day_free'] || '10' %>" 
+                        x-model="fields.limit_matches_per_day_free.value"
+                        @blur="onBlur('limit_matches_per_day_free')"
+                        @input="onInput('limit_matches_per_day_free', $event.target.value)"
+                        :class="getInputClasses('limit_matches_per_day_free')">
+                    <p x-show="fields.limit_matches_per_day_free.error" x-text="fields.limit_matches_per_day_free.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
+                    <p x-show="!fields.limit_matches_per_day_free.error" class="text-[10px] text-gray-500 mt-1">0 = unlimited</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Matches/day (PRO)</label>
-                    <input type="number" min="0" name="limit_matches_per_day_pro" value="<%= settings['limit_matches_per_day_pro'] || '100' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="0" name="limit_matches_per_day_pro" value="<%= settings['limit_matches_per_day_pro'] || '100' %>" 
+                        x-model="fields.limit_matches_per_day_pro.value"
+                        @blur="onBlur('limit_matches_per_day_pro')"
+                        @input="onInput('limit_matches_per_day_pro', $event.target.value)"
+                        :class="getInputClasses('limit_matches_per_day_pro')">
+                    <p x-show="fields.limit_matches_per_day_pro.error" x-text="fields.limit_matches_per_day_pro.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Matches/day (ENTERPRISE)</label>
-                    <input type="number" min="0" name="limit_matches_per_day_enterprise" value="<%= settings['limit_matches_per_day_enterprise'] || '0' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="0" name="limit_matches_per_day_enterprise" value="<%= settings['limit_matches_per_day_enterprise'] || '0' %>" 
+                        x-model="fields.limit_matches_per_day_enterprise.value"
+                        @blur="onBlur('limit_matches_per_day_enterprise')"
+                        @input="onInput('limit_matches_per_day_enterprise', $event.target.value)"
+                        :class="getInputClasses('limit_matches_per_day_enterprise')">
+                    <p x-show="fields.limit_matches_per_day_enterprise.error" x-text="fields.limit_matches_per_day_enterprise.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">API keys max (FREE)</label>
@@ -152,15 +224,30 @@
             <div class="p-6 grid md:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Retry attempts</label>
-                    <input type="number" min="1" name="queue_retry_attempts" value="<%= settings['queue_retry_attempts'] || '3' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="1" name="queue_retry_attempts" value="<%= settings['queue_retry_attempts'] || '3' %>" 
+                        x-model="fields.queue_retry_attempts.value"
+                        @blur="onBlur('queue_retry_attempts')"
+                        @input="onInput('queue_retry_attempts', $event.target.value)"
+                        :class="getInputClasses('queue_retry_attempts')">
+                    <p x-show="fields.queue_retry_attempts.error" x-text="fields.queue_retry_attempts.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Retry backoff (ms)</label>
-                    <input type="number" min="0" name="queue_retry_backoff_ms" value="<%= settings['queue_retry_backoff_ms'] || '5000' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="0" name="queue_retry_backoff_ms" value="<%= settings['queue_retry_backoff_ms'] || '5000' %>" 
+                        x-model="fields.queue_retry_backoff_ms.value"
+                        @blur="onBlur('queue_retry_backoff_ms')"
+                        @input="onInput('queue_retry_backoff_ms', $event.target.value)"
+                        :class="getInputClasses('queue_retry_backoff_ms')">
+                    <p x-show="fields.queue_retry_backoff_ms.error" x-text="fields.queue_retry_backoff_ms.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Worker concurrency</label>
-                    <input type="number" min="1" name="queue_concurrency" value="<%= settings['queue_concurrency'] || '2' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                    <input type="number" min="1" name="queue_concurrency" value="<%= settings['queue_concurrency'] || '2' %>" 
+                        x-model="fields.queue_concurrency.value"
+                        @blur="onBlur('queue_concurrency')"
+                        @input="onInput('queue_concurrency', $event.target.value)"
+                        :class="getInputClasses('queue_concurrency')">
+                    <p x-show="fields.queue_concurrency.error" x-text="fields.queue_concurrency.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Max turns per match</label>
@@ -223,6 +310,46 @@
                 </div>
             </div>
         </section>
+
+        <!-- Chat Config Policy -->
+        <% if (typeof can === 'function' && can('admin.settings.chat_config')) { %>
+        <section class="bg-white rounded-lg shadow border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="font-bold text-gray-900">Chat Configuration Policy</h3>
+                <p class="text-xs text-gray-500">Dictate which settings users can manage themselves.</p>
+            </div>
+            <div class="p-6 grid md:grid-cols-2 gap-6">
+                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <input type="checkbox" name="user_can_toggle_chat_notifications" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" <%= settings['user_can_toggle_chat_notifications'] !== 'false' ? 'checked' : '' %>>
+                    <div>
+                        <span class="text-sm font-semibold text-gray-900 block">Allow: Toggle Notifications</span>
+                        <span class="text-[10px] text-gray-500 block">Users can enable/disable toast alerts.</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <input type="checkbox" name="user_can_toggle_chat_sound" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" <%= settings['user_can_toggle_chat_sound'] !== 'false' ? 'checked' : '' %>>
+                    <div>
+                        <span class="text-sm font-semibold text-gray-900 block">Allow: Toggle Sound</span>
+                        <span class="text-[10px] text-gray-500 block">Users can manage notification audio.</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <input type="checkbox" name="user_can_change_chat_rate_limit" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" <%= settings['user_can_change_chat_rate_limit'] !== 'false' ? 'checked' : '' %>>
+                    <div>
+                        <span class="text-sm font-semibold text-gray-900 block">Allow: Anti-Spam Customization</span>
+                        <span class="text-[10px] text-gray-500 block">Users can change their toast delay.</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <input type="checkbox" name="user_can_toggle_chat_presence" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" <%= settings['user_can_toggle_chat_presence'] !== 'false' ? 'checked' : '' %>>
+                    <div>
+                        <span class="text-sm font-semibold text-gray-900 block">Allow: Toggle Presence</span>
+                        <span class="text-[10px] text-gray-500 block">Users can hide their online status.</span>
+                    </div>
+                </label>
+            </div>
+        </section>
+        <% } %>
 
         <!-- Default Tier -->
         <section class="bg-white rounded-lg shadow border border-gray-200">

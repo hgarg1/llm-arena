@@ -1,0 +1,226 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">API Keys</h1>
+            <p class="text-sm text-gray-500">Track usage, enforce scopes, and manage key health.</p>
+        </div>
+        <div class="text-xs text-gray-500">Last updated <%= new Date().toLocaleString() %></div>
+    </div>
+
+    <% 
+        const totalKeys = keys.length;
+        const activeKeys = keys.filter(k => k.status === 'ACTIVE').length;
+        const suspendedKeys = keys.filter(k => k.status === 'SUSPENDED').length;
+        const revokedKeys = keys.filter(k => k.status === 'REVOKED').length;
+        const totalUsage = Object.values(usageMap || {}).reduce((sum, val) => sum + Number(val || 0), 0);
+        const topKeys = [...keys].sort((a, b) => (usageMap[b.id] || 0) - (usageMap[a.id] || 0)).slice(0, 3);
+    %>
+    <div class="grid md:grid-cols-4 gap-4 mb-6">
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Total Keys</div>
+            <div class="mt-2 text-2xl font-bold text-gray-900"><%= totalKeys %></div>
+            <div class="text-[11px] text-gray-500">Across all users</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Active</div>
+            <div class="mt-2 text-2xl font-bold text-emerald-700"><%= activeKeys %></div>
+            <div class="text-[11px] text-gray-500">Ready for production</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Suspended</div>
+            <div class="mt-2 text-2xl font-bold text-amber-700"><%= suspendedKeys %></div>
+            <div class="text-[11px] text-gray-500">Access paused</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Usage</div>
+            <div class="mt-2 text-2xl font-bold text-gray-900"><%= totalUsage %></div>
+            <div class="text-[11px] text-gray-500">Requests tracked</div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
+        <form class="grid md:grid-cols-4 gap-3" method="GET" action="/admin/api-keys">
+            <div>
+                <label class="text-xs font-medium text-gray-600">Search</label>
+                <input type="text" name="q" value="<%= query.q || '' %>" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Key name, user email, prefix">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Status</label>
+                <select name="status" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">All</option>
+                    <option value="ACTIVE" <%= query.status === 'ACTIVE' ? 'selected' : '' %>>Active</option>
+                    <option value="SUSPENDED" <%= query.status === 'SUSPENDED' ? 'selected' : '' %>>Suspended</option>
+                    <option value="REVOKED" <%= query.status === 'REVOKED' ? 'selected' : '' %>>Revoked</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Scope</label>
+                <select name="scope" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">All</option>
+                    <% scopes.forEach(scope => { %>
+                        <option value="<%= scope.key %>" <%= query.scope === scope.key ? 'selected' : '' %>><%= scope.label %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button class="btn btn-sm btn-primary">Apply</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6 mb-6">
+        <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <div class="text-sm font-semibold text-gray-900">Usage Trend</div>
+                    <div class="text-[11px] text-gray-500">Hourly counters (selected key)</div>
+                </div>
+                <select id="usageKeySelect" class="text-xs border border-gray-300 rounded px-2 py-1">
+                    <option value="">Select key</option>
+                    <% keys.forEach(key => { %>
+                        <option value="<%= key.id %>"><%= key.name %> | <%= key.user?.email || "" %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div class="rounded-lg border border-dashed border-gray-200 bg-slate-50 p-3">
+                <div id="usageChart" class="grid grid-cols-24 gap-1 items-end h-44"></div>
+            </div>
+            <div class="mt-3 text-[11px] text-gray-500 flex items-center justify-between">
+                <span>Last 100 hours</span>
+                <span>Bars scale to max volume</span>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-5 space-y-4">
+            <div>
+                <div class="text-sm font-semibold text-gray-900 mb-1">Key Summary</div>
+                <div id="usageSummary" class="text-xs text-gray-600 space-y-2">
+                    <div>Select a key to view usage.</div>
+                </div>
+            </div>
+            <div>
+                <div class="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-2">Top Usage</div>
+                <div class="space-y-2 text-xs text-gray-600">
+                    <% if (topKeys.length) { %>
+                        <% topKeys.forEach(key => { %>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-gray-800"><%= key.name %></div>
+                                    <div class="text-[10px] text-gray-400"><%= key.user?.email || "" %></div>
+                                </div>
+                                <div class="text-sm font-semibold text-gray-900"><%= usageMap[key.id] || 0 %></div>
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div>No usage data yet.</div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Key</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usage</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scopes</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Used</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                <% keys.forEach(key => { %>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-semibold text-gray-900"><%= key.name %></div>
+                            <div class="text-[10px] text-gray-400 font-mono">sk-<%= key.prefix || key.key_hash.substring(0, 8) %>****</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600"><%= key.user?.email || '-' %></td>
+                        <td class="px-6 py-4 text-sm">
+                            <span class="px-2 py-1 text-xs rounded <%= key.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : (key.status === 'SUSPENDED' ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600') %>">
+                                <%= key.status %>
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700"><%= usageMap[key.id] || 0 %></td>
+                        <td class="px-6 py-4 text-xs text-gray-600">
+                            <% (key.scopes || []).forEach(scope => { %>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 mr-1 mb-1"><%= scope.scope_key %></span>
+                            <% }) %>
+                        </td>
+                        <td class="px-6 py-4 text-xs text-gray-500">
+                            <%= key.last_used ? new Date(key.last_used).toLocaleDateString() : 'Never' %>
+                        </td>
+                        <td class="px-6 py-4 text-right text-xs">
+                            <a href="/admin/users/<%= key.user_id %>" class="text-blue-600 hover:underline">Open User</a>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        <% if (keys.length === 0) { %>
+            <div class="p-8 text-center text-gray-500">No API keys found.</div>
+        <% } %>
+    </div>
+<%- include('../../partials/admin_footer') %>
+
+<script>
+    (function () {
+        const chart = document.getElementById('usageChart');
+        const summary = document.getElementById('usageSummary');
+        const select = document.getElementById('usageKeySelect');
+
+        const renderChart = (series) => {
+            chart.innerHTML = '';
+            if (!series.length) {
+                chart.innerHTML = '<div class="col-span-24 text-xs text-gray-500">No data yet.</div>';
+                return;
+            }
+            const max = Math.max(...series.map(point => point.count), 1);
+            series.slice(-100).forEach(point => {
+                const height = Math.max(6, Math.round((point.count / max) * 140));
+                const bar = document.createElement('div');
+                bar.className = 'rounded';
+                bar.style.background = 'linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.6))';
+                bar.style.height = `${height}px`;
+                bar.title = `${point.count} @ ${new Date(point.window_start).toLocaleString()}`;
+                chart.appendChild(bar);
+            });
+        };
+
+        const renderSummary = (rows) => {
+            if (!rows.length) {
+                summary.innerHTML = '<div>No usage data yet.</div>';
+                return;
+            }
+            const total = rows.reduce((sum, row) => sum + row.count, 0);
+            const latest = rows[0];
+            const avg = Math.round(total / rows.length);
+            summary.innerHTML = `
+                <div class="text-xs text-gray-500">Total requests</div>
+                <div class="text-lg font-semibold text-gray-900">${total}</div>
+                <div class="text-xs text-gray-500 mt-3">Avg / hour</div>
+                <div class="text-sm font-semibold text-gray-700">${avg}</div>
+                <div class="text-xs text-gray-500 mt-3">Latest activity</div>
+                <div class="text-sm text-gray-700">${latest.count} @ ${new Date(latest.window_start).toLocaleString()}</div>
+            `;
+        };
+
+        const loadUsage = async () => {
+            if (!select.value) {
+                chart.innerHTML = '<div class="col-span-24 text-xs text-gray-500">Select a key to view usage.</div>';
+                summary.innerHTML = '<div>Select a key to view usage.</div>';
+                return;
+            }
+            const res = await fetch(`/admin/api-keys/usage/data?keyId=${select.value}`);
+            const data = await res.json();
+            renderChart(data.series || []);
+            renderSummary(data.rows || []);
+        };
+
+        select.addEventListener('change', loadUsage);
+        loadUsage();
+    })();
+</script>

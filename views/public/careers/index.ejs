@@ -1,0 +1,87 @@
+<%- include('../../partials/header_layout') %>
+
+<section class="relative bg-slate-950 text-white overflow-hidden">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,#1e293b,transparent_55%)] opacity-80"></div>
+    <div class="container relative z-10 py-20">
+        <div class="max-w-3xl">
+            <div class="text-xs uppercase tracking-[0.3em] text-slate-400 mb-4">Careers</div>
+            <h1 class="text-4xl md:text-6xl font-bold leading-tight"><%= content['public:careers:hero_title'] %></h1>
+            <p class="mt-4 text-lg text-slate-300"><%= content['public:careers:hero_subtitle'] %></p>
+            <p class="mt-3 text-sm text-slate-400"><%= content['public:careers:hero_lead'] %></p>
+        </div>
+    </div>
+</section>
+
+<section id="open-roles" class="container py-16">
+    <div class="grid lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-6">
+            <% if (jobs.length === 0) { %>
+                <div class="border border-dashed border-slate-200 rounded-lg p-10 text-center text-slate-500">No open roles at the moment. Check back soon.</div>
+            <% } %>
+            <% jobs.forEach(job => { %>
+                <a href="/careers/<%= job.slug %>" class="block bg-white border border-slate-200 rounded-xl p-6 hover:shadow-lg transition">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-sm uppercase tracking-widest text-slate-400"><%= job.department || 'General' %></div>
+                            <h2 class="text-2xl font-semibold text-slate-900 mt-1"><%= job.title %></h2>
+                            <p class="text-sm text-slate-500 mt-2"><%= job.summary %></p>
+                        </div>
+                        <span class="px-3 py-1 text-xs rounded-full bg-slate-900 text-white"><%= job.location_type %></span>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-500">
+                        <span class="px-2 py-1 bg-slate-100 rounded"><%= job.employment_type %></span>
+                        <% if (job.location) { %><span class="px-2 py-1 bg-slate-100 rounded"><%= job.location %></span><% } %>
+                        <% if (job.seniority) { %><span class="px-2 py-1 bg-slate-100 rounded"><%= job.seniority %></span><% } %>
+                    </div>
+                </a>
+            <% }) %>
+        </div>
+        <div class="space-y-6">
+            <div class="bg-slate-900 text-white rounded-xl p-6">
+                <div class="text-xs uppercase tracking-widest text-slate-400"><%= content['public:careers:mission_title'] %></div>
+                <h3 class="text-xl font-semibold mt-3"><%= content['public:careers:values_title'] %></h3>
+                <p class="text-sm text-slate-300 mt-2"><%= content['public:careers:mission_text'] %></p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-6">
+                <div class="text-xs uppercase tracking-widest text-slate-400"><%= content['public:careers:benefits_title'] %></div>
+                <ul class="mt-3 space-y-2 text-sm text-slate-600">
+                    <li><%= content['public:careers:benefit_1'] %></li>
+                    <li><%= content['public:careers:benefit_2'] %></li>
+                    <li><%= content['public:careers:benefit_3'] %></li>
+                    <li><%= content['public:careers:benefit_4'] %></li>
+                    <li><%= content['public:careers:benefit_5'] %></li>
+                    <li><%= content['public:careers:benefit_6'] %></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container pb-16">
+    <div class="grid lg:grid-cols-3 gap-8">
+        <div class="bg-white border border-slate-200 rounded-xl p-6">
+            <div class="text-xs uppercase tracking-widest text-slate-400"><%= content['public:careers:values_title'] %></div>
+            <ul class="mt-4 space-y-3 text-sm text-slate-600">
+                <li><%= content['public:careers:value_1'] %></li>
+                <li><%= content['public:careers:value_2'] %></li>
+                <li><%= content['public:careers:value_3'] %></li>
+            </ul>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-xl p-6">
+            <div class="text-xs uppercase tracking-widest text-slate-400"><%= content['public:careers:process_title'] %></div>
+            <ol class="mt-4 space-y-2 text-sm text-slate-600 list-decimal list-inside">
+                <li><%= content['public:careers:process_step_1'] %></li>
+                <li><%= content['public:careers:process_step_2'] %></li>
+                <li><%= content['public:careers:process_step_3'] %></li>
+                <li><%= content['public:careers:process_step_4'] %></li>
+            </ol>
+        </div>
+        <div class="bg-slate-900 text-white rounded-xl p-6">
+            <div class="text-xs uppercase tracking-widest text-slate-400"><%= content['public:careers:cta_title'] %></div>
+            <p class="mt-3 text-sm text-slate-300"><%= content['public:careers:cta_text'] %></p>
+            <a href="#open-roles" class="inline-flex mt-4 px-4 py-2 bg-white text-slate-900 rounded-full text-sm font-semibold">Explore roles</a>
+        </div>
+    </div>
+</section>
+
+<%- include('../../partials/footer_layout') %>

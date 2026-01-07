@@ -1,0 +1,184 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">HR Console</h1>
+        <p class="text-sm text-gray-500">Talent pipeline overview, applications, and hiring ops.</p>
+    </div>
+
+    <div class="grid md:grid-cols-4 gap-4 mb-6">
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Open Roles</div>
+            <div class="mt-2 text-2xl font-bold text-gray-900"><%= stats.jobs %></div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Applications</div>
+            <div class="mt-2 text-2xl font-bold text-gray-900"><%= stats.applications %></div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Signal Quality</div>
+            <div class="mt-2 text-2xl font-bold text-gray-900">High</div>
+            <div class="text-[11px] text-gray-500">AI-assisted screening</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Avg Fit Score</div>
+            <div class="mt-2 text-2xl font-bold text-gray-900"><%= averages._avg.ai_fit_score ? averages._avg.ai_fit_score.toFixed(1) : 'N/A' %></div>
+            <div class="text-[11px] text-gray-500">AI fit assessment</div>
+        </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div class="text-sm font-semibold text-gray-900">Pipeline Breakdown</div>
+            <div class="text-[11px] text-gray-500">Application status distribution.</div>
+            <div class="mt-4 space-y-3">
+                <% breakdown.forEach(item => { %>
+                    <div>
+                        <div class="flex items-center justify-between text-xs text-gray-600">
+                            <span><%= item.status %></span>
+                            <span><%= item._count._all %></span>
+                        </div>
+                        <div class="h-2 bg-slate-100 rounded-full mt-1">
+                            <div class="h-2 bg-slate-900 rounded-full" style="width:<%= stats.applications ? (item._count._all / stats.applications) * 100 : 0 %>%"></div>
+                        </div>
+                    </div>
+                <% }) %>
+                <% if (breakdown.length === 0) { %>
+                    <div class="text-xs text-gray-400">No pipeline data yet.</div>
+                <% } %>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div class="text-sm font-semibold text-gray-900">Role Momentum</div>
+            <div class="text-[11px] text-gray-500">Top roles by application volume.</div>
+            <div class="mt-4 space-y-3 text-sm text-gray-600">
+                <% jobStats.forEach(job => { %>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900"><%= job.title %></div>
+                            <div class="text-[11px] text-gray-400"><%= job.status %> - <%= job.location_type %></div>
+                        </div>
+                        <div class="text-lg font-semibold text-gray-900"><%= job._count.applications %></div>
+                    </div>
+                <% }) %>
+                <% if (jobStats.length === 0) { %>
+                    <div class="text-xs text-gray-400">No jobs yet.</div>
+                <% } %>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-sm font-semibold text-gray-900">Recent Applications</div>
+                    <div class="text-[11px] text-gray-500">Fastest signal from the last 6 submissions.</div>
+                </div>
+                <a href="/admin/hr/applications" class="btn btn-xs btn-secondary">View All</a>
+            </div>
+            <div class="divide-y">
+                <% recentApps.forEach(app => { %>
+                    <div class="py-3 flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900"><%= app.full_name %></div>
+                            <div class="text-[11px] text-gray-500"><%= app.job.title %> - <%= app.email %></div>
+                        </div>
+                        <a href="/admin/hr/applications/<%= app.id %>" class="text-sm text-blue-600">Review</a>
+                    </div>
+                <% }) %>
+                <% if (recentApps.length === 0) { %>
+                    <div class="py-8 text-sm text-gray-500">No applications yet.</div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div class="text-sm font-semibold text-gray-900">Score Distribution</div>
+            <div class="text-[11px] text-gray-500">Fit, sentiment, and review buckets.</div>
+            <div class="mt-4 space-y-3">
+                <% scoreBuckets.fit.forEach((bucket, idx) => { %>
+                    <div>
+                        <div class="flex items-center justify-between text-xs text-gray-600">
+                            <span>Fit <%= bucket.label %></span>
+                            <span><%= bucket.count %></span>
+                        </div>
+                        <div class="h-2 bg-slate-100 rounded-full mt-1">
+                            <div class="h-2 bg-blue-600 rounded-full" style="width:<%= scoreSample ? (bucket.count / scoreSample) * 100 : 0 %>%"></div>
+                        </div>
+                    </div>
+                <% }) %>
+                <div class="pt-2 border-t border-gray-100"></div>
+                <% scoreBuckets.sentiment.forEach(bucket => { %>
+                    <div>
+                        <div class="flex items-center justify-between text-xs text-gray-600">
+                            <span>Sentiment <%= bucket.label %></span>
+                            <span><%= bucket.count %></span>
+                        </div>
+                        <div class="h-2 bg-slate-100 rounded-full mt-1">
+                            <div class="h-2 bg-emerald-600 rounded-full" style="width:<%= scoreSample ? (bucket.count / scoreSample) * 100 : 0 %>%"></div>
+                        </div>
+                    </div>
+                <% }) %>
+                <div class="pt-2 border-t border-gray-100"></div>
+                <% scoreBuckets.review.forEach(bucket => { %>
+                    <div>
+                        <div class="flex items-center justify-between text-xs text-gray-600">
+                            <span>Review <%= bucket.label %></span>
+                            <span><%= bucket.count %></span>
+                        </div>
+                        <div class="h-2 bg-slate-100 rounded-full mt-1">
+                            <div class="h-2 bg-amber-500 rounded-full" style="width:<%= scoreSample ? (bucket.count / scoreSample) * 100 : 0 %>%"></div>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div class="text-sm font-semibold text-gray-900">Role Quality</div>
+            <div class="text-[11px] text-gray-500">Average fit and sentiment by role.</div>
+            <div class="mt-4 space-y-3">
+                <% roleScoreCards.forEach(role => { %>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900"><%= role.title %></div>
+                            <div class="text-[11px] text-gray-500"><%= role.count %> apps</div>
+                        </div>
+                        <div class="text-right text-xs text-gray-600">
+                            <div>Fit <span class="font-semibold text-gray-900"><%= role.fitAvg !== null ? role.fitAvg.toFixed(1) : 'N/A' %></span></div>
+                            <div>Sentiment <span class="font-semibold text-gray-900"><%= role.sentimentAvg !== null ? role.sentimentAvg.toFixed(1) : 'N/A' %></span></div>
+                        </div>
+                    </div>
+                <% }) %>
+                <% if (roleScoreCards.length === 0) { %>
+                    <div class="text-xs text-gray-400">No role metrics yet.</div>
+                <% } %>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <div class="text-sm font-semibold text-gray-900">Top Signals</div>
+            <div class="text-[11px] text-gray-500">Signals and risks from AI summaries.</div>
+            <div class="mt-4 space-y-4">
+                <div>
+                    <div class="text-xs uppercase tracking-widest text-gray-500">Signals</div>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <% topSignals.forEach(signal => { %>
+                            <span class="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 rounded-full"><%= signal.label %> (<%= signal.count %>)</span>
+                        <% }) %>
+                        <% if (topSignals.length === 0) { %>
+                            <span class="text-xs text-gray-400">No signal data yet.</span>
+                        <% } %>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-xs uppercase tracking-widest text-gray-500">Risks</div>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <% topRisks.forEach(signal => { %>
+                            <span class="px-2 py-1 text-xs bg-amber-50 text-amber-700 rounded-full"><%= signal.label %> (<%= signal.count %>)</span>
+                        <% }) %>
+                        <% if (topRisks.length === 0) { %>
+                            <span class="text-xs text-gray-400">No risk data yet.</span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<%- include('../../partials/admin_footer') %>

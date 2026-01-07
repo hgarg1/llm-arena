@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { matchQueue } from '../services/queue';
+import { apiKeyScopesForAdmin } from './admin/api-keys.controller';
 import { MatchStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { settingsService } from '../services/settings.service';
@@ -23,30 +24,72 @@ const getEnterprisePlan = async () => {
 };
 
 export const dashboard = async (req: Request, res: Response) => {
-    // ... existing dashboard code ...
-    // Gather stats
+    const userId = (req.session as any).userId;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Gather Comprehensive Stats
     const [
         userCount, 
         modelCount, 
         matchCount, 
         runningMatches,
-        failedMatches
+        failedMatches,
+        dashboard,
+        matchesByGame,
+        recentSignups,
+        recentMatches,
+        queueCounts,
+        auditLogs,
+        // New Data Points
+        activeSubscriptions,
+        pendingApprovals,
+        totalApiKeys,
+        openJobs,
+        totalApplications,
+        totalChannels,
+        messagesToday,
+        activeModels,
+        accessDeniedCount,
+        tierDistribution
     ] = await Promise.all([
         prisma.user.count(),
         prisma.model.count(),
         prisma.match.count(),
         prisma.match.count({ where: { status: 'RUNNING' } }),
-        prisma.match.count({ where: { status: 'FAILED' } })
+        prisma.match.count({ where: { status: 'FAILED' } }),
+        prisma.adminDashboard.findUnique({ where: { user_id: userId } }),
+        prisma.match.groupBy({ by: ['game_type'], _count: { id: true } }),
+        prisma.user.findMany({
+            take: 10,
+            orderBy: { created_at: 'desc' },
+            select: { email: true, created_at: true, tier: true }
+        }),
+        prisma.match.findMany({
+            take: 10,
+            orderBy: { created_at: 'desc' },
+            include: { created_by: { select: { email: true } } }
+        }),
+        matchQueue.getJobCounts('active', 'waiting', 'completed', 'failed'),
+        prisma.adminAuditLog.findMany({
+            take: 10,
+            orderBy: { created_at: 'desc' },
+            include: { admin: { select: { email: true } } }
+        }),
+        prisma.stripeSubscription.count({ where: { status: 'active' } }),
+        prisma.adminAccessRequest.count({ where: { status: 'PENDING' } }),
+        prisma.apiKey.count({ where: { status: 'ACTIVE' } }),
+        prisma.jobPosting.count({ where: { status: 'PUBLISHED' } }),
+        prisma.jobApplication.count(),
+        prisma.chatChannel.count(),
+        prisma.chatMessage.count({ where: { created_at: { gte: today } } }),
+        prisma.model.count({ where: { is_active: true } }),
+        prisma.adminAuditLog.count({ where: { action: 'access.denied' } }),
+        prisma.user.groupBy({ by: ['tier'], _count: { id: true } })
     ]);
 
-    const recentMatches = await prisma.match.findMany({
-        take: 5,
-        orderBy: { created_at: 'desc' },
-        include: { created_by: { select: { email: true } } }
-    });
-
-    // Queue Stats
-    const queueCounts = await matchQueue.getJobCounts('active', 'waiting', 'completed', 'failed');
+    const layout = dashboard ? dashboard.layout : null;
 
     res.render('admin/dashboard', {
         title: 'Admin Dashboard',
@@ -57,9 +100,23 @@ export const dashboard = async (req: Request, res: Response) => {
             matchCount,
             runningMatches,
             failedMatches,
-            queueCounts
+            queueCounts,
+            activeSubscriptions,
+            pendingApprovals,
+            totalApiKeys,
+            openJobs,
+            totalApplications,
+            totalChannels,
+            messagesToday,
+            activeModels,
+            accessDeniedCount,
+            tierDistribution
         },
-        recentMatches
+        recentMatches,
+        recentSignups,
+        matchesByGame,
+        auditLogs,
+        layout: JSON.stringify(layout)
     });
 };
 
@@ -457,7 +514,7 @@ export const getUserDetails = async (req: Request, res: Response) => {
             where: { id },
             include: {
                 matches: { orderBy: { created_at: 'desc' }, take: 5 },
-                api_keys: true,
+                api_keys: { include: { scopes: true } },
                 plan: true,
                 _count: { select: { matches: true } }
             }
@@ -470,11 +527,13 @@ export const getUserDetails = async (req: Request, res: Response) => {
     
     if (!user) return res.redirect('/admin/users');
     
+    const apiKeyScopes = await apiKeyScopesForAdmin();
     res.render('admin/users/detail', { 
         title: `User: ${user.email}`, 
         path: '/admin/users', 
         user,
         plans,
+        apiKeyScopes,
         success: req.query.success,
         error: req.query.error
     });
@@ -482,7 +541,13 @@ export const getUserDetails = async (req: Request, res: Response) => {
 
 export const updateUserDetails = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, company, job_title, email, role, tier, phone, plan_id } = req.body;
+    const { 
+        name, company, job_title, email, role, tier, phone, plan_id,
+        chat_notifications_enabled,
+        chat_notifications_sound,
+        chat_notifications_rate_limit,
+        chat_presence_visible
+    } = req.body;
     const data: any = {};
 
     const existing = await prisma.user.findUnique({ where: { id }, select: { role: true } });
@@ -493,6 +558,11 @@ export const updateUserDetails = async (req: Request, res: Response) => {
     if (job_title !== undefined) data.job_title = job_title || null;
     if (email !== undefined) data.email = email;
     if (phone !== undefined) data.phone = phone || null;
+
+    if (chat_notifications_enabled !== undefined) data.chat_notifications_enabled = chat_notifications_enabled === 'on';
+    if (chat_notifications_sound !== undefined) data.chat_notifications_sound = chat_notifications_sound === 'on';
+    if (chat_notifications_rate_limit !== undefined) data.chat_notifications_rate_limit = parseInt(chat_notifications_rate_limit) || 0;
+    if (chat_presence_visible !== undefined) data.chat_presence_visible = chat_presence_visible === 'on';
 
     const allowedRoles = ['USER', 'ADMIN'];
     if (role && allowedRoles.includes(role)) data.role = role;
@@ -612,6 +682,11 @@ export const resetUser2FA = async (req: Request, res: Response) => {
 };
 
 export const exportUsers = async (req: Request, res: Response) => {
+    const entitlements = (req as any).entitlements;
+    const canExport = !entitlements?.resolved?.['export.csv'] || entitlements.hasEntitlement('export.csv');
+    if (!canExport) {
+        return res.status(403).send('Export not allowed for your subscription.');
+    }
     const users = await prisma.user.findMany({
         orderBy: { created_at: 'desc' },
         include: { plan: true }
@@ -854,7 +929,11 @@ export const updateSettings = async (req: Request, res: Response) => {
         'security_csp_allow_unsafe_eval',
         'queue_auto_clean_enabled',
         'comms_email_enabled',
-        'comms_sms_enabled'
+        'comms_sms_enabled',
+        'user_can_toggle_chat_notifications',
+        'user_can_toggle_chat_sound',
+        'user_can_change_chat_rate_limit',
+        'user_can_toggle_chat_presence'
     ];
     const settingsKeys = [
         'global_alert',
@@ -951,6 +1030,11 @@ export const testSms = async (req: Request, res: Response) => {
 };
 
 export const exportAuditLogs = async (req: Request, res: Response) => {
+    const entitlements = (req as any).entitlements;
+    const canExport = !entitlements?.resolved?.['export.csv'] || entitlements.hasEntitlement('export.csv');
+    if (!canExport) {
+        return res.status(403).send('Export not allowed for your subscription.');
+    }
     const logs = await prisma.adminAuditLog.findMany({
         orderBy: { created_at: 'desc' },
         take: 1000,

@@ -1,0 +1,199 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Entitlement Usage</h1>
+            <p class="text-sm text-gray-500">Monitor quota usage across users, orgs, and keys.</p>
+        </div>
+        <a href="/admin/entitlements" class="btn btn-sm btn-ghost">Back to Entitlements</a>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Total Usage</div>
+            <div id="usageTotal" class="mt-2 text-2xl font-bold text-gray-900">--</div>
+            <div class="text-[11px] text-gray-500">Across current filters</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Entries</div>
+            <div id="usageEntries" class="mt-2 text-2xl font-bold text-gray-900">--</div>
+            <div class="text-[11px] text-gray-500">Counter rows loaded</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+            <div class="text-xs uppercase tracking-widest text-gray-500">Latest Window</div>
+            <div id="usageLatest" class="mt-2 text-2xl font-bold text-gray-900">--</div>
+            <div class="text-[11px] text-gray-500">Most recent bucket</div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
+        <div class="grid md:grid-cols-5 gap-3">
+            <div>
+                <label class="text-xs font-medium text-gray-600">Entitlement</label>
+                <select id="filterKey" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">All</option>
+                    <% entitlements.forEach(ent => { %>
+                        <option value="<%= ent.key %>"><%= ent.key %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Scope Type</label>
+                <select id="filterScopeType" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                    <option value="">All</option>
+                    <option value="USER">User</option>
+                    <option value="ORG">Org</option>
+                    <option value="API_KEY">API Key</option>
+                    <option value="MODEL">Model</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">Scope ID</label>
+                <input id="filterScopeId" type="text" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Optional">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">From</label>
+                <input id="filterFrom" type="date" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-gray-600">To</label>
+                <input id="filterTo" type="date" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+            </div>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+            <button id="usageApply" class="btn btn-sm btn-primary">Apply Filters</button>
+            <button id="usageReset" class="btn btn-sm btn-ghost">Reset</button>
+        </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <div class="text-sm font-semibold text-gray-900">Usage Trend</div>
+                    <div class="text-[11px] text-gray-500">Counts by window start</div>
+                </div>
+                <div class="text-[11px] text-gray-400">Last 100 buckets</div>
+            </div>
+            <div id="usageChart" class="grid grid-cols-12 gap-1 items-end h-48"></div>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-5">
+            <div class="text-sm font-semibold text-gray-900 mb-3">Recent Activity</div>
+            <div class="space-y-2 text-xs text-gray-600">
+                <% if (recent.length === 0) { %>
+                    <div>No usage data yet.</div>
+                <% } else { %>
+                    <% recent.forEach(row => { %>
+                        <div class="border border-gray-100 rounded p-2">
+                            <div class="text-[11px] text-gray-500"><%= row.entitlement_key %> • <%= row.scope_type %></div>
+                            <div class="text-xs text-gray-700"><%= row.count %> @ <%= row.window_start.toISOString() %></div>
+                        </div>
+                    <% }) %>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg border border-gray-200 p-5 mt-6">
+        <div class="flex items-center justify-between mb-3">
+            <div class="text-sm font-semibold text-gray-900">Usage Counters</div>
+            <div class="text-[11px] text-gray-400">Up to 500 rows</div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs">
+                <thead class="text-gray-500 uppercase bg-gray-50">
+                    <tr>
+                        <th class="p-2 text-left">Entitlement</th>
+                        <th class="p-2 text-left">Scope</th>
+                        <th class="p-2 text-left">Scope ID</th>
+                        <th class="p-2 text-left">Window Start</th>
+                        <th class="p-2 text-left">Count</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y" id="usageTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+<%- include('../../partials/admin_footer') %>
+
+<script>
+    (function () {
+        const totalEl = document.getElementById('usageTotal');
+        const entriesEl = document.getElementById('usageEntries');
+        const latestEl = document.getElementById('usageLatest');
+        const tableBody = document.getElementById('usageTableBody');
+        const chart = document.getElementById('usageChart');
+
+        const filterKey = document.getElementById('filterKey');
+        const filterScopeType = document.getElementById('filterScopeType');
+        const filterScopeId = document.getElementById('filterScopeId');
+        const filterFrom = document.getElementById('filterFrom');
+        const filterTo = document.getElementById('filterTo');
+
+        const buildQuery = () => {
+            const params = new URLSearchParams();
+            if (filterKey.value) params.set('key', filterKey.value);
+            if (filterScopeType.value) params.set('scopeType', filterScopeType.value);
+            if (filterScopeId.value) params.set('scopeId', filterScopeId.value);
+            if (filterFrom.value) params.set('from', filterFrom.value);
+            if (filterTo.value) params.set('to', filterTo.value);
+            return params.toString();
+        };
+
+        const renderTable = (rows) => {
+            if (!rows.length) {
+                tableBody.innerHTML = '<tr><td class="p-3 text-gray-500" colspan="5">No usage rows.</td></tr>';
+                return;
+            }
+            tableBody.innerHTML = rows.map(row => `
+                <tr>
+                    <td class="p-2 text-gray-700">${row.entitlement_key}</td>
+                    <td class="p-2 text-gray-700">${row.scope_type}</td>
+                    <td class="p-2 text-gray-700">${row.scope_id}</td>
+                    <td class="p-2 text-gray-700">${new Date(row.window_start).toLocaleString()}</td>
+                    <td class="p-2 text-gray-900 font-semibold">${row.count}</td>
+                </tr>
+            `).join('');
+        };
+
+        const renderChart = (series) => {
+            chart.innerHTML = '';
+            if (!series.length) {
+                chart.innerHTML = '<div class="col-span-12 text-xs text-gray-500">No data yet.</div>';
+                return;
+            }
+            const max = Math.max(...series.map(point => point.count), 1);
+            const trimmed = series.slice(-100);
+            trimmed.forEach(point => {
+                const height = Math.max(6, Math.round((point.count / max) * 160));
+                const bar = document.createElement('div');
+                bar.className = 'bg-slate-900/80 rounded';
+                bar.style.height = `${height}px`;
+                bar.title = `${point.count} @ ${new Date(point.window_start).toLocaleDateString()}`;
+                chart.appendChild(bar);
+            });
+        };
+
+        const refresh = async () => {
+            const query = buildQuery();
+            const res = await fetch(`/admin/entitlements/usage/data?${query}`);
+            const data = await res.json();
+            totalEl.textContent = data.total || 0;
+            entriesEl.textContent = data.rows.length || 0;
+            latestEl.textContent = data.series.length ? new Date(data.series[data.series.length - 1].window_start).toLocaleDateString() : '--';
+            renderTable(data.rows);
+            renderChart(data.series);
+        };
+
+        document.getElementById('usageApply').addEventListener('click', refresh);
+        document.getElementById('usageReset').addEventListener('click', () => {
+            filterKey.value = '';
+            filterScopeType.value = '';
+            filterScopeId.value = '';
+            filterFrom.value = '';
+            filterTo.value = '';
+            refresh();
+        });
+
+        refresh();
+    })();
+</script>

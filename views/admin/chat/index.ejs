@@ -1,0 +1,472 @@
+<%- include('../../partials/admin_header') %>
+
+<div class="space-y-6" x-data="{ 
+    createModalOpen: false, 
+    settingsModalOpen: false, 
+    broadcastModalOpen: false 
+}">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Chat Operations Center</h1>
+            <p class="mt-1 text-sm text-gray-500">Real-time governance, moderation, and analytics.</p>
+        </div>
+        <div class="flex gap-3">
+            <button @click="createModalOpen = true" class="btn btn-sm btn-primary shadow-lg shadow-indigo-500/30 transition-transform active:scale-95 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Create Channel
+            </button>
+            <button @click="settingsModalOpen = true" class="btn btn-sm btn-white border-gray-200 shadow-sm text-gray-700 hover:border-gray-300 transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Settings
+            </button>
+            <% if (typeof can === 'function' && can('admin.chat.broadcast')) { %>
+            <button @click="broadcastModalOpen = true" class="btn btn-sm bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100 hover:border-rose-200 shadow-sm transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                Broadcast
+            </button>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Metric 1 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between transition-shadow hover:shadow-md">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Messages</p>
+                <p class="mt-1 text-2xl font-bold text-gray-900"><%= stats.totalMessages.toLocaleString() %></p>
+            </div>
+            <div class="p-3 bg-indigo-50 rounded-lg text-indigo-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+            </div>
+        </div>
+        <!-- Metric 2 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between transition-shadow hover:shadow-md">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Messages Today</p>
+                <div class="flex items-baseline gap-2">
+                    <p class="mt-1 text-2xl font-bold text-gray-900"><%= stats.messagesToday.toLocaleString() %></p>
+                    <% if (stats.messagesToday > 0) { %>
+                        <span class="text-xs font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">+12%</span>
+                    <% } %>
+                </div>
+            </div>
+            <div class="p-3 bg-emerald-50 rounded-lg text-emerald-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+            </div>
+        </div>
+        <!-- Metric 3 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between transition-shadow hover:shadow-md">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Users (24h)</p>
+                <p class="mt-1 text-2xl font-bold text-gray-900"><%= stats.activeUsers.toLocaleString() %></p>
+            </div>
+            <div class="p-3 bg-blue-50 rounded-lg text-blue-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            </div>
+        </div>
+        <!-- Metric 4 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between transition-shadow hover:shadow-md">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Active Channels</p>
+                <p class="mt-1 text-2xl font-bold text-gray-900"><%= stats.totalChannels %></p>
+            </div>
+            <div class="p-3 bg-purple-50 rounded-lg text-purple-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Chart -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Message Volume</h3>
+                <select class="text-xs border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <option>Last 7 Days</option>
+                    <option>Last 30 Days</option>
+                </select>
+            </div>
+            <div class="h-64 bg-gray-50 rounded flex items-center justify-center relative">
+                <canvas id="volumeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- System Health / Quick Actions -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">System Health</h3>
+            
+            <div class="space-y-4 flex-1">
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100 transition-colors hover:bg-green-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm font-medium text-green-900">Socket Server</span>
+                    </div>
+                    <span class="text-xs text-green-700 font-medium">Operational</span>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 transition-colors hover:bg-slate-100">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-4 h-4 <%= stats.sentiment.score > 0 ? 'text-green-500' : (stats.sentiment.score < 0 ? 'text-red-500' : 'text-slate-400') %>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span class="text-sm font-medium text-slate-700">Sentiment AI</span>
+                    </div>
+                    <span class="text-xs font-bold <%= stats.sentiment.score > 0 ? 'text-green-600' : (stats.sentiment.score < 0 ? 'text-red-600' : 'text-slate-500') %>">
+                        <%= stats.sentiment.label %> (<%= stats.sentiment.score.toFixed(2) %>)
+                    </span>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-gray-100">
+                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Moderation Queue</h4>
+                <div class="text-center py-4 bg-gray-50 rounded border border-dashed border-gray-200">
+                    <span class="text-sm text-gray-400">All caught up! 🎉</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Channels List -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/50 flex flex-col md:flex-row justify-between items-center gap-4">
+            <h3 class="text-lg font-bold text-gray-900">Active Channels</h3>
+            <div class="flex gap-2 w-full md:w-auto">
+                <input type="text" placeholder="Search channels..." class="text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-64 transition-all focus:w-full md:focus:w-72">
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Channel</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Access Control</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Governance</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <% channels.forEach(channel => { %>
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                        <span class="font-bold text-lg">#</span>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900"><%= channel.name %></div>
+                                        <div class="text-xs text-gray-500"><%= channel.description || 'No description' %></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-col gap-1">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= channel.type === 'PUBLIC' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' %>">
+                                        <%= channel.type %>
+                                    </span>
+                                    <% if (channel.min_role_required) { %>
+                                        <span class="inline-flex items-center text-[10px] text-gray-500 gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                            <%= channel.min_role_required %>
+                                        </span>
+                                    <% } %>
+                                    <% if (channel.entitlement_required) { %>
+                                        <span class="inline-flex items-center text-[10px] text-purple-600 gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                                            <%= channel.entitlement_required %> Only
+                                        </span>
+                                    <% } %>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900 font-bold"><%= channel._count.messages %> <span class="font-normal text-gray-500">msgs</span></div>
+                                <div class="text-xs text-gray-500"><%= channel._count.participants %> participants</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <div class="flex items-center gap-2">
+                                    <% if (channel.creator) { %>
+                                        <img class="h-6 w-6 rounded-full" src="<%= channel.creator.avatar_url || `https://ui-avatars.com/api/?name=${channel.creator.email}&background=random` %>">
+                                        <span class="truncate max-w-[100px]"><%= channel.creator.email %></span>
+                                    <% } else { %>
+                                        <span class="italic text-gray-400">System</span>
+                                    <% } %>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex items-center justify-end gap-2">
+                                    <a href="/admin/chat/channels/<%= channel.id %>/config" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 p-2 rounded transition-colors" title="Configure">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    </a>
+                                    <form action="/admin/chat/channels/<%= channel.id %>/delete" method="POST" onsubmit="return confirm('Delete channel and all messages?');" class="inline">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                        <button type="submit" class="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 p-2 rounded transition-colors" title="Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+            <% if (channels.length === 0) { %>
+                <div class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No channels active</h3>
+                    <p class="mt-1 text-sm text-gray-500">Get started by creating a new channel.</p>
+                </div>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Create Channel Modal -->
+    <div x-show="createModalOpen" style="display: none;" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div x-show="createModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" @click="createModalOpen = false"></div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <!-- Modal panel -->
+            <div x-show="createModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full ring-1 ring-black/5">
+                <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        Create New Channel
+                    </h3>
+                    <button @click="createModalOpen = false" class="text-indigo-100 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <form action="/admin/chat/channels" method="POST" class="p-6 space-y-5" x-data="formValidation({
+                    name: [
+                        { required: true, message: 'Channel name is required' },
+                        { pattern: /^[a-z0-9-]+$/, message: 'Lowercase, numbers, and hyphens only' }
+                    ],
+                    description: [
+                        { minLength: 5, message: 'Description must be at least 5 characters' }
+                    ]
+                })" @submit="submit">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Channel Name</label>
+                        <div class="relative rounded-md shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm font-mono">#</span>
+                            </div>
+                            <input type="text" name="name" 
+                                x-model="fields.name.value"
+                                @blur="onBlur('name')"
+                                @input="onInput('name', $event.target.value)"
+                                :class="getInputClasses('name')"
+                                class="pl-7"
+                                placeholder="general">
+                        </div>
+                        <p x-show="fields.name.error" x-text="fields.name.error" class="mt-1 text-xs text-red-600 font-medium"></p>
+                        <p x-show="!fields.name.error" class="mt-1 text-xs text-gray-500">Lowercase, no spaces.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                        <input type="text" name="description" 
+                            x-model="fields.description.value"
+                            @blur="onBlur('description')"
+                            @input="onInput('description', $event.target.value)"
+                            :class="getInputClasses('description')"
+                            placeholder="What's this channel about?">
+                        <p x-show="fields.description.error" x-text="fields.description.error" class="mt-1 text-xs text-red-600 font-medium"></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Type</label>
+                        <select name="type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="PUBLIC">Public</option>
+                            <option value="PRIVATE">Private</option>
+                            <option value="SUPPORT">Support</option>
+                            <option value="SYSTEM">System</option>
+                            <option value="ANNOUNCEMENT">Announcement</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Min Role</label>
+                            <select name="min_role_required" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                                <option value="">None (Open)</option>
+                                <% roles.forEach(role => { %>
+                                    <option value="<%= role.name %>"><%= role.name %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Entitlement</label>
+                            <select name="entitlement_required" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                                <option value="">None (Open)</option>
+                                <% entitlements.forEach(ent => { %>
+                                    <option value="<%= ent.key %>"><%= ent.key %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">
+                        <button type="button" @click="createModalOpen = false" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                            Create Channel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Settings Modal -->
+    <div x-show="settingsModalOpen" style="display: none;" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div x-show="settingsModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" @click="settingsModalOpen = false"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div x-show="settingsModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full ring-1 ring-black/5">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
+                        Global Settings
+                    </h3>
+                    <button @click="settingsModalOpen = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <form action="/admin/chat/settings" method="POST" class="p-6 space-y-5" x-data="formValidation({
+                    chat_global_rate_limit: [
+                        { custom: (v) => v >= 0, message: 'Rate limit cannot be negative' }
+                    ]
+                })" @submit="submit">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div>
+                        <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer">
+                            <input type="checkbox" name="chat_maintenance_mode" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" <%= settings['chat_maintenance_mode'] === 'true' ? 'checked' : '' %>>
+                            <div>
+                                <span class="text-sm font-semibold text-gray-900 block">Maintenance Mode</span>
+                                <span class="text-xs text-gray-500 block">Disable chat access for all non-admin users.</span>
+                            </div>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Global Rate Limit</label>
+                        <div class="relative rounded-md shadow-sm">
+                            <input type="number" name="chat_global_rate_limit" 
+                                x-model="fields.chat_global_rate_limit.value"
+                                @blur="onBlur('chat_global_rate_limit')"
+                                @input="onInput('chat_global_rate_limit', $event.target.value)"
+                                :class="getInputClasses('chat_global_rate_limit')"
+                                value="<%= settings['chat_global_rate_limit'] || 0 %>" 
+                                class="pr-12">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">sec</span>
+                            </div>
+                        </div>
+                        <p x-show="fields.chat_global_rate_limit.error" x-text="fields.chat_global_rate_limit.error" class="mt-1 text-xs text-red-600 font-medium"></p>
+                        <p x-show="!fields.chat_global_rate_limit.error" class="mt-1 text-xs text-gray-500">Minimum time between messages across all channels.</p>
+                    </div>
+                    <div class="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">
+                        <button type="button" @click="settingsModalOpen = false" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 transition-colors">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broadcast Modal -->
+    <div x-show="broadcastModalOpen" style="display: none;" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div x-show="broadcastModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" @click="broadcastModalOpen = false"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div x-show="broadcastModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full ring-1 ring-black/5">
+                <div class="bg-rose-50 px-6 py-4 border-b border-rose-100 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-rose-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                        Broadcast System Alert
+                    </h3>
+                    <button @click="broadcastModalOpen = false" class="text-rose-400 hover:text-rose-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <form action="/admin/chat/broadcast" method="POST" class="p-6 space-y-5" x-data="formValidation({
+                    message: [
+                        { required: true, message: 'Broadcast message is required' },
+                        { minLength: 10, message: 'Message should be at least 10 characters' }
+                    ]
+                })" @submit="submit">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div class="bg-rose-50/50 border border-rose-100 rounded-lg p-4">
+                        <p class="text-xs font-medium text-rose-800 flex gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Warning: This message will be sent to ALL public channels immediately.
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Alert Message</label>
+                        <textarea name="message" rows="3" 
+                            x-model="fields.message.value"
+                            @blur="onBlur('message')"
+                            @input="onInput('message', $event.target.value)"
+                            :class="getInputClasses('message')"
+                            placeholder="e.g. System maintenance in 10 minutes..."></textarea>
+                        <p x-show="fields.message.error" x-text="fields.message.error" class="mt-1 text-xs text-red-600 font-medium"></p>
+                    </div>
+                    <div class="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">
+                        <button type="button" @click="broadcastModalOpen = false" class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-rose-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-rose-700 transition-colors flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                            Broadcast
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const ctx = document.getElementById('volumeChart').getContext('2d');
+        const chartData = <%- chartData %>;
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Messages',
+                    data: chartData.data,
+                    borderColor: 'rgb(79, 70, 229)',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+<%- include('../../partials/admin_footer') %>

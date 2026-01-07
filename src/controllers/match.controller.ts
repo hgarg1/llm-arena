@@ -9,6 +9,39 @@ const matchService = new MatchService();
 const modelRepo = new ModelRepository();
 const matchRepo = new MatchRepository();
 
+const normalizeList = (value: any) => {
+  if (!value) return { allowlist: [], denylist: [], matchMode: 'exact' };
+  if (Array.isArray(value)) return { allowlist: value, denylist: [], matchMode: 'exact' };
+  if (typeof value === 'object') {
+    return {
+      allowlist: Array.isArray(value.allowlist) ? value.allowlist : [],
+      denylist: Array.isArray(value.denylist) ? value.denylist : [],
+      matchMode: value.match_mode || 'exact'
+    };
+  }
+  return { allowlist: [], denylist: [], matchMode: 'exact' };
+};
+
+const isAllowed = (value: string, allowlist: string[], denylist: string[], matchMode: string) => {
+  const matches = (item: string) => (matchMode === 'prefix' ? value.startsWith(item) : value === item);
+  if (denylist.some(matches)) return false;
+  if (allowlist.length === 0) return true;
+  return allowlist.some(matches);
+};
+
+const filterModelsByEntitlements = (models: any[], entitlements: any) => {
+  if (!entitlements || !entitlements.entitlementValue) return models;
+  const providerPolicy = normalizeList(entitlements.entitlementValue('models.allowed_providers'));
+  const idPolicy = normalizeList(entitlements.entitlementValue('models.allowed_ids'));
+  const denyPolicy = normalizeList(entitlements.entitlementValue('models.denied_ids'));
+  return models.filter(model => {
+    const providerAllowed = isAllowed(String(model.api_provider || ''), providerPolicy.allowlist, providerPolicy.denylist, providerPolicy.matchMode);
+    const idAllowed = isAllowed(String(model.id), idPolicy.allowlist, idPolicy.denylist, idPolicy.matchMode);
+    const denyBlocked = denyPolicy.denylist.length > 0 && isAllowed(String(model.id), [], denyPolicy.denylist, denyPolicy.matchMode);
+    return providerAllowed && idAllowed && !denyBlocked;
+  });
+};
+
 const getGameDefaults = async (gameKey: string) => {
   const game = await prisma.gameDefinition.findUnique({
     where: { key: gameKey },
@@ -123,7 +156,32 @@ export const list = async (req: Request, res: Response) => {
   const gameType = req.query.game as string;
   const status = req.query.status as MatchStatus;
 
-  const result = await matchRepo.findAll({ page, search, gameType, status });
+  const toTitle = (value: string) =>
+    value
+      .split(/[_-]/)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+
+  const [result, games, matchGameTypes] = await Promise.all([
+    matchRepo.findAll({ page, search, gameType, status }),
+    prisma.gameDefinition.findMany({
+      orderBy: { name: 'asc' },
+      select: { key: true, name: true }
+    }),
+    prisma.match.findMany({
+      distinct: ['game_type'],
+      select: { game_type: true },
+      orderBy: { game_type: 'asc' }
+    })
+  ]);
+  const statuses = Object.values(MatchStatus);
+  const gameMap = new Map(games.map(game => [game.key, game.name]));
+  matchGameTypes.forEach(entry => {
+    if (!gameMap.has(entry.game_type)) {
+      gameMap.set(entry.game_type, toTitle(entry.game_type));
+    }
+  });
+  const gameOptions = Array.from(gameMap.entries()).map(([key, name]) => ({ key, name }));
   
   res.render('matches/list', { 
       title: 'Matches', 
@@ -134,12 +192,16 @@ export const list = async (req: Request, res: Response) => {
           total: result.total
       },
       query: { search, gameType, status },
+      games: gameOptions,
+      statuses,
       path: '/matches'
   });
 };
 
 export const createPage = async (req: Request, res: Response) => {
-  const models = await modelRepo.findAll();
+  const rawModels = await modelRepo.findAll();
+  const entitlements = (req as any).entitlements;
+  const models = filterModelsByEntitlements(rawModels, entitlements);
   const gameDefinitions = await prisma.gameDefinition.findMany({
     include: { settings: true, ui_schema: true }
   });
@@ -167,6 +229,9 @@ export const create = async (req: Request, res: Response) => {
   const { gameType, playerCount, dealerSeat } = req.body;
   const participants = [];
   let options: any = {};
+  const entitlements = (req as any).entitlements;
+  const userId = (req.session as any).userId;
+  const orgId = (req.session as any).user?.org_id;
   const userTier = (req.session as any).user?.tier;
   const advancedAllowed = userTier === 'ENTERPRISE';
   const defaults = await getGameDefaults(gameType || 'iterated-negotiation');
@@ -174,9 +239,38 @@ export const create = async (req: Request, res: Response) => {
   const mergedOptions = { ...defaults.settings, ...gameOptions };
   const engineOptions = mapOptionsToEngine(gameType || 'iterated-negotiation', mergedOptions);
 
+  if (entitlements?.resolved?.['matches.quota']) {
+    const scope = orgId ? { type: 'org', id: orgId } : { type: 'user', id: userId };
+    const quotaResult = await entitlements.enforceQuota('matches.quota', scope);
+    if (!quotaResult.allowed) {
+      return res.status(429).send('Match quota exceeded. Try again later.');
+    }
+  }
+  const concurrencyLimit = entitlements?.entitlementValue?.('matches.concurrent');
+  if (typeof concurrencyLimit === 'number' && concurrencyLimit > 0 && userId) {
+    const activeCount = await prisma.match.count({
+      where: {
+        created_by_id: userId,
+        status: { in: ['PENDING', 'RUNNING'] }
+      }
+    });
+    if (activeCount >= concurrencyLimit) {
+      return res.status(429).send('Concurrent match limit reached.');
+    }
+  }
+
+  const validateModelAccess = async (modelId: string) => {
+    if (!entitlements) return true;
+    const model = await modelRepo.findById(modelId);
+    if (!model) return false;
+    const filtered = filterModelsByEntitlements([model], entitlements);
+    return filtered.length === 1;
+  };
+
   if (gameType === 'chutes_and_ladders') {
       const modelId = req.body.model1Id;
       if (!modelId) return res.status(400).send('Select a model');
+      if (!(await validateModelAccess(modelId))) return res.status(403).send('Model not permitted by your entitlements.');
       participants.push({ modelId, role: 'player1' });
       options = { ...options, ...engineOptions };
   } else if (gameType === 'texas_holdem') {
@@ -184,6 +278,7 @@ export const create = async (req: Request, res: Response) => {
       for (let i = 1; i <= count; i++) {
           const modelId = req.body[`model${i}Id`];
           if (!modelId) return res.status(400).send(`Select a model for Seat ${i}`);
+          if (!(await validateModelAccess(modelId))) return res.status(403).send('Model not permitted by your entitlements.');
           participants.push({ modelId, role: `seat${i}` });
       }
       
@@ -198,6 +293,7 @@ export const create = async (req: Request, res: Response) => {
       for (let i = 1; i <= count; i++) {
           const modelId = req.body[`model${i}Id`];
           if (!modelId) return res.status(400).send(`Select a model for Seat ${i}`);
+          if (!(await validateModelAccess(modelId))) return res.status(403).send('Model not permitted by your entitlements.');
           participants.push({ modelId, role: `seat${i}` });
       }
 
@@ -236,6 +332,9 @@ export const create = async (req: Request, res: Response) => {
       const m1 = req.body.model1Id;
       const m2 = req.body.model2Id;
       if (!m1 || !m2) return res.status(400).send('Select two models');
+      if (!(await validateModelAccess(m1)) || !(await validateModelAccess(m2))) {
+        return res.status(403).send('Model not permitted by your entitlements.');
+      }
       
       participants.push({ modelId: m1, role: gameType === 'chess' ? 'white' : 'player1' });
       participants.push({ modelId: m2, role: gameType === 'chess' ? 'black' : 'player2' });
@@ -245,6 +344,18 @@ export const create = async (req: Request, res: Response) => {
   }
 
   await matchService.createMatch(participants, gameType || 'iterated-negotiation', options, (req.session as any).userId);
+  if (entitlements?.resolved?.['matches.quota']) {
+    const config = entitlements.entitlementValue('matches.quota');
+    if (config?.limit) {
+      const scope = orgId ? { type: 'org', id: orgId } : { type: 'user', id: userId };
+      await entitlements.incrementUsage({
+        entitlementKey: 'matches.quota',
+        scopeType: scope.type === 'org' ? 'ORG' : 'USER',
+        scopeId: scope.id,
+        window: config.window || 'day'
+      });
+    }
+  }
   
   res.redirect('/matches');
 };

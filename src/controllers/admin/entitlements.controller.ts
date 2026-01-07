@@ -5,7 +5,13 @@ import { EntitlementValueType, Prisma } from '@prisma/client';
 
 const tiers = ['FREE', 'PRO', 'ENTERPRISE'] as const;
 
-const toJsonInput = (value: any) => (value === null ? Prisma.DbNull : value);
+const toJsonInput = (value: Prisma.JsonValue | null): Prisma.InputJsonValue | Prisma.NullTypes.DbNull => {
+  if (value === null) return Prisma.DbNull;
+  return value;
+};
+const toJsonInputOrUndefined = (value: Prisma.JsonValue | null | undefined) => (
+  value === undefined ? undefined : toJsonInput(value)
+);
 
 const ensureDefaultPlans = async () => {
   const defaults = [
@@ -59,6 +65,18 @@ export const entitlementsDashboard = async (req: Request, res: Response) => {
       dependencies: { include: { depends_on: true } }
     }
   });
+  const usageSummaryRaw = await prisma.usageCounter.groupBy({
+    by: ['entitlement_key'],
+    _sum: { count: true },
+    _max: { window_start: true }
+  });
+  const usageSummary = usageSummaryRaw.reduce<Record<string, { total: number; lastWindow: Date | null }>>((acc, row) => {
+    acc[row.entitlement_key] = {
+      total: row._sum.count || 0,
+      lastWindow: row._max.window_start || null
+    };
+    return acc;
+  }, {});
   const entitlementKeys = entitlements.map(ent => ent.key);
   const [overrides, auditLogs] = await Promise.all([
     prisma.entitlementOverride.findMany({
@@ -104,9 +122,69 @@ export const entitlementsDashboard = async (req: Request, res: Response) => {
     categories,
     overrides,
     auditLogs,
+    usageSummary,
     stats,
     success: req.query.success,
     error: req.query.error
+  });
+};
+
+export const entitlementsUsageDashboard = async (req: Request, res: Response) => {
+  const entitlements = await prisma.subscriptionEntitlement.findMany({
+    orderBy: { key: 'asc' },
+    select: { key: true, description: true }
+  });
+  const recent = await prisma.usageCounter.findMany({
+    orderBy: { window_start: 'desc' },
+    take: 20
+  });
+  res.render('admin/entitlements/usage', {
+    title: 'Entitlement Usage',
+    path: '/admin/entitlements/usage',
+    entitlements,
+    recent
+  });
+};
+
+export const entitlementsUsageData = async (req: Request, res: Response) => {
+  const entitlementKey = String(req.query.key || '').trim();
+  const scopeType = String(req.query.scopeType || '').trim();
+  const scopeId = String(req.query.scopeId || '').trim();
+  const from = String(req.query.from || '').trim();
+  const to = String(req.query.to || '').trim();
+
+  const where: Prisma.UsageCounterWhereInput = {};
+  if (entitlementKey) where.entitlement_key = entitlementKey;
+  if (scopeType) where.scope_type = scopeType as any;
+  if (scopeId) where.scope_id = scopeId;
+  if (from || to) {
+    where.window_start = {};
+    if (from) (where.window_start as any).gte = new Date(from);
+    if (to) (where.window_start as any).lte = new Date(to);
+  }
+
+  const [rows, grouped] = await Promise.all([
+    prisma.usageCounter.findMany({
+      where,
+      orderBy: { window_start: 'desc' },
+      take: 500
+    }),
+    prisma.usageCounter.groupBy({
+      by: ['window_start'],
+      where,
+      _sum: { count: true },
+      orderBy: { window_start: 'asc' }
+    })
+  ]);
+
+  const total = rows.reduce((sum, row) => sum + row.count, 0);
+  res.json({
+    total,
+    rows,
+    series: grouped.map(point => ({
+      window_start: point.window_start,
+      count: point._sum.count || 0
+    }))
   });
 };
 
@@ -140,7 +218,14 @@ export const createEntitlement = async (req: Request, res: Response) => {
       validationSchema = JSON.parse(validationRaw);
     }
     const entitlement = await prisma.subscriptionEntitlement.create({
-      data: { key, description, category_id: defaultCategory?.id, value_type: valueType as EntitlementValueType, default_value: defaultValue, validation_schema: validationSchema }
+      data: {
+        key,
+        description,
+        category_id: defaultCategory?.id,
+        value_type: valueType as EntitlementValueType,
+        default_value: toJsonInput(defaultValue ?? null),
+        validation_schema: toJsonInput(validationSchema ?? null)
+      }
     });
     await logAdminAction((req.session as any).userId, 'entitlement.create', entitlement.id, { key });
     res.redirect('/admin/entitlements?success=Created');
@@ -219,8 +304,8 @@ export const updateEntitlementDetails = async (req: Request, res: Response) => {
           usage_unit: usageUnit,
           usage_period: usagePeriod,
           value_type: valueType ? (valueType as EntitlementValueType) : undefined,
-          default_value: defaultValue,
-          validation_schema: validationSchema
+          default_value: toJsonInputOrUndefined(defaultValue),
+          validation_schema: toJsonInputOrUndefined(validationSchema)
         }
       });
       await tx.subscriptionEntitlementDependency.deleteMany({ where: { entitlement_id: id } });
@@ -264,7 +349,7 @@ export const updateEntitlementPolicy = async (req: Request, res: Response) => {
     return res.redirect('/admin/entitlements?error=Invalid value type');
   }
 
-  let defaultValue: any = entitlement.default_value;
+  let defaultValue: Prisma.JsonValue | null = entitlement.default_value as Prisma.JsonValue | null;
   try {
     if (defaultRaw) {
       if (valueType === 'JSON') defaultValue = JSON.parse(defaultRaw);
@@ -276,7 +361,7 @@ export const updateEntitlementPolicy = async (req: Request, res: Response) => {
     return res.redirect('/admin/entitlements?error=Default value must be valid JSON');
   }
 
-  let validationSchema: any = entitlement.validation_schema;
+  let validationSchema: Prisma.JsonValue | null = entitlement.validation_schema as Prisma.JsonValue | null;
   try {
     if (validationRaw) {
       validationSchema = JSON.parse(validationRaw);
@@ -294,12 +379,12 @@ export const updateEntitlementPolicy = async (req: Request, res: Response) => {
   }
 
   const plans = await prisma.subscriptionPlan.findMany({ where: { is_active: true } });
-  const planUpdates: Array<{ planId: string; enabled: boolean; value: any }> = [];
+  const planUpdates: Array<{ planId: string; enabled: boolean; value: Prisma.JsonValue | null }> = [];
 
   for (const plan of plans) {
     const enabled = req.body[`plan_enabled_${plan.id}`] === 'on';
     const rawValue = (req.body[`plan_value_${plan.id}`] || '').trim();
-    let value: any = null;
+    let value: Prisma.JsonValue | null = null;
     try {
       if (valueType === 'JSON') {
         value = rawValue ? JSON.parse(rawValue) : null;
@@ -328,8 +413,8 @@ export const updateEntitlementPolicy = async (req: Request, res: Response) => {
         usage_unit: usageUnit,
         usage_period: usagePeriod,
         value_type: valueType as EntitlementValueType,
-        default_value: defaultValue,
-        validation_schema: validationSchema
+        default_value: toJsonInput(defaultValue ?? null),
+        validation_schema: toJsonInput(validationSchema ?? null)
       }
     });
     await tx.subscriptionEntitlementDependency.deleteMany({ where: { entitlement_id: id } });
@@ -346,8 +431,8 @@ export const updateEntitlementPolicy = async (req: Request, res: Response) => {
         target_id: 'definition',
         entitlement_key: key,
         action: 'UPDATE',
-        before_value: before?.default_value ?? null,
-        after_value: defaultValue ?? null,
+        before_value: toJsonInput(before?.default_value ?? null),
+        after_value: toJsonInput(defaultValue ?? null),
         before_enabled: null,
         after_enabled: null
       }
@@ -360,11 +445,11 @@ export const updateEntitlementPolicy = async (req: Request, res: Response) => {
       if (existing) {
         await tx.subscriptionPlanEntitlement.update({
           where: { id: existing.id },
-          data: { enabled: update.enabled, value: update.value }
+          data: { enabled: update.enabled, value: toJsonInput(update.value ?? null) }
         });
       } else {
         await tx.subscriptionPlanEntitlement.create({
-          data: { plan_id: update.planId, entitlement_id: entitlement.id, enabled: update.enabled, value: update.value }
+          data: { plan_id: update.planId, entitlement_id: entitlement.id, enabled: update.enabled, value: toJsonInput(update.value ?? null) }
         });
       }
       await tx.entitlementAuditLog.create({
@@ -374,8 +459,8 @@ export const updateEntitlementPolicy = async (req: Request, res: Response) => {
           target_id: update.planId,
           entitlement_key: key,
           action: 'UPDATE',
-          before_value: existing?.value ?? null,
-          after_value: update.value ?? null,
+          before_value: toJsonInput(existing?.value ?? null),
+          after_value: toJsonInput(update.value ?? null),
           before_enabled: existing?.enabled ?? null,
           after_enabled: update.enabled
         }
@@ -401,7 +486,7 @@ export const createEntitlementOverride = async (req: Request, res: Response) => 
   if (!['ORG', 'USER'].includes(targetType)) return res.redirect('/admin/entitlements?error=Invalid target type');
   if (!targetId) return res.redirect('/admin/entitlements?error=Target ID required');
 
-  let value: any = null;
+  let value: Prisma.JsonValue | null = null;
   try {
     value = valueRaw ? JSON.parse(valueRaw) : null;
   } catch (err) {
@@ -414,7 +499,7 @@ export const createEntitlementOverride = async (req: Request, res: Response) => 
       target_id: targetId,
       entitlement_key: entitlement.key,
       enabled,
-      value,
+      value: toJsonInput(value ?? null),
       starts_at: startsAt,
       ends_at: endsAt,
       created_by: (req.session as any).userId
@@ -428,8 +513,8 @@ export const createEntitlementOverride = async (req: Request, res: Response) => 
       target_id: targetId,
       entitlement_key: entitlement.key,
       action: 'CREATE',
-      before_value: null,
-      after_value: value,
+      before_value: Prisma.DbNull,
+      after_value: toJsonInput(value ?? null),
       before_enabled: null,
       after_enabled: enabled
     }
@@ -452,8 +537,8 @@ export const deleteEntitlementOverride = async (req: Request, res: Response) => 
       target_id: override.target_id,
       entitlement_key: override.entitlement_key,
       action: 'DELETE',
-      before_value: override.value,
-      after_value: null,
+      before_value: toJsonInput(override.value ?? null),
+      after_value: Prisma.DbNull,
       before_enabled: override.enabled,
       after_enabled: null
     }

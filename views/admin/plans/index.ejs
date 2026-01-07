@@ -107,6 +107,45 @@
                     </div>
                     <div class="text-[11px] text-gray-500">Level <%= plan.level %></div>
                 </div>
+                <div class="mt-4 border-t border-gray-100 pt-4">
+                    <div class="text-[11px] uppercase tracking-widest text-gray-400">Stripe</div>
+                    <div class="mt-2 text-xs text-gray-600">
+                        <% if (plan.stripe_products && plan.stripe_products.length) { %>
+                            <% plan.stripe_products.forEach(product => { %>
+                                <div class="flex items-center gap-2 text-[11px] text-gray-500">
+                                    <span class="px-2 py-0.5 rounded-full <%= product.mode === 'LIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600' %>"><%= product.mode %></span>
+                                    <span class="font-mono"><%= product.stripe_product_id %></span>
+                                    <span class="px-2 py-0.5 rounded-full <%= product.active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600' %>"><%= product.active ? 'ACTIVE' : 'INACTIVE' %></span>
+                                </div>
+                            <% }) %>
+                        <% } else if (plan.stripe_product_id) { %>
+                            <div class="flex items-center gap-2 text-[11px] text-gray-500">
+                                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">LEGACY</span>
+                                <span class="font-mono"><%= plan.stripe_product_id %></span>
+                            </div>
+                        <% } else { %>
+                            <div class="text-[11px] text-gray-400">No Stripe product linked</div>
+                        <% } %>
+                        <div class="mt-2 space-y-2">
+                            <% if (plan.prices && plan.prices.length) { %>
+                                <% plan.prices.forEach(price => { %>
+                                    <div class="flex items-center justify-between text-[11px] text-gray-500">
+                                        <div class="font-mono"><%= price.stripe_price_id %></div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-2 py-0.5 rounded-full <%= price.mode === 'LIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600' %>"><%= price.mode %></span>
+                                            <span class="px-2 py-0.5 rounded-full <%= price.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : (price.status === 'LEGACY' ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600') %>"><%= price.status %></span>
+                                            <% if (price.is_default) { %>
+                                                <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Default</span>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            <% } else { %>
+                                <div class="text-[11px] text-gray-400">No Stripe prices added yet.</div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
                 <div class="mt-4 flex items-center gap-2">
                     <% if (typeof can === 'function' && can('admin.plans.edit')) { %>
                         <button type="button" class="btn btn-xs btn-secondary" data-action="edit-plan"
@@ -122,6 +161,15 @@
                             data-active="<%= plan.is_active ? 'true' : 'false' %>">
                             Edit
                         </button>
+                        <button type="button" class="btn btn-xs btn-secondary" data-action="stripe-plan" data-id="<%= plan.id %>">Stripe Pricing</button>
+                        <form action="/admin/plans/<%= plan.id %>/stripe/sync" method="POST" class="flex items-center gap-1">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <select name="mode" class="text-[10px] border border-gray-200 rounded px-2 py-1">
+                                <option value="TEST">TEST</option>
+                                <option value="LIVE">LIVE</option>
+                            </select>
+                            <button class="btn btn-xs btn-ghost" data-confirm="Sync pricing from Stripe now?">Sync</button>
+                        </form>
                         <form action="/admin/plans/<%= plan.id %>/delete" method="POST" data-confirm="Delete this plan?">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <button class="btn btn-xs btn-ghost text-red-600">Delete</button>
@@ -193,6 +241,218 @@
     </div>
 </div>
 
+<div id="stripePlanModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl border border-gray-200">
+            <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                    <div class="text-xs uppercase tracking-widest text-gray-400">Stripe Pricing</div>
+                    <div id="stripePlanTitle" class="font-semibold text-gray-900">Plan</div>
+                </div>
+                <button type="button" class="text-xs uppercase tracking-widest text-gray-500" data-action="close-stripe-modal">Close</button>
+            </div>
+            <div class="p-4 space-y-6 max-h-[70vh] overflow-y-auto">
+                <form id="stripeProductForm" method="POST" class="border border-gray-200 rounded-lg p-4">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900">Stripe Product</div>
+                            <div class="text-[11px] text-gray-500">Link a Stripe product to anchor pricing.</div>
+                        </div>
+                        <div id="stripeProductStatus" class="text-[11px] text-gray-400"></div>
+                    </div>
+                    <div class="grid md:grid-cols-3 gap-3 mt-3 items-end">
+                        <div class="md:col-span-2">
+                            <label class="text-xs font-medium text-gray-600">Stripe Product ID</label>
+                            <input id="stripeProductId" type="text" name="stripe_product_id" placeholder="prod_123" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                            <div id="stripeProductValidation" class="text-[11px] text-gray-400 mt-1"></div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Mode</label>
+                            <select id="stripeProductMode" name="mode" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <option value="TEST">TEST</option>
+                                <option value="LIVE">LIVE</option>
+                            </select>
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+                            <input id="stripeProductActive" type="checkbox" name="stripe_product_active">
+                            Active in Stripe
+                        </label>
+                    </div>
+                    <div class="mt-4 text-right">
+                        <button class="btn btn-sm btn-primary">Save Product</button>
+                    </div>
+                </form>
+
+                <form id="stripeCreateProductPriceForm" method="POST" class="border border-gray-200 rounded-lg p-4">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div class="text-sm font-semibold text-gray-900">Create in Stripe</div>
+                    <div class="text-[11px] text-gray-500">Creates a product if needed and adds a price.</div>
+                    <div class="grid md:grid-cols-3 gap-3 mt-3">
+                        <div class="md:col-span-2">
+                            <label class="text-xs font-medium text-gray-600">Product name</label>
+                            <input id="stripeCreateName" type="text" name="name" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Mode</label>
+                            <select id="stripeCreateMode" name="mode" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <option value="TEST">TEST</option>
+                                <option value="LIVE">LIVE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Amount (cents)</label>
+                            <input type="number" name="unit_amount" min="50" step="1" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="4900">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Currency</label>
+                            <input type="text" name="currency" value="usd" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" maxlength="3">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Interval</label>
+                            <select name="interval" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <option value="month">Monthly</option>
+                                <option value="year">Yearly</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Interval count</label>
+                            <input type="number" name="interval_count" min="1" value="1" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-xs font-medium text-gray-600">Label</label>
+                            <input type="text" name="nickname" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Monthly 2024">
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-600 mt-6">
+                            <input type="checkbox" name="is_default">
+                            Set as default
+                        </label>
+                    </div>
+                    <div class="mt-4 text-right">
+                        <button class="btn btn-sm btn-primary">Create in Stripe</button>
+                    </div>
+                </form>
+
+                <form id="stripeCreatePriceForm" method="POST" class="border border-gray-200 rounded-lg p-4">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div class="text-sm font-semibold text-gray-900">Create Additional Price</div>
+                    <div class="text-[11px] text-gray-500">Creates a new Stripe price under the linked product.</div>
+                    <div class="grid md:grid-cols-3 gap-3 mt-3">
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Mode</label>
+                            <select id="stripeCreatePriceMode" name="mode" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <option value="TEST">TEST</option>
+                                <option value="LIVE">LIVE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Amount (cents)</label>
+                            <input type="number" name="unit_amount" min="50" step="1" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="4900">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Currency</label>
+                            <input type="text" name="currency" value="usd" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" maxlength="3">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Interval</label>
+                            <select name="interval" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <option value="month">Monthly</option>
+                                <option value="year">Yearly</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Interval count</label>
+                            <input type="number" name="interval_count" min="1" value="1" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-xs font-medium text-gray-600">Label</label>
+                            <input type="text" name="nickname" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Annual 2024">
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-600 mt-6">
+                            <input type="checkbox" name="is_default">
+                            Set as default
+                        </label>
+                    </div>
+                    <div class="mt-4 text-right">
+                        <button class="btn btn-sm btn-secondary">Create Price</button>
+                    </div>
+                </form>
+
+                <form id="stripeSyncForm" method="POST" class="border border-gray-200 rounded-lg p-4 flex items-center justify-between">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div>
+                        <div class="text-sm font-semibold text-gray-900">Sync from Stripe</div>
+                        <div class="text-[11px] text-gray-500">Refresh product + price status from Stripe.</div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <select id="stripeSyncMode" name="mode" class="px-3 py-2 border border-gray-300 rounded text-sm">
+                            <option value="TEST">TEST</option>
+                            <option value="LIVE">LIVE</option>
+                        </select>
+                        <button class="btn btn-sm btn-ghost">Sync</button>
+                    </div>
+                </form>
+
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="text-sm font-semibold text-gray-900">Stripe Activity</div>
+                    <div class="text-[11px] text-gray-500">Recent price/product updates for this plan.</div>
+                    <div id="stripeAuditList" class="mt-3 space-y-2 text-xs text-gray-600"></div>
+                </div>
+
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900">Stripe Prices</div>
+                            <div class="text-[11px] text-gray-500">Attach multiple prices and control which is default.</div>
+                        </div>
+                        <div class="text-[11px] text-gray-400">Immutable in Stripe; update via new price.</div>
+                    </div>
+                    <div id="stripePricesList" class="mt-4 space-y-3 text-sm text-gray-700"></div>
+                </div>
+
+                <form id="stripePriceAddForm" method="POST" class="border border-gray-200 rounded-lg p-4">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <div class="text-sm font-semibold text-gray-900">Add Stripe Price</div>
+                    <div class="grid md:grid-cols-3 gap-3 mt-3 items-end">
+                        <div class="md:col-span-2">
+                            <label class="text-xs font-medium text-gray-600">Stripe Price ID</label>
+                            <input id="stripePriceId" type="text" name="stripe_price_id" placeholder="price_123" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                            <div id="stripePriceValidation" class="text-[11px] text-gray-400 mt-1"></div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Mode</label>
+                            <select id="stripePriceMode" name="mode" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <option value="TEST">TEST</option>
+                                <option value="LIVE">LIVE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Status</label>
+                            <select name="status" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                                <option value="LEGACY">Legacy</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="text-xs font-medium text-gray-600">Nickname (optional)</label>
+                            <input type="text" name="nickname" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded text-sm" placeholder="Monthly 2024">
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+                            <input type="checkbox" name="is_default">
+                            Set as default
+                        </label>
+                    </div>
+                    <div class="mt-4 text-right">
+                        <button class="btn btn-sm btn-secondary">Add Price</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     (function () {
         const modal = document.getElementById('planModal');
@@ -200,6 +460,34 @@
         const errorBox = document.getElementById('planEditError');
         const createForm = document.getElementById('planCreateForm');
         const createError = document.getElementById('planCreateError');
+        const stripeModal = document.getElementById('stripePlanModal');
+        const stripeTitle = document.getElementById('stripePlanTitle');
+        const stripeProductForm = document.getElementById('stripeProductForm');
+        const stripeProductId = document.getElementById('stripeProductId');
+        const stripeProductMode = document.getElementById('stripeProductMode');
+        const stripeProductActive = document.getElementById('stripeProductActive');
+        const stripeProductStatus = document.getElementById('stripeProductStatus');
+        const stripeProductValidation = document.getElementById('stripeProductValidation');
+        const stripeCreateProductPriceForm = document.getElementById('stripeCreateProductPriceForm');
+        const stripeCreateName = document.getElementById('stripeCreateName');
+        const stripeCreateMode = document.getElementById('stripeCreateMode');
+        const stripeCreatePriceForm = document.getElementById('stripeCreatePriceForm');
+        const stripeCreatePriceMode = document.getElementById('stripeCreatePriceMode');
+        const stripeSyncForm = document.getElementById('stripeSyncForm');
+        const stripeSyncMode = document.getElementById('stripeSyncMode');
+        const stripePricesList = document.getElementById('stripePricesList');
+        const stripePriceAddForm = document.getElementById('stripePriceAddForm');
+        const stripePriceId = document.getElementById('stripePriceId');
+        const stripePriceMode = document.getElementById('stripePriceMode');
+        const stripePriceValidation = document.getElementById('stripePriceValidation');
+        const plansData = <%- JSON.stringify(plans.map(plan => ({
+            id: plan.id,
+            name: plan.name,
+            stripe_products: plan.stripe_products || [],
+            prices: plan.prices || []
+        }))) %>;
+        const stripeLogs = <%- JSON.stringify(stripeLogs || []) %>;
+        const stripeAuditList = document.getElementById('stripeAuditList');
 
         const openModal = (data) => {
             if (!form || !modal) return;
@@ -239,6 +527,201 @@
                 if (modal) modal.classList.add('hidden');
             });
         });
+
+        const renderPrices = (planId, prices) => {
+            if (!stripePricesList) return;
+            if (!prices.length) {
+                stripePricesList.innerHTML = '<div class="text-[11px] text-gray-400">No Stripe prices configured.</div>';
+                return;
+            }
+            stripePricesList.innerHTML = prices.map(price => `
+                <form method="POST" action="/admin/plans/${planId}/stripe/prices/${price.id}/update" class="border border-gray-100 rounded-lg p-3 grid md:grid-cols-5 gap-2 items-center">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="mode" value="${price.mode || 'TEST'}">
+                    <div class="md:col-span-2">
+                        <div class="text-[11px] text-gray-500">Stripe Price</div>
+                        <div class="font-mono text-[11px] text-gray-700">${price.stripe_price_id}</div>
+                        <div class="text-[10px] text-gray-400">${price.mode || 'TEST'} mode</div>
+                        <div class="text-[10px] text-gray-400">${price.interval || 'n/a'} ${price.unit_amount ? ` $${(price.unit_amount / 100).toFixed(2)}` : ''}</div>
+                        ${price.stripe_active === false ? '<div class="text-[10px] text-amber-600">Disabled in Stripe</div>' : ''}
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-500">Status</label>
+                        <select name="status" class="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-xs">
+                            <option value="ACTIVE" ${price.status === 'ACTIVE' ? 'selected' : ''}>Active</option>
+                            <option value="INACTIVE" ${price.status === 'INACTIVE' ? 'selected' : ''}>Inactive</option>
+                            <option value="LEGACY" ${price.status === 'LEGACY' ? 'selected' : ''}>Legacy</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-500">Nickname</label>
+                        <input name="nickname" class="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-xs" value="${price.nickname || ''}">
+                    </div>
+                    <div class="flex items-center justify-between md:justify-end gap-3 mt-2 md:mt-0">
+                        <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                            <input type="checkbox" name="is_default" ${price.is_default ? 'checked' : ''}>
+                            Default
+                        </label>
+                        <button class="btn btn-xs btn-primary">Save</button>
+                    </div>
+                </form>
+            `).join('');
+            stripePricesList.querySelectorAll('form').forEach(formEl => {
+                formEl.addEventListener('submit', (event) => {
+                    const statusSelect = formEl.querySelector('select[name="status"]');
+                    const defaultInput = formEl.querySelector('input[name="is_default"]');
+                    if (defaultInput && defaultInput.checked) {
+                        if (!confirm('Set this price as the default?')) {
+                            event.preventDefault();
+                            return;
+                        }
+                    }
+                    if (statusSelect && ['INACTIVE', 'LEGACY'].includes(statusSelect.value)) {
+                        if (!confirm(`Mark this price as ${statusSelect.value}? This may impact active subscriptions.`)) {
+                            event.preventDefault();
+                        }
+                    }
+                });
+            });
+        };
+
+        const validateStripe = async (type, value, outputEl, modeValue) => {
+            if (!outputEl) return;
+            if (!value) {
+                outputEl.textContent = '';
+                return;
+            }
+            const res = await fetch('/admin/plans/stripe/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'csrf-token': '<%= csrfToken %>' },
+                body: JSON.stringify({ type, value, mode: modeValue || 'TEST' })
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                outputEl.textContent = data.error || 'Invalid Stripe ID';
+                outputEl.classList.add('text-red-500');
+                outputEl.classList.remove('text-gray-400');
+                return;
+            }
+            outputEl.textContent = data.warning ? data.warning : 'Verified in Stripe';
+            outputEl.classList.remove('text-red-500');
+            outputEl.classList.add('text-gray-500');
+        };
+
+        const setProductForMode = (plan, mode) => {
+            if (!plan) return;
+            const product = (plan.stripe_products || []).find(item => item.mode === mode);
+            stripeModal.dataset.planProduct = product ? product.stripe_product_id : '';
+            if (stripeProductId) stripeProductId.value = product ? product.stripe_product_id : '';
+            if (stripeProductActive) stripeProductActive.checked = product ? !!product.active : false;
+            if (stripeProductStatus) {
+                stripeProductStatus.textContent = product ? 'Linked' : 'Not linked';
+            }
+        };
+
+        const renderStripeAudit = (planId) => {
+            if (!stripeAuditList) return;
+            const items = stripeLogs.filter(log => log.target === planId).slice(0, 8);
+            if (!items.length) {
+                stripeAuditList.innerHTML = '<div class="text-[11px] text-gray-400">No Stripe activity yet.</div>';
+                return;
+            }
+            stripeAuditList.innerHTML = items.map(item => {
+                const who = item.admin ? item.admin.email : 'system';
+                return `
+                    <div class="border border-gray-100 rounded p-2">
+                        <div class="text-[11px] text-gray-500">${item.action.replace('plan.stripe_', '')}</div>
+                        <div class="text-[11px] text-gray-400">${new Date(item.created_at).toLocaleString()} · ${who}</div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        document.querySelectorAll('[data-action="stripe-plan"]').forEach(button => {
+            button.addEventListener('click', () => {
+                const id = button.getAttribute('data-id');
+                const plan = plansData.find(item => item.id === id);
+                if (!plan || !stripeModal) return;
+                if (stripeTitle) stripeTitle.textContent = plan.name;
+                stripeModal.dataset.planId = id;
+                if (stripeProductForm) stripeProductForm.action = `/admin/plans/${id}/stripe/product`;
+                if (stripeProductMode) stripeProductMode.value = 'TEST';
+                setProductForMode(plan, 'TEST');
+                if (stripeCreateMode) stripeCreateMode.value = 'TEST';
+                if (stripeCreatePriceMode) stripeCreatePriceMode.value = 'TEST';
+                if (stripePriceMode) stripePriceMode.value = 'TEST';
+                if (stripeSyncMode) stripeSyncMode.value = 'TEST';
+                if (stripePriceAddForm) stripePriceAddForm.action = `/admin/plans/${id}/stripe/prices`;
+                if (stripeCreateProductPriceForm) stripeCreateProductPriceForm.action = `/admin/plans/${id}/stripe/create-product-price`;
+                if (stripeCreatePriceForm) stripeCreatePriceForm.action = `/admin/plans/${id}/stripe/create-price`;
+                if (stripeSyncForm) stripeSyncForm.action = `/admin/plans/${id}/stripe/sync`;
+                if (stripeCreateName) stripeCreateName.value = plan.name || '';
+                renderPrices(id, plan.prices || []);
+                renderStripeAudit(id);
+                if (stripeModal) stripeModal.classList.remove('hidden');
+            });
+        });
+
+        document.querySelectorAll('[data-action="close-stripe-modal"]').forEach(button => {
+            button.addEventListener('click', () => {
+                if (stripeModal) stripeModal.classList.add('hidden');
+            });
+        });
+
+        if (stripeProductId) {
+            stripeProductId.addEventListener('blur', () => {
+                validateStripe('product', stripeProductId.value.trim(), stripeProductValidation, stripeProductMode ? stripeProductMode.value : 'TEST');
+            });
+        }
+        if (stripeProductMode) {
+            stripeProductMode.addEventListener('change', () => {
+                const planId = stripeModal.dataset.planId;
+                const plan = plansData.find(item => item.id === planId);
+                setProductForMode(plan, stripeProductMode.value);
+                if (stripeCreateMode) stripeCreateMode.value = stripeProductMode.value;
+                if (stripeCreatePriceMode) stripeCreatePriceMode.value = stripeProductMode.value;
+                if (stripePriceMode) stripePriceMode.value = stripeProductMode.value;
+                if (stripeSyncMode) stripeSyncMode.value = stripeProductMode.value;
+            });
+        }
+        if (stripePriceId) {
+            stripePriceId.addEventListener('blur', () => {
+                validateStripe('price', stripePriceId.value.trim(), stripePriceValidation, stripePriceMode ? stripePriceMode.value : 'TEST');
+            });
+        }
+        if (stripeProductForm) {
+            stripeProductForm.addEventListener('submit', (event) => {
+                if (!stripeModal) return;
+                const current = stripeModal.dataset.planProduct || '';
+                const nextValue = stripeProductId ? stripeProductId.value.trim() : '';
+                if (current && current !== nextValue) {
+                    if (!confirm('Change the Stripe product? Existing prices may no longer match.')) {
+                        event.preventDefault();
+                    }
+                }
+            });
+        }
+        if (stripeCreateProductPriceForm) {
+            stripeCreateProductPriceForm.addEventListener('submit', (event) => {
+                if (!confirm('Create Stripe product/price now? This will create live billing objects.')) {
+                    event.preventDefault();
+                }
+            });
+        }
+        if (stripeCreatePriceForm) {
+            stripeCreatePriceForm.addEventListener('submit', (event) => {
+                if (!confirm('Create a new Stripe price? Existing prices will remain for legacy subscriptions.')) {
+                    event.preventDefault();
+                }
+            });
+        }
+        if (stripeSyncForm) {
+            stripeSyncForm.addEventListener('submit', (event) => {
+                if (!confirm('Sync pricing from Stripe? Local metadata will be refreshed.')) {
+                    event.preventDefault();
+                }
+            });
+        }
 
         document.querySelectorAll('[data-confirm]').forEach(formEl => {
             formEl.addEventListener('submit', (event) => {

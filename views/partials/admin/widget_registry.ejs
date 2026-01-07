@@ -1,0 +1,81 @@
+<!-- Reusable Widget Templates -->
+<div style="display: none;">
+    <!-- Stat Card Template -->
+    <div id="widget-stat-card" class="grid-stack-item-content bg-white shadow-sm rounded-lg border border-gray-200 flex flex-col h-full overflow-hidden">
+        <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/50 handle cursor-move flex justify-between items-center">
+            <span class="font-bold text-xs text-gray-500 uppercase tracking-wider widget-title">Statistic</span>
+            <div class="flex gap-1">
+                <button class="text-gray-400 hover:text-gray-600 widget-config-btn"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button>
+                <button class="text-gray-400 hover:text-red-500 widget-remove-btn"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+        </div>
+        <div class="p-4 flex-grow flex items-center gap-4">
+            <div class="p-3 rounded-full bg-indigo-50 text-indigo-600 widget-icon">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 widget-value">0</p>
+                <p class="text-xs text-gray-500 widget-label">Label</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Widget Template -->
+    <div id="widget-chart" class="grid-stack-item-content bg-white shadow-sm rounded-lg border border-gray-200 flex flex-col h-full overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100 font-bold text-sm text-gray-700 bg-gray-50/50 handle cursor-move flex justify-between items-center">
+            <span class="widget-title">Chart Title</span>
+            <div class="flex gap-1">
+                <button class="text-gray-400 hover:text-gray-600 widget-config-btn"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button>
+                <button class="text-gray-400 hover:text-red-500 widget-remove-btn"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+        </div>
+        <div class="p-4 flex-grow relative min-h-0">
+            <canvas class="widget-chart-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Table Widget Template -->
+    <div id="widget-table" class="grid-stack-item-content bg-white shadow-sm rounded-lg border border-gray-200 flex flex-col h-full overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100 font-bold text-sm text-gray-700 bg-gray-50/50 handle cursor-move flex justify-between items-center">
+            <span class="widget-title">Data Table</span>
+            <div class="flex gap-1">
+                <button class="text-gray-400 hover:text-gray-600 widget-config-btn"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button>
+                <button class="text-gray-400 hover:text-red-500 widget-remove-btn"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+        </div>
+        <div class="p-0 flex-grow overflow-auto">
+            <table class="min-w-full text-xs text-left">
+                <thead class="bg-gray-50 text-gray-500 uppercase sticky top-0">
+                    <tr class="widget-table-head"></tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 widget-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- System Health Widget -->
+    <div id="widget-system-health" class="grid-stack-item-content bg-white shadow-sm rounded-lg border border-gray-200 flex flex-col h-full overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100 font-bold text-sm text-gray-700 bg-gray-50/50 handle cursor-move flex justify-between items-center">
+            <span>System Health</span>
+            <button class="text-gray-400 hover:text-red-500 widget-remove-btn"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        </div>
+        <div class="p-4 flex-grow grid grid-cols-2 gap-2">
+            <div class="bg-emerald-50 p-3 rounded border border-emerald-100 text-center">
+                <div class="text-[10px] text-emerald-600 font-bold uppercase">Database</div>
+                <div class="text-sm font-bold text-emerald-700">Online</div>
+            </div>
+            <div class="bg-indigo-50 p-3 rounded border border-indigo-100 text-center">
+                <div class="text-[10px] text-indigo-600 font-bold uppercase">Redis</div>
+                <div class="text-sm font-bold text-indigo-700">Connected</div>
+            </div>
+            <div class="bg-amber-50 p-3 rounded border border-amber-100 text-center">
+                <div class="text-[10px] text-amber-600 font-bold uppercase">Worker</div>
+                <div class="text-sm font-bold text-amber-700">Active</div>
+            </div>
+            <div class="bg-blue-50 p-3 rounded border border-blue-100 text-center">
+                <div class="text-[10px] text-blue-600 font-bold uppercase">Uptime</div>
+                <div class="text-sm font-bold text-blue-700">99.9%</div>
+            </div>
+        </div>
+    </div>
+</div>

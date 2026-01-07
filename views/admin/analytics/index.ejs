@@ -165,7 +165,7 @@
                 } catch (e) {
                     console.error("Grid Init Failed:", e);
                     this.loading = false; 
-                    alert("Dashboard error: " + e.message);
+                    window.adminAlert("Dashboard error: " + e.message, 'danger');
                 }
             },
 
@@ -348,9 +348,9 @@
                         body: JSON.stringify({ layout })
                     });
                     this.toggleEdit();
-                    alert('Layout saved');
+                    window.adminAlert('Layout saved', 'success');
                 } catch(e) {
-                    alert('Save failed');
+                    window.adminAlert('Save failed', 'danger');
                 }
             }
         }

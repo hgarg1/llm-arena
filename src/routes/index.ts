@@ -8,8 +8,10 @@ import authRoutes from './auth.routes';
 import accountRoutes from './account.routes';
 import adminRoutes from './admin.routes';
 import investorRoutes from './investor.routes';
+import chatRoutes from './chat.routes';
 import { isAuthenticated } from '../middleware/auth.middleware';
 import { matchCreateRateLimit } from '../middleware/rate-limit.middleware';
+import { apiKeyAuthOptional, apiKeyUsageTracker, requireApiScope } from '../middleware/api-key.middleware';
 
 const router = Router();
 
@@ -19,6 +21,7 @@ router.use('/auth', authRoutes);
 router.use('/account', accountRoutes);
 router.use('/admin', adminRoutes);
 router.use('/investors', investorRoutes);
+router.use('/chat', chatRoutes);
 
 // App Pages (Override home if needed, but PublicController handles root)
 // router.get('/', homeController.index); // Removed in favor of PublicController.home
@@ -37,7 +40,7 @@ router.post('/access/request', isAuthenticated, accessController.requestAccess);
 router.get('/access/requested', isAuthenticated, accessController.requestConfirmation);
 
 // Models
-router.get('/api/models', modelController.apiList);
+router.get('/api/models', apiKeyAuthOptional, requireApiScope('models.read'), apiKeyUsageTracker, modelController.apiList);
 router.get('/models', modelController.list);
 router.get('/models/:id', modelController.detail);
 

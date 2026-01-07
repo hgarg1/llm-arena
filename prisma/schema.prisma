@@ -82,6 +82,28 @@ enum UsageScopeType {
   API_KEY
   MODEL
 }
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  SUSPENDED
+}
+
+enum StripePriceStatus {
+  ACTIVE
+  INACTIVE
+  LEGACY
+}
+
+enum StripeSubscriptionTarget {
+  USER
+  ORG
+}
+
+enum StripeMode {
+  TEST
+  LIVE
+}
 enum GameStatus {
   DRAFT
   SCHEDULED
@@ -101,6 +123,51 @@ enum GameEngineArtifactStatus {
   DRAFT
   PUBLISHED
   FAILED
+}
+
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum JobEmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+  TEMP
+}
+
+enum JobLocationType {
+  ONSITE
+  REMOTE
+  HYBRID
+}
+
+enum JobQuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  SELECT
+  MULTISELECT
+  BOOLEAN
+}
+
+enum JobApplicationStatus {
+  NEW
+  IN_REVIEW
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+}
+
+enum JobInterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELED
+  NO_SHOW
+  RESCHEDULE
 }
 
 model GameDryRun {
@@ -127,6 +194,7 @@ model User {
   tier          SubscriptionTier @default(FREE)
   plan_id       String?
   plan          SubscriptionPlan? @relation(fields: [plan_id], references: [id], onDelete: SetNull)
+  stripe_customer_id String?
   org_id        String?
   organization  Organization? @relation(fields: [org_id], references: [id], onDelete: SetNull)
 
@@ -161,6 +229,7 @@ model User {
   models        Model[]
   matches       Match[]   // Matches created by user
   api_keys      ApiKey[]
+  api_key_audits ApiKeyAuditLog[]
     passkeys      Passkey[]
     dashboard     AdminDashboard?
     admin_audit_logs AdminAuditLog[] @relation("AdminAuditLogs")
@@ -168,9 +237,23 @@ model User {
     access_requests_reviewed AdminAccessRequest[] @relation("AccessRequestReviewer")
     entitlement_overrides_created EntitlementOverride[] @relation("EntitlementOverrideCreator")
     entitlement_audit_logs EntitlementAuditLog[] @relation("EntitlementAuditActor")
+    stripe_products_created SubscriptionPlanStripeProduct[] @relation("StripeProductCreator")
+    stripe_prices_created SubscriptionPlanPrice[] @relation("StripePriceCreator")
+    jobs_created JobPosting[] @relation("JobCreator")
     rbac_roles    RbacUserRole[]
   rbac_groups   RbacUserGroup[]
   rbac_permission_overrides RbacUserPermissionOverride[]
+  
+  chat_channels_created ChatChannel[] @relation("ChannelCreator")
+  chat_participations   ChatParticipant[]
+  chat_messages         ChatMessage[]
+  chat_notifications    ChatNotification[]
+
+  // Chat/Notification Settings
+  chat_notifications_enabled Boolean @default(true)
+  chat_notifications_sound   Boolean @default(true)
+  chat_notifications_rate_limit Int @default(5) // Seconds between toasts
+  chat_presence_visible      Boolean @default(true)
 }
 
 model Organization {
@@ -179,6 +262,7 @@ model Organization {
   slug       String   @unique
   plan_id    String?
   plan       SubscriptionPlan? @relation(fields: [plan_id], references: [id], onDelete: SetNull)
+  stripe_customer_id String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -201,10 +285,57 @@ model ApiKey {
   id          String   @id @default(uuid())
   key_hash    String   @unique
   name        String
+  prefix      String?
+  status      ApiKeyStatus @default(ACTIVE)
   last_used   DateTime?
+  expires_at  DateTime?
   created_at  DateTime @default(now())
   user_id     String
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  scopes      ApiKeyScope[]
+  usage       ApiKeyUsage[]
+  audits      ApiKeyAuditLog[]
+}
+
+model ApiKeyScope {
+  id         String   @id @default(uuid())
+  key_id     String
+  scope_key  String
+  created_at DateTime @default(now())
+  api_key    ApiKey   @relation(fields: [key_id], references: [id], onDelete: Cascade)
+
+  @@unique([key_id, scope_key])
+  @@index([scope_key])
+}
+
+model ApiKeyUsage {
+  id           String   @id @default(uuid())
+  key_id       String
+  route        String
+  method       String
+  status_code  Int
+  window_start DateTime
+  count        Int      @default(0)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  api_key      ApiKey   @relation(fields: [key_id], references: [id], onDelete: Cascade)
+
+  @@index([key_id, window_start])
+  @@unique([key_id, route, method, status_code, window_start])
+}
+
+model ApiKeyAuditLog {
+  id            String   @id @default(uuid())
+  actor_user_id String
+  target_key_id String
+  action        String
+  before        Json?
+  after         Json?
+  created_at    DateTime @default(now())
+  actor         User     @relation(fields: [actor_user_id], references: [id], onDelete: Cascade)
+  api_key       ApiKey   @relation(fields: [target_key_id], references: [id], onDelete: Cascade)
+
+  @@index([target_key_id, created_at])
 }
 
 model Model {
@@ -547,6 +678,102 @@ model GameEngineArtifact {
   game       GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
 }
 
+model JobPosting {
+  id               String   @id @default(uuid())
+  title            String
+  slug             String   @unique
+  summary          String
+  description      String   @db.Text
+  location         String?
+  location_type    JobLocationType @default(REMOTE)
+  employment_type  JobEmploymentType @default(FULL_TIME)
+  department       String?
+  seniority        String?
+  status           JobStatus @default(DRAFT)
+  featured         Boolean  @default(false)
+  application_schema Json?
+  review_rubric    Json?
+  created_by       String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  applications     JobApplication[]
+  questions        JobQuestion[]
+  creator          User? @relation("JobCreator", fields: [created_by], references: [id], onDelete: SetNull)
+
+  @@index([status, created_at])
+}
+
+model JobQuestion {
+  id         String   @id @default(uuid())
+  job_id     String
+  key        String
+  label      String
+  type       JobQuestionType @default(SHORT_TEXT)
+  required   Boolean  @default(false)
+  options    String[] @default([])
+  position   Int      @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  job        JobPosting @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@unique([job_id, key])
+  @@index([job_id, position])
+}
+
+model JobApplication {
+  id              String   @id @default(uuid())
+  job_id          String
+  full_name       String
+  email           String
+  phone           String?
+  location        String?
+  linkedin_url    String?
+  github_url      String?
+  portfolio_url   String?
+  resume_path     String?
+  resume_blob_url String?
+  resume_text     String?
+  ai_extract      Json?
+  ai_sentiment_application Json?
+  ai_sentiment_fit Json?
+  ai_sentiment_score Float?
+  ai_fit_score    Float?
+  review_rubric   Json?
+  review_score    Float?
+  interview_status JobInterviewStatus?
+  interview_scheduled_at DateTime?
+  interview_location String?
+  interview_notes String?
+  last_contacted_at DateTime?
+  admin_notes     String?  @db.Text
+  status          JobApplicationStatus @default(NEW)
+  source          String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  job             JobPosting @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  answers         JobApplicationAnswer[]
+
+  @@index([job_id, status, created_at])
+  @@index([email])
+}
+
+model JobApplicationAnswer {
+  id              String   @id @default(uuid())
+  application_id  String
+  question_key    String
+  question_label  String
+  response        Json?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  application     JobApplication @relation(fields: [application_id], references: [id], onDelete: Cascade)
+
+  @@index([application_id])
+}
+
 model SubscriptionEntitlement {
   id          String   @id @default(uuid())
   key         String   @unique
@@ -594,12 +821,89 @@ model SubscriptionPlan {
   interval          String?  @default("month")
   level             Int      @default(1)
   is_active         Boolean  @default(true)
+  stripe_product_id String?
+  stripe_product_active Boolean?
+  stripe_product_metadata Json?
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
 
   entitlements      SubscriptionPlanEntitlement[]
+  stripe_products   SubscriptionPlanStripeProduct[]
+  prices            SubscriptionPlanPrice[]
+  subscriptions     StripeSubscription[]
   users             User[]
   organizations     Organization[]
+}
+
+model SubscriptionPlanStripeProduct {
+  id                String   @id @default(uuid())
+  plan_id           String
+  stripe_product_id String   @unique
+  mode              StripeMode
+  active            Boolean  @default(true)
+  metadata          Json?
+  created_by        String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  plan              SubscriptionPlan @relation(fields: [plan_id], references: [id], onDelete: Cascade)
+  creator           User? @relation("StripeProductCreator", fields: [created_by], references: [id], onDelete: SetNull)
+
+  @@unique([plan_id, mode])
+  @@index([plan_id, mode, active])
+}
+
+model SubscriptionPlanPrice {
+  id               String   @id @default(uuid())
+  plan_id          String
+  stripe_price_id  String   @unique
+  stripe_product_id String?
+  nickname         String?
+  currency         String?
+  unit_amount      Int?
+  interval         String?
+  interval_count   Int?
+  status           StripePriceStatus @default(ACTIVE)
+  is_default       Boolean  @default(false)
+  stripe_active    Boolean?
+  metadata         Json?
+  mode             StripeMode @default(TEST)
+  created_by       String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  plan             SubscriptionPlan @relation(fields: [plan_id], references: [id], onDelete: Cascade)
+  creator          User? @relation("StripePriceCreator", fields: [created_by], references: [id], onDelete: SetNull)
+
+  @@index([plan_id, status])
+  @@index([plan_id, mode, status])
+}
+
+model StripeSubscription {
+  id                     String   @id @default(uuid())
+  stripe_subscription_id String   @unique
+  stripe_customer_id     String
+  stripe_mode            StripeMode @default(TEST)
+  status                 String
+  plan_id                String?
+  price_id               String?
+  product_id             String?
+  target_type            StripeSubscriptionTarget
+  target_id              String
+  current_period_start   DateTime?
+  current_period_end     DateTime?
+  cancel_at_period_end   Boolean  @default(false)
+  canceled_at            DateTime?
+  trial_end              DateTime?
+  quantity               Int?
+  raw                    Json?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  plan                   SubscriptionPlan? @relation(fields: [plan_id], references: [id], onDelete: SetNull)
+
+  @@index([target_type, target_id])
+  @@index([stripe_customer_id])
 }
 
 model SubscriptionPlanEntitlement {
@@ -692,4 +996,107 @@ model UsageCounter {
 
   @@unique([scope_type, scope_id, entitlement_key, window_start])
   @@index([entitlement_key, window_start])
+}
+
+enum ChatChannelType {
+  PUBLIC
+  PRIVATE
+  SUPPORT
+  SYSTEM
+  ANNOUNCEMENT
+}
+
+enum ChatMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  READONLY
+}
+
+enum ChatMessageType {
+  TEXT
+  SYSTEM
+  IMAGE
+  FILE
+}
+
+model ChatChannel {
+  id                    String   @id @default(uuid())
+  name                  String
+  slug                  String   @unique
+  description           String?
+  type                  ChatChannelType @default(PUBLIC)
+  is_archived           Boolean  @default(false)
+  is_read_only          Boolean  @default(false)
+  rate_limit            Int      @default(0)
+  min_role_required     String?  // Reference to RbacRole.name
+  entitlement_required  String?  // Reference to SubscriptionEntitlement.key
+  created_by            String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  creator               User?    @relation("ChannelCreator", fields: [created_by], references: [id], onDelete: SetNull)
+  participants          ChatParticipant[]
+  messages              ChatMessage[]
+  notifications         ChatNotification[]
+}
+
+model ChatParticipant {
+  id          String   @id @default(uuid())
+  channel_id  String
+  user_id     String
+  role        ChatMemberRole @default(MEMBER)
+  joined_at   DateTime @default(now())
+  last_read_at DateTime?
+
+  channel     ChatChannel @relation(fields: [channel_id], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([channel_id, user_id])
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  channel_id  String
+  user_id     String?  // Null for system messages
+  type        ChatMessageType @default(TEXT)
+  content     String   @db.Text
+  is_pinned   Boolean  @default(false)
+  is_edited   Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  channel     ChatChannel @relation(fields: [channel_id], references: [id], onDelete: Cascade)
+  sender      User?       @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  attachments ChatAttachment[]
+  notifications ChatNotification[]
+
+  @@index([channel_id, created_at])
+}
+
+model ChatAttachment {
+  id          String   @id @default(uuid())
+  message_id  String
+  file_name   String
+  file_type   String
+  file_size   Int
+  url         String
+  created_at  DateTime @default(now())
+
+  message     ChatMessage @relation(fields: [message_id], references: [id], onDelete: Cascade)
+}
+
+model ChatNotification {
+  id          String   @id @default(uuid())
+  user_id     String
+  message_id  String
+  channel_id  String
+  is_sent     Boolean  @default(false)
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  message     ChatMessage @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  channel     ChatChannel @relation(fields: [channel_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, is_sent])
 }

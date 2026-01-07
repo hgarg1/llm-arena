@@ -5,7 +5,10 @@
     </div>
 
     <% if (success) { %>
-        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm"><%= success %></div>
+        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm flex items-center justify-between">
+            <span><%= success %></span>
+            <a href="/admin/games?success=<%= encodeURIComponent(success) %>&newId=<%= game.id %>" class="text-xs uppercase tracking-widest text-green-700 underline">Back to Games</a>
+        </div>
     <% } %>
     <% if (error) { %>
         <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>

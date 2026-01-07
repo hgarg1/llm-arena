@@ -12,6 +12,9 @@ export const RBAC_PERMISSIONS = [
   { key: 'admin.users.export', description: 'Export users' },
   { key: 'admin.models.view', description: 'View models' },
   { key: 'admin.models.edit', description: 'Create or edit models' },
+  { key: 'admin.api_keys.view', description: 'View API keys' },
+  { key: 'admin.api_keys.edit', description: 'Edit API key scopes and status' },
+  { key: 'admin.api_keys.revoke', description: 'Revoke API keys' },
   { key: 'admin.matches.view', description: 'View matches' },
   { key: 'admin.matches.cancel', description: 'Cancel matches' },
   { key: 'admin.matches.retry', description: 'Retry matches' },
@@ -42,7 +45,16 @@ export const RBAC_PERMISSIONS = [
   { key: 'admin.entitlements.view', description: 'View subscription entitlements' },
   { key: 'admin.entitlements.edit', description: 'Edit subscription entitlements' },
   { key: 'admin.plans.view', description: 'View subscription plans' },
-  { key: 'admin.plans.edit', description: 'Edit subscription plans' }
+  { key: 'admin.plans.edit', description: 'Edit subscription plans' },
+  { key: 'admin.hr.view', description: 'View HR console' },
+  { key: 'admin.hr.edit', description: 'Manage HR jobs and applications' },
+  { key: 'admin.chat.manage', description: 'Manage chat channels and settings' },
+  { key: 'admin.chat.broadcast', description: 'Broadcast system-wide alerts' },
+  { key: 'admin.settings.chat_config', description: 'Configure which chat settings users can manage' },
+  { key: 'admin.users.chat_settings', description: 'Modify chat settings for specific users' },
+  { key: 'admin.ai_chat.access', description: 'Access administrative AI assistant' },
+  { key: 'admin.ai_chat.query', description: 'Interact with administrative AI assistant' },
+  { key: 'admin.ai_chat.export', description: 'Export administrative AI chat logs' }
 ];
 
 type PermissionEffect = 'ALLOW' | 'DENY';

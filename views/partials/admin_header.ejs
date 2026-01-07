@@ -24,14 +24,26 @@
             <button type="button" class="ml-auto lg:hidden text-xs uppercase tracking-widest text-slate-400 border border-slate-700 px-2 py-1" @click="sidebarOpen = false">Close</button>
         </div>
         
-        <nav class="flex-1 px-4 py-6 space-y-1">
-            <% if (typeof can === 'function' && can('admin.dashboard.view')) { %>
-            <a href="/admin" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path === '/admin') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
-                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                Dashboard
-            </a>
-            <% } %>
-            <% if (typeof can === 'function' && can('admin.users.view')) { %>
+        <nav class="flex-1 px-4 py-6 space-y-4 overflow-y-auto">
+            <details open class="group">
+                <summary class="cursor-pointer list-none px-2 text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2 flex items-center justify-between">
+                    Core
+                    <svg class="h-3 w-3 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+                </summary>
+                <% if (typeof can === 'function' && can('admin.dashboard.view')) { %>
+                <a href="/admin" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path === '/admin') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                    <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                    Dashboard
+                </a>
+                <% } %>
+            </details>
+
+            <details open class="group">
+                <summary class="cursor-pointer list-none px-2 text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2 flex items-center justify-between">
+                    Operations
+                    <svg class="h-3 w-3 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+                </summary>
+                <% if (typeof can === 'function' && can('admin.users.view')) { %>
             <a href="/admin/users" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/users')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
                 <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                 Users
@@ -49,18 +61,31 @@
                 Match Ops
             </a>
             <% } %>
+            <% if (typeof can === 'function' && can('admin.chat.manage')) { %>
+            <a href="/admin/chat" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/chat')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                Chat
+            </a>
+            <% } %>
             <% if (typeof can === 'function' && can('admin.queue.view')) { %>
             <a href="/admin/queue" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/queue')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
                 <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                 Queue
             </a>
             <% } %>
-            <% if (typeof can === 'function' && can('admin.analytics.view')) { %>
-            <a href="/admin/analytics" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/analytics')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
-                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                Analytics
+            <% if (typeof can === 'function' && can('admin.games.view')) { %>
+            <a href="/admin/games" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/games')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Games
             </a>
             <% } %>
+            </details>
+
+            <details open class="group">
+                <summary class="cursor-pointer list-none px-2 text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2 flex items-center justify-between">
+                    Governance
+                    <svg class="h-3 w-3 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+                </summary>
             <% if (typeof can === 'function' && can('admin.approvals.view')) { %>
             <a href="/admin/approvals" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/approvals')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
                 <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 1a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -73,16 +98,29 @@
                 Audit Log
             </a>
             <% } %>
+            <% if (typeof can === 'function' && can('admin.ai_chat.access')) { %>
+            <a href="/admin/ai-chat" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/ai-chat')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                AI Assistant
+            </a>
+            <% } %>
+            </details>
+
+            <details open class="group">
+                <summary class="cursor-pointer list-none px-2 text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2 flex items-center justify-between">
+                    Platform
+                    <svg class="h-3 w-3 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+                </summary>
+            <% if (typeof can === 'function' && can('admin.analytics.view')) { %>
+            <a href="/admin/analytics" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/analytics')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                Analytics
+            </a>
+            <% } %>
             <% if (typeof can === 'function' && can('admin.content.view')) { %>
             <a href="/admin/content" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/content')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
                 <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 Content
-            </a>
-            <% } %>
-            <% if (typeof can === 'function' && can('admin.games.view')) { %>
-            <a href="/admin/games" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/games')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
-                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Games
             </a>
             <% } %>
             <% if (typeof can === 'function' && can('admin.media.view')) { %>
@@ -91,16 +129,54 @@
                 Media
             </a>
             <% } %>
+            </details>
+
+            <details open class="group">
+                <summary class="cursor-pointer list-none px-2 text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2 flex items-center justify-between">
+                    HR
+                    <svg class="h-3 w-3 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+                </summary>
+            <% if (typeof can === 'function' && can('admin.hr.view')) { %>
+            <a href="/admin/hr" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path === '/admin/hr') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 6h6M9 10h6M9 14h6M5 6h.01M5 10h.01M5 14h.01M7 20h10a2 2 0 002-2V7l-4-3H7a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                HR Console
+            </a>
+            <a href="/admin/hr/jobs" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/hr/jobs')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2m-2 4H6m-2 4h16M6 15v4m12-4v4" /></svg>
+                Jobs
+            </a>
+            <a href="/admin/hr/applications" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/hr/applications')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 6h8M8 10h8M8 14h6M6 6h.01M6 10h.01M6 14h.01M5 20h14a2 2 0 002-2V7l-4-3H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                Applications
+            </a>
+            <% } %>
+            </details>
+
+            <details open class="group">
+                <summary class="cursor-pointer list-none px-2 text-[10px] uppercase tracking-[0.2em] text-slate-500 mb-2 flex items-center justify-between">
+                    Access
+                    <svg class="h-3 w-3 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+                </summary>
             <% if (typeof can === 'function' && can('admin.settings.view')) { %>
             <a href="/admin/settings" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/settings')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
                 <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 00-1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Settings
             </a>
             <% } %>
+            <% if (typeof can === 'function' && can('admin.api_keys.view')) { %>
+            <a href="/admin/api-keys" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/api-keys')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11V7m0 4a4 4 0 100 8 4 4 0 000-8zm6-4h2a2 2 0 012 2v2m0 4v2a2 2 0 01-2 2h-2M6 7H4a2 2 0 00-2 2v2m0 4v2a2 2 0 002 2h2" /></svg>
+                API Keys
+            </a>
+            <% } %>
             <% if (typeof can === 'function' && can('admin.entitlements.view')) { %>
             <a href="/admin/entitlements" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/entitlements')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
                 <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.12-3 2.5S10.343 13 12 13s3-1.12 3-2.5S13.657 8 12 8zm0 0V6m0 7v5m-4-3h8" /></svg>
                 Entitlements
+            </a>
+            <a href="/admin/entitlements/usage" class="flex items-center px-2 py-2 text-sm font-medium rounded-md <%= (typeof path !== 'undefined' && path && path.startsWith('/admin/entitlements/usage')) ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' %>">
+                <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h4l3 8 4-16 3 8h4" /></svg>
+                Entitlement Usage
             </a>
             <% } %>
             <% if (typeof can === 'function' && can('admin.plans.view')) { %>
@@ -115,6 +191,7 @@
                 RBAC
             </a>
             <% } %>
+            </details>
             <a href="/" class="flex items-center px-2 py-2 text-sm font-medium rounded-md text-slate-300 hover:bg-slate-800 hover:text-white mt-8">
                 <svg class="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 Back to App

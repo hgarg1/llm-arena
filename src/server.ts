@@ -13,6 +13,7 @@ import { contentMiddleware } from './middleware/content.middleware';
 import { redisConnection } from './config/redis';
 import { attachPermissions } from './middleware/rbac.middleware';
 import { attachEntitlements } from './middleware/entitlements.middleware';
+import { stripeWebhookHandler } from './controllers/stripe.controller';
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ if (isProduction && !process.env.REDIS_URL) {
 // Middleware
 app.set('trust proxy', 1);
 app.use(morgan('dev'));
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -77,6 +79,7 @@ app.use(attachEntitlements);
         "object-src": ["'none'"],
         "frame-ancestors": ["'none'"],
         "script-src": ["'self'", "'unsafe-inline'", ...(allowUnsafeEval ? ["'unsafe-eval'"] : []), "https://cdn.jsdelivr.net", "https://unpkg.com", "https://cdnjs.cloudflare.com", ...parseList(settings.security_csp_script_src)],
+        "script-src-attr": ["'unsafe-inline'"],
         "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", ...parseList(settings.security_csp_style_src)],
         "font-src": ["'self'", "https://fonts.gstatic.com", "data:", ...parseList(settings.security_csp_font_src)],
         "img-src": ["'self'", "data:", "https:", ...parseList(settings.security_csp_img_src)],
@@ -142,7 +145,10 @@ app.use((req, res, next) => {
   return res.status(503).render('errors/503');
 });
 
-app.use(csurf() as unknown as express.RequestHandler);
+app.use((req, res, next) => {
+  if (req.path.startsWith('/webhooks/stripe')) return next();
+  return (csurf() as unknown as express.RequestHandler)(req, res, next);
+});
 
 app.use((req, res, next) => {
   res.locals.csrfToken = typeof req.csrfToken === 'function' ? req.csrfToken() : '';

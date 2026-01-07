@@ -30,7 +30,6 @@ export const createWorkbook = (title: string) => {
   workbook.creator = 'LLM Arena';
   workbook.created = new Date();
   workbook.modified = new Date();
-  workbook.properties = { title };
   return workbook;
 };
 
@@ -108,4 +107,3 @@ export const applyColumnSizing = (sheet: ExcelJS.Worksheet, columns: ExcelColumn
     column.width = Math.min(Math.max(12, maxLength + 2), 60);
   });
 };
-

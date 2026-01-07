@@ -1,0 +1,97 @@
+<%- include('../../partials/admin_header') %>
+
+<div class="max-w-3xl mx-auto">
+    <div class="mb-8">
+        <a href="/admin/chat" class="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Back to Chat Operations
+        </a>
+        <h1 class="text-2xl font-bold text-gray-900">Configure Channel: #<%= channel.name %></h1>
+        <p class="mt-1 text-sm text-gray-500">Manage access control, moderation, and behavior.</p>
+    </div>
+
+    <form action="/admin/chat/channels/<%= channel.id %>/config" method="POST" class="space-y-6">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-medium leading-6 text-gray-900">Governance & Access</h3>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div class="sm:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700">Channel Type</label>
+                        <select name="type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="PUBLIC" <%= channel.type === 'PUBLIC' ? 'selected' : '' %>>Public</option>
+                            <option value="PRIVATE" <%= channel.type === 'PRIVATE' ? 'selected' : '' %>>Private</option>
+                            <option value="SUPPORT" <%= channel.type === 'SUPPORT' ? 'selected' : '' %>>Support</option>
+                            <option value="SYSTEM" <%= channel.type === 'SYSTEM' ? 'selected' : '' %>>System</option>
+                            <option value="ANNOUNCEMENT" <%= channel.type === 'ANNOUNCEMENT' ? 'selected' : '' %>>Announcement</option>
+                        </select>
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700">RBAC Role Gate</label>
+                        <select name="min_role_required" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="">None (Open)</option>
+                            <% roles.forEach(role => { %>
+                                <option value="<%= role.name %>" <%= channel.min_role_required === role.name ? 'selected' : '' %>><%= role.name %></option>
+                            <% }) %>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Only users with this role (or above) can access.</p>
+                    </div>
+
+                    <div class="sm:col-span-6">
+                        <label class="block text-sm font-medium text-gray-700">Entitlement Gate</label>
+                        <select name="entitlement_required" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="">None (Open)</option>
+                            <% entitlements.forEach(ent => { %>
+                                <option value="<%= ent.key %>" <%= channel.entitlement_required === ent.key ? 'selected' : '' %>><%= ent.key %> (<%= ent.description %>)</option>
+                            <% }) %>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Require specific subscription entitlement (e.g. "pro_features").</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-medium leading-6 text-gray-900">Moderation Settings</h3>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        <input id="is_read_only" name="is_read_only" type="checkbox" <%= channel.is_read_only ? 'checked' : '' %> class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                    </div>
+                    <div class="ml-3 text-sm">
+                        <label for="is_read_only" class="font-medium text-gray-700">Read-Only Mode</label>
+                        <p class="text-gray-500">Only Admins can post. Users can only read.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Rate Limit (Slow Mode)</label>
+                    <div class="mt-1 relative rounded-md shadow-sm w-32">
+                        <input type="number" name="rate_limit" value="<%= channel.rate_limit %>" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-12 sm:text-sm border-gray-300 rounded-md" placeholder="0">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm">sec</span>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Minimum seconds between user messages. 0 to disable.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <a href="/admin/chat" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Cancel
+            </a>
+            <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+<%- include('../../partials/admin_footer') %>

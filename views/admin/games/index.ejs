@@ -12,6 +12,34 @@
         <% } %>
     </div>
 
+    <% if (success || error) { %>
+        <div class="fixed top-6 right-6 z-50">
+            <div id="gameToast" class="rounded-lg shadow-lg border px-4 py-3 text-sm flex items-start gap-3 <%= success ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700' %>">
+                <div class="mt-0.5">
+                    <% if (success) { %>
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    <% } else { %>
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <% } %>
+                </div>
+                <div>
+                    <div class="font-semibold"><%= success ? 'Success' : 'Error' %></div>
+                    <div class="text-xs mt-1"><%= success || error %></div>
+                    <% if (newId) { %>
+                        <a href="/admin/games/<%= newId %>?step=basics" class="text-xs mt-2 inline-block underline">Open new game</a>
+                    <% } %>
+                </div>
+                <button type="button" class="text-xs uppercase tracking-widest ml-2" onclick="document.getElementById('gameToast').remove()">Close</button>
+            </div>
+        </div>
+        <script>
+            setTimeout(() => {
+                const toast = document.getElementById('gameToast');
+                if (toast) toast.remove();
+            }, 5500);
+        </script>
+    <% } %>
+
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">

@@ -55,7 +55,8 @@ async function main() {
     'admin.users.password_reset',
     'admin.users.2fa_reset',
     'admin.users.ban',
-    'admin.users.unban'
+    'admin.users.unban',
+    'admin.chat.manage'
   ]);
   const opsAdminRole = await upsertRole('OpsAdmin', 'Operations and queue management', [
     'admin.access',
@@ -66,7 +67,13 @@ async function main() {
     'admin.queue.view',
     'admin.queue.retry',
     'admin.queue.clean',
-    'admin.analytics.view'
+    'admin.analytics.view',
+    'admin.chat.manage',
+    'admin.chat.broadcast',
+    'admin.settings.chat_config',
+    'admin.users.chat_settings',
+    'admin.ai_chat.access',
+    'admin.ai_chat.query'
   ]);
 
   // Create Admin User

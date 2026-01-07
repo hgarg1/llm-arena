@@ -20,6 +20,16 @@ const parseList = (value?: string) =>
     .map(v => v.trim())
     .filter(Boolean);
 
+const allowIfNotDefined = (entitlements: any, key: string) => {
+  if (!entitlements?.resolved?.[key]) return true;
+  return entitlements.hasEntitlement(key);
+};
+
+const enforceModeIfDefined = (entitlements: any, key: string, mode: 'hidden' | 'view' | 'edit' | 'admin' | 'locked') => {
+  if (!entitlements?.resolved?.[key]) return true;
+  return entitlements.enforceMode(key, mode);
+};
+
 const parseSettingValue = (type: string, value: string): Prisma.InputJsonValue | typeof Prisma.DbNull => {
   if (value === undefined || value === null || value === '') return Prisma.DbNull;
   if (type === 'INT') return parseInt(value, 10);
@@ -284,7 +294,10 @@ export const listGames = async (req: Request, res: Response) => {
   res.render('admin/games/index', {
     title: 'Game Builder',
     path: '/admin/games',
-    games
+    games,
+    success: req.query.success,
+    error: req.query.error,
+    newId: req.query.newId
   });
 };
 
@@ -369,7 +382,7 @@ export const newGameDraft = async (req: Request, res: Response) => {
     ]
   });
   await logAdminAction((req.session as any).userId, 'game.create', game.id, { key });
-  res.redirect(`/admin/games/${game.id}?step=basics`);
+  res.redirect(`/admin/games/${game.id}?step=basics&success=Game created`);
 };
 
 export const deleteGame = async (req: Request, res: Response) => {
@@ -384,6 +397,22 @@ export const deleteGame = async (req: Request, res: Response) => {
 
 export const generateGameEngine = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const entitlements = (req as any).entitlements;
+  const adminId = (req.session as any).userId;
+  const orgId = (req.session as any).user?.org_id;
+  if (!allowIfNotDefined(entitlements, 'engine.generate')) {
+    return res.redirect(`/admin/games/${id}?step=review&error=Engine generation not allowed`);
+  }
+  if (!enforceModeIfDefined(entitlements, 'engine.generate', 'edit')) {
+    return res.redirect(`/admin/games/${id}?step=review&error=Insufficient access mode to generate engine`);
+  }
+  if (entitlements?.resolved?.['engine.generate']) {
+    const scope = orgId ? { type: 'org', id: orgId } : { type: 'user', id: adminId };
+    const quotaResult = await entitlements.enforceQuota('engine.generate', scope);
+    if (!quotaResult.allowed) {
+      return res.redirect(`/admin/games/${id}?step=review&error=Engine generation quota exceeded`);
+    }
+  }
   const game = await prisma.gameDefinition.findUnique({
     where: { id },
     include: { settings: true, ui_schema: true }
@@ -416,6 +445,18 @@ export const generateGameEngine = async (req: Request, res: Response) => {
       });
     }
     await logAdminAction((req.session as any).userId, 'game.engine.generate', id);
+    if (entitlements?.resolved?.['engine.generate']) {
+      const config = entitlements.entitlementValue('engine.generate');
+      if (config?.limit) {
+        const scope = orgId ? { type: 'org', id: orgId } : { type: 'user', id: adminId };
+        await entitlements.incrementUsage({
+          entitlementKey: 'engine.generate',
+          scopeType: scope.type === 'org' ? 'ORG' : 'USER',
+          scopeId: scope.id,
+          window: config.window || 'day'
+        });
+      }
+    }
     res.redirect(`/admin/games/${id}?step=review&success=Engine generated`);
   } catch (err) {
     await prisma.gameEngineArtifact.create({
@@ -435,6 +476,13 @@ export const generateGameEngine = async (req: Request, res: Response) => {
 
 export const publishGameEngine = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const entitlements = (req as any).entitlements;
+  if (!allowIfNotDefined(entitlements, 'engine.publish')) {
+    return res.redirect(`/admin/games/${id}?step=review&error=Engine publish not allowed`);
+  }
+  if (!enforceModeIfDefined(entitlements, 'engine.publish', 'admin')) {
+    return res.redirect(`/admin/games/${id}?step=review&error=Insufficient access mode to publish engine`);
+  }
   const game = await prisma.gameDefinition.findUnique({
     where: { id },
     include: { engine_artifacts: { orderBy: { created_at: 'desc' }, take: 1 } }
@@ -858,9 +906,9 @@ export const saveGameDraft = async (req: Request, res: Response) => {
 
     const nextStep = step === 'basics' ? 'config' : step === 'config' ? 'uiux' : 'review';
     if (req.body.action === 'continue') {
-      return res.redirect(`/admin/games/${id}?step=${nextStep}&success=Saved`);
+      return res.redirect(`/admin/games/${id}?step=${nextStep}&success=Game updated`);
     }
-    return res.redirect(`/admin/games/${id}?step=${step}&success=Saved`);
+    return res.redirect(`/admin/games/${id}?step=${step}&success=Game updated`);
   } catch (err) {
     console.error(err);
     return res.redirect(`/admin/games/${id}?step=${step}&error=Failed to save`);
@@ -869,6 +917,13 @@ export const saveGameDraft = async (req: Request, res: Response) => {
 
 export const publishGame = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const entitlements = (req as any).entitlements;
+  if (!allowIfNotDefined(entitlements, 'engine.publish')) {
+    return res.redirect(`/admin/games/${id}?step=review&error=Publish not allowed by entitlements`);
+  }
+  if (!enforceModeIfDefined(entitlements, 'engine.publish', 'admin')) {
+    return res.redirect(`/admin/games/${id}?step=review&error=Insufficient access mode to publish`);
+  }
   const action = req.body.action;
   const adminId = (req.session as any).userId;
   const game = await prisma.gameDefinition.findUnique({ where: { id } });
@@ -905,5 +960,10 @@ export const publishGame = async (req: Request, res: Response) => {
     }
   });
   await logAdminAction(adminId, 'game.publish', id, { status, publishAt });
-  res.redirect(`/admin/games/${id}?step=review&success=Game ${status.toLowerCase()}`);
+  const statusLabel =
+    status === 'LIVE' ? 'published' :
+    status === 'SCHEDULED' ? 'scheduled' :
+    status === 'RETIRED' ? 'retired' :
+    'saved';
+  res.redirect(`/admin/games/${id}?step=review&success=Game ${statusLabel}`);
 };

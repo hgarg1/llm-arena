@@ -65,6 +65,11 @@ export const auditDashboard = async (req: Request, res: Response) => {
 };
 
 export const exportAuditLogs = async (req: Request, res: Response) => {
+  const entitlements = (req as any).entitlements;
+  const canExport = !entitlements?.resolved?.['export.csv'] || entitlements.hasEntitlement('export.csv');
+  if (!canExport) {
+    return res.status(403).send('Export not allowed for your subscription.');
+  }
   const { where } = buildFilters(req);
   const logs = await prisma.adminAuditLog.findMany({
     where,

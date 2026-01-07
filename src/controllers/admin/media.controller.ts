@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { storage } from '../../services/storage.service';
 import { logAdminAction } from '../../services/audit.service';
 import fs from 'fs';
 import path from 'path';
@@ -123,7 +122,16 @@ export const deleteMedia = async (req: Request, res: Response) => {
     const filename = String(req.body.filename || '');
     const dir = normalizeRelPath(String(req.body.dir || 'img'));
     if (!filename) return res.redirect('/admin/media?error=Missing filename');
-    await storage.delete(filename, dir || 'img');
-    await logAdminAction((req.session as any).userId, 'media.delete', filename, { dir });
-    res.redirect(`/admin/media?success=Deleted&folder=${encodeURIComponent(dir.replace(/^img\/?/, ''))}`);
+    const targetDir = dir || 'img';
+    const filePath = path.join(PUBLIC_ROOT, targetDir, filename);
+    const resolved = path.resolve(filePath);
+    if (!resolved.startsWith(path.resolve(PUBLIC_ROOT))) {
+        return res.redirect('/admin/media?error=Invalid file path');
+    }
+    if (!fs.existsSync(resolved)) {
+        return res.redirect('/admin/media?error=File not found');
+    }
+    fs.unlinkSync(resolved);
+    await logAdminAction((req.session as any).userId, 'media.delete', filename, { dir: targetDir });
+    res.redirect(`/admin/media?success=Deleted&folder=${encodeURIComponent(targetDir.replace(/^img\/?/, ''))}`);
 };

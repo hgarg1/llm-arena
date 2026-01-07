@@ -27,10 +27,23 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
     try {
         const messages = [
             { role: 'system', content: systemPrompt },
-            ...history.map(e => ({
-                role: e.actor === 'system' ? 'system' : 'user', // Simplified mapping
-                content: JSON.stringify(e.payload) // Passing event payload as content
-            }))
+            ...history.map(e => {
+                const role = e.actor === 'assistant' ? 'assistant' : (e.actor === 'system' ? 'system' : 'user');
+                
+                // If there are images, use content array format (OpenAI Vision)
+                if (e.payload.images && e.payload.images.length > 0) {
+                    const content: any[] = [{ type: 'text', text: e.payload.content || JSON.stringify(e.payload) }];
+                    e.payload.images.forEach((url: string) => {
+                        content.push({ type: 'image_url', image_url: { url: url.startsWith('http') ? url : `data:image/jpeg;base64,${url}` } });
+                    });
+                    return { role, content };
+                }
+
+                return {
+                    role,
+                    content: e.payload.content || JSON.stringify(e.payload)
+                };
+            })
         ];
 
         const res = await axios.post(`${this.baseUrl}/chat/completions`, {
@@ -254,8 +267,8 @@ export function getModelAdapter(provider: string, modelId: string, apiKey?: stri
     return new OpenAICompatibleAdapter(apiKey || envKey('XAI_API_KEY'), modelId, 'https://api.x.ai/v1');
   }
 
-  if (provider === 'zhipu') {
-    return new OpenAICompatibleAdapter(apiKey || envKey('ZHIPU_API_KEY'), modelId, 'https://open.bigmodel.cn/api/paas/v4');
+  if (provider === 'zhipu' || provider === 'z.ai') {
+    return new OpenAICompatibleAdapter(apiKey || envKey('ZHIPU_API_KEY') || envKey('Z_AI_API_KEY') || envKey('ZAI_API_KEY'), modelId, 'https://open.bigmodel.cn/api/paas/v4');
   }
 
   if (provider === 'anthropic') {

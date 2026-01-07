@@ -1,39 +1,34 @@
-import fs from 'fs';
 import path from 'path';
+import fs from 'fs/promises';
+import { BlobServiceClient } from '@azure/storage-blob';
 
-export interface IStorageProvider {
-    list(dir: string): Promise<string[]>;
-    save(file: Express.Multer.File, dir: string): Promise<string>;
-    delete(filename: string, dir: string): Promise<void>;
-}
+const ensureDir = async (dir: string) => {
+  await fs.mkdir(dir, { recursive: true });
+};
 
-export class LocalStorageProvider implements IStorageProvider {
-    async list(dir: string): Promise<string[]> {
-        const fullPath = path.join(__dirname, '../../public', dir);
-        if (!fs.existsSync(fullPath)) return [];
-        return fs.readdirSync(fullPath).filter(f => !f.startsWith('.'));
-    }
+export const saveLocalFile = async (buffer: Buffer, fileName: string, folder: string) => {
+  const targetDir = path.join(process.cwd(), 'public', folder);
+  await ensureDir(targetDir);
+  const targetPath = path.join(targetDir, fileName);
+  await fs.writeFile(targetPath, buffer);
+  return {
+    relativePath: `/${folder}/${fileName}`,
+    absolutePath: targetPath
+  };
+};
 
-    async save(file: Express.Multer.File, dir: string): Promise<string> {
-        // Multer already saves to temp or dest, we just ensure it's in the right place
-        // If using DiskStorage in middleware, it's already there. 
-        // We just return the public URL.
-        return path.join('/', dir, file.filename).replace(/\\/g, '/');
-    }
+export const uploadToAzure = async (buffer: Buffer, fileName: string, folder: string) => {
+  const connectionString = process.env.AZURE_BLOB_CONNECTION_STRING;
+  const containerName = process.env.AZURE_BLOB_CONTAINER;
+  if (!connectionString || !containerName) return null;
 
-    async delete(filename: string, dir: string): Promise<void> {
-        const fullPath = path.join(__dirname, '../../public', dir, filename);
-        if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
-        }
-    }
-}
-
-export class AzureBlobProvider implements IStorageProvider {
-    // Placeholder for future implementation
-    async list(dir: string): Promise<string[]> { return []; }
-    async save(file: Express.Multer.File, dir: string): Promise<string> { return ''; }
-    async delete(filename: string, dir: string): Promise<void> { }
-}
-
-export const storage = process.env.AZURE_STORAGE_CONN_STRING ? new AzureBlobProvider() : new LocalStorageProvider();
+  const client = BlobServiceClient.fromConnectionString(connectionString);
+  const container = client.getContainerClient(containerName);
+  await container.createIfNotExists();
+  const blobName = `${folder}/${fileName}`;
+  const blobClient = container.getBlockBlobClient(blobName);
+  await blobClient.uploadData(buffer, {
+    blobHTTPHeaders: { blobContentType: 'application/octet-stream' }
+  });
+  return blobClient.url;
+};

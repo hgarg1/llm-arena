@@ -127,9 +127,17 @@
                             method: 'POST',
                             headers: { 'X-CSRF-Token': csrfToken }
                         });
+                        if (!resp.ok) {
+                            const err = await resp.json().catch(() => ({}));
+                            throw new Error(err.error || 'Failed to load passkey options');
+                        }
                         const opts = await resp.json();
+                        const publicKey = opts.publicKey?.challenge ? opts.publicKey : opts;
+                        if (!publicKey.challenge) {
+                            throw new Error('Passkey options missing challenge');
+                        }
                         
-                        const asResp = await SimpleWebAuthnBrowser.startAuthentication(opts);
+                        const asResp = await SimpleWebAuthnBrowser.startAuthentication(publicKey);
                         
                         const verifyResp = await fetch('/auth/passkey/auth/verify', {
                             method: 'POST',

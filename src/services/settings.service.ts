@@ -66,7 +66,13 @@ class SettingsService {
     comms_sms_provider: 'auto',
 
     // Defaults
-    default_user_tier: 'FREE'
+    default_user_tier: 'FREE',
+
+    // Chat Visibility/Configurability for Users
+    user_can_toggle_chat_notifications: 'true',
+    user_can_toggle_chat_sound: 'true',
+    user_can_change_chat_rate_limit: 'true',
+    user_can_toggle_chat_presence: 'true'
   };
 
   async getAll(): Promise<Record<string, string>> {

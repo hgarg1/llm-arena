@@ -1,0 +1,102 @@
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('formValidation', (rules = {}, initialValues = {}) => ({
+            fields: {},
+            rules: rules,
+            submitted: false,
+
+            init() {
+                // Initialize field states based on rules
+                Object.keys(this.rules).forEach(name => {
+                    this.fields[name] = {
+                        value: initialValues[name] || '',
+                        error: '',
+                        valid: initialValues[name] ? true : false,
+                        touched: false
+                    };
+                    if (this.fields[name].value) {
+                        this.validateField(name);
+                    }
+                });
+            },
+
+            validateField(name) {
+                const field = this.fields[name];
+                const fieldRules = this.rules[name];
+                field.error = '';
+                field.valid = true;
+
+                if (!fieldRules) return;
+
+                for (let rule of fieldRules) {
+                    if (rule.required && !field.value) {
+                        field.error = rule.message || 'This field is required';
+                        field.valid = false;
+                        break;
+                    }
+                    if (rule.email && field.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
+                        field.error = rule.message || 'Invalid email address';
+                        field.valid = false;
+                        break;
+                    }
+                    if (rule.minLength && field.value && field.value.length < rule.minLength) {
+                        field.error = rule.message || `Minimum length is ${rule.minLength}`;
+                        field.valid = false;
+                        break;
+                    }
+                    if (rule.pattern && field.value && !rule.pattern.test(field.value)) {
+                        field.error = rule.message || 'Invalid format';
+                        field.valid = false;
+                        break;
+                    }
+                    if (rule.custom && !rule.custom(field.value)) {
+                        field.error = rule.message || 'Validation failed';
+                        field.valid = false;
+                        break;
+                    }
+                }
+            },
+
+            onBlur(name) {
+                this.fields[name].touched = true;
+                this.validateField(name);
+            },
+
+            onInput(name, value) {
+                this.fields[name].value = value;
+                if (this.fields[name].touched || this.submitted) {
+                    this.validateField(name);
+                }
+            },
+
+            submit(e) {
+                this.submitted = true;
+                let isValid = true;
+                Object.keys(this.rules).forEach(name => {
+                    this.validateField(name);
+                    if (!this.fields[name].valid) isValid = false;
+                });
+
+                if (!isValid) {
+                    e.preventDefault();
+                    return false;
+                }
+            },
+
+            getInputClasses(name) {
+                const field = this.fields[name];
+                const baseClasses = 'mt-1 block w-full rounded-md shadow-sm transition-all duration-200 sm:text-sm ';
+                
+                if ((field.touched || this.submitted) && field.error) {
+                    return baseClasses + 'border-red-300 text-red-900 placeholder-red-300 focus:outline-none focus:ring-red-500 focus:border-red-500 bg-red-50';
+                }
+                
+                if (field.touched && field.valid && field.value) {
+                    return baseClasses + 'border-emerald-300 text-emerald-900 focus:ring-emerald-500 focus:border-emerald-500 bg-emerald-50/30';
+                }
+
+                return baseClasses + 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500';
+            }
+        }));
+    });
+</script>
