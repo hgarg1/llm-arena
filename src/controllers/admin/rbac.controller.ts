@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../config/db';
 import { Prisma } from '@prisma/client';
-import { RBAC_PERMISSIONS } from '../../services/rbac.service';
+import { RBAC_PERMISSIONS } from '../../constants/rbac-permissions';
 import { logAdminAction } from '../../services/audit.service';
 
 const findUser = async (query?: string) => {
@@ -66,7 +66,7 @@ const ensurePermissions = async () => {
 };
 
 const buildEffectivePermissions = (user: NonNullable<Awaited<ReturnType<typeof findUser>>>) => {
-  const results = RBAC_PERMISSIONS.map(p => ({
+  const results: { key: string; effect: 'ALLOW' | 'DENY' | 'NONE'; source: string }[] = RBAC_PERMISSIONS.map(p => ({
     key: p.key,
     effect: 'NONE' as 'ALLOW' | 'DENY' | 'NONE',
     source: 'None'

@@ -12,6 +12,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:seed:prod": "node prisma/seed.prod.js",
     "prisma:seed:rbac": "ts-node prisma/seed-rbac.ts",
     "prisma:seed:entitlements": "ts-node prisma/seed-entitlements-policy.ts",
     "prisma:seed:hr": "ts-node prisma/seed-hr.ts",
