@@ -8,16 +8,22 @@ import RedisStore from 'connect-redis';
 import csurf from 'csurf';
 import routes from './routes';
 import * as dotenv from 'dotenv';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import { globalSettingsMiddleware } from './middleware/global.middleware';
 import { contentMiddleware } from './middleware/content.middleware';
 import { redisConnection } from './config/redis';
 import { attachPermissions } from './middleware/rbac.middleware';
 import { attachEntitlements } from './middleware/entitlements.middleware';
 import { stripeWebhookHandler } from './controllers/stripe.controller';
+import { prisma as db } from './config/db';
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer);
+
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -31,12 +37,15 @@ if (isProduction && !process.env.REDIS_URL) {
 
 // Middleware
 app.set('trust proxy', 1);
+app.set('io', io); // Make io accessible in controllers
+
 app.use(morgan('dev'));
 app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(session({
+
+const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'default_secret',
   store: new RedisStore({ client: redisConnection }),
   resave: false,
@@ -46,11 +55,27 @@ app.use(session({
     httpOnly: true,
     sameSite: 'lax'
   }
-}));
+});
 
-// Global User Middleware
-app.use((req, res, next) => {
-  res.locals.user = (req.session as any).user || null;
+app.use(sessionMiddleware);
+
+// Share session with Socket.IO
+io.engine.use(sessionMiddleware);
+
+// Global User Middleware (Fetches fresh user data)
+app.use(async (req, res, next) => {
+  const userId = (req.session as any).userId;
+  if (userId) {
+      try {
+          const user = await db.user.findUnique({ where: { id: userId } });
+          res.locals.user = user;
+      } catch (e) {
+          console.error("Failed to fetch user", e);
+          res.locals.user = null;
+      }
+  } else {
+      res.locals.user = null;
+  }
   res.locals.path = req.path; 
   next();
 });
@@ -83,7 +108,7 @@ app.use(attachEntitlements);
         "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", ...parseList(settings.security_csp_style_src)],
         "font-src": ["'self'", "https://fonts.gstatic.com", "data:", ...parseList(settings.security_csp_font_src)],
         "img-src": ["'self'", "data:", "https:", ...parseList(settings.security_csp_img_src)],
-        "connect-src": ["'self'", "https:", ...parseList(settings.security_csp_connect_src)]
+        "connect-src": ["'self'", "https:", "ws:", "wss:", ...parseList(settings.security_csp_connect_src)]
       }
     }
   });
@@ -121,6 +146,46 @@ app.set('views', path.join(__dirname, '../views'));
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Socket.IO Logic
+io.on('connection', (socket) => {
+  const req = socket.request as any;
+  const session = req.session;
+  
+  if (session && session.userId) {
+    // Join user's personal room for notifications/DMs
+    socket.join(`user:${session.userId}`);
+    
+    // Join channel rooms
+    socket.on('join_channel', (channelId) => {
+      socket.join(`channel:${channelId}`);
+    });
+
+    socket.on('leave_channel', (channelId) => {
+      socket.leave(`channel:${channelId}`);
+    });
+
+    socket.on('typing', ({ channelId, isTyping }) => {
+      socket.to(`channel:${channelId}`).emit('typing', {
+        channelId,
+        userId: session.userId,
+        userName: session.user?.name || session.user?.email || 'User',
+        isTyping
+      });
+    });
+    
+    socket.on('read_message', ({ channelId, messageId }) => {
+        // Broadcast to channel so others update their UI
+        // In a real app, we'd also batch update the DB here or via API
+        socket.to(`channel:${channelId}`).emit('message_read', {
+            channelId,
+            messageId,
+            userId: session.userId,
+            userAvatar: session.user?.avatar_url
+        });
+    });
+  }
+});
 
 app.use((req, res, next) => {
   const settings = res.locals.settings || {};
@@ -177,6 +242,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).render('errors/500', { errorId: 'ERR-' + Date.now().toString(36).toUpperCase() });
 });
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

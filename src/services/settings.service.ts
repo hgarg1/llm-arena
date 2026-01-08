@@ -36,6 +36,7 @@ class SettingsService {
     limit_models_per_user_free: '3',
     limit_models_per_user_pro: '10',
     limit_models_per_user_enterprise: '0',
+    limit_admin_ai_chats: '10',
 
     // Queue
     queue_retry_attempts: '3',

@@ -20,7 +20,7 @@ export class IteratedNegotiationGame implements GameEngine {
   }
 
   processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null } {
-    const currentTurn = history[history.length - 1].turn + 1;
+    const currentTurn = (history[history.length - 1]?.turn ?? 0) + 1;
     const events: GameEvent[] = [];
     
     // Parse move (simple heuristic for MVP: look for numbers)

@@ -1,7 +1,10 @@
 <%- include('../../partials/admin_header') %>
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Approvals</h1>
-        <p class="text-sm text-gray-500">Review permission requests and grant access instantly.</p>
+    <div class="mb-6 flex justify-between items-end">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Approvals</h1>
+            <p class="text-sm text-gray-500">Review permission requests and grant access instantly.</p>
+        </div>
+        <a href="/admin/approvals/blocks" class="btn btn-sm btn-outline-secondary">Manage Blocks</a>
     </div>
 
     <% if (success) { %>

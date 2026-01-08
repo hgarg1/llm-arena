@@ -108,3 +108,38 @@ export const denyRequest = async (req: Request, res: Response) => {
   await logAdminAction(adminId, 'access.request.deny', id, { permission: request.permission_key });
   res.redirect('/admin/approvals?success=Request denied');
 };
+
+export const getUserBlocks = async (req: Request, res: Response) => {
+  const blocks = await prisma.userBlock.findMany({
+    include: {
+      blocker: { select: { id: true, email: true, can_block_people: true } },
+      blocked: { select: { id: true, email: true } }
+    },
+    orderBy: { created_at: 'desc' }
+  });
+
+  res.render('admin/approvals/blocks', {
+    title: 'User Blocks',
+    path: '/admin/approvals/blocks',
+    blocks
+  });
+};
+
+export const deleteUserBlock = async (req: Request, res: Response) => {
+  const { id } = req.body;
+  await prisma.userBlock.delete({ where: { id } });
+  res.redirect('/admin/approvals/blocks?success=Block removed');
+};
+
+export const toggleUserBlockCapability = async (req: Request, res: Response) => {
+  const { userId } = req.body;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (user) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { can_block_people: !user.can_block_people }
+    });
+  }
+  res.redirect('/admin/approvals/blocks?success=Capability updated');
+};
+

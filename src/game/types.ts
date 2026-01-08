@@ -8,12 +8,13 @@ export interface GameContext {
 export interface GameEvent {
   actor: string;
   type: string;
+  turn: number;
   payload: {
     content?: string;
     images?: string[]; // URLs or base64
     [key: string]: any;
   };
-  created_at: Date;
+  created_at?: Date;
 }
 
 export interface GameResult {

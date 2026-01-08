@@ -248,12 +248,33 @@ model User {
   chat_participations   ChatParticipant[]
   chat_messages         ChatMessage[]
   chat_notifications    ChatNotification[]
+  chat_audit_logs       ChatAuditLog[]
+  admin_ai_chats        AdminAiChat[]
 
   // Chat/Notification Settings
   chat_notifications_enabled Boolean @default(true)
   chat_notifications_sound   Boolean @default(true)
   chat_notifications_rate_limit Int @default(5) // Seconds between toasts
   chat_presence_visible      Boolean @default(true)
+  
+  // Blocking
+  can_block_people           Boolean @default(true)
+  blocked_users              UserBlock[] @relation("UserBlocking")
+  blocked_by                 UserBlock[] @relation("UserBlockedBy")
+}
+
+model UserBlock {
+  id          String   @id @default(uuid())
+  blocker_id  String
+  blocked_id  String
+  created_at  DateTime @default(now())
+
+  blocker     User     @relation("UserBlocking", fields: [blocker_id], references: [id], onDelete: Cascade)
+  blocked     User     @relation("UserBlockedBy", fields: [blocked_id], references: [id], onDelete: Cascade)
+
+  @@unique([blocker_id, blocked_id])
+  @@index([blocker_id])
+  @@index([blocked_id])
 }
 
 model Organization {
@@ -1063,6 +1084,7 @@ model ChatMessage {
   content     String   @db.Text
   is_pinned   Boolean  @default(false)
   is_edited   Boolean  @default(false)
+  deleted_at  DateTime?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
@@ -1070,8 +1092,31 @@ model ChatMessage {
   sender      User?       @relation(fields: [user_id], references: [id], onDelete: SetNull)
   attachments ChatAttachment[]
   notifications ChatNotification[]
+  audit_logs  ChatAuditLog[]
 
   @@index([channel_id, created_at])
+}
+
+enum ChatAuditAction {
+  EDIT
+  DELETE
+}
+
+model ChatAuditLog {
+  id          String   @id @default(uuid())
+  message_id  String
+  actor_id    String
+  action      ChatAuditAction
+  old_content String?  @db.Text
+  new_content String?  @db.Text
+  reason      String?
+  created_at  DateTime @default(now())
+
+  message     ChatMessage @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  actor       User        @relation(fields: [actor_id], references: [id], onDelete: Cascade)
+
+  @@index([message_id])
+  @@index([actor_id])
 }
 
 model ChatAttachment {
@@ -1099,4 +1144,33 @@ model ChatNotification {
   channel     ChatChannel @relation(fields: [channel_id], references: [id], onDelete: Cascade)
 
   @@index([user_id, is_sent])
+}
+
+model AdminAiChat {
+  id           String   @id @default(uuid())
+  user_id      String
+  title        String
+  provider     String
+  model_id     String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  last_used_at DateTime @default(now())
+  
+  messages     AdminAiChatMessage[]
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model AdminAiChatMessage {
+  id        String   @id @default(uuid())
+  chat_id   String
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  images    String[] @default([]) // Array of image URLs/base64
+  created_at DateTime @default(now())
+  
+  chat      AdminAiChat @relation(fields: [chat_id], references: [id], onDelete: Cascade)
+
+  @@index([chat_id, created_at])
 }

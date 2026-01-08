@@ -77,7 +77,7 @@ Please acknowledge the game state.`;
   }
 
   processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null } {
-    const turnIndex = history[history.length - 1].turn + 1;
+    const turnIndex = (history[history.length - 1]?.turn ?? 0) + 1;
     const events: GameEvent[] = [];
 
     // Check strict turn limit

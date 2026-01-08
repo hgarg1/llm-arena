@@ -10,7 +10,7 @@ import * as plansController from '../controllers/admin/plans.controller';
 import * as hrController from '../controllers/admin/hr.controller';
 import * as chatController from '../controllers/admin/chat.controller';
 import * as aiChatController from '../controllers/admin/ai-chat.controller';
-import { approvalsDashboard, approveRequest, denyRequest } from '../controllers/admin/approvals.controller';
+import { approvalsDashboard, approveRequest, denyRequest, getUserBlocks, deleteUserBlock, toggleUserBlockCapability } from '../controllers/admin/approvals.controller';
 import { auditDashboard, exportAuditLogs as exportAuditLogsPage } from '../controllers/admin/audit.controller';
 import { isAuthenticated } from '../middleware/auth.middleware';
 import { requirePermission } from '../middleware/rbac.middleware';
@@ -56,10 +56,13 @@ router.post('/analytics/layout', requirePermission('admin.analytics.edit'), admi
 router.get('/api-keys', requirePermission('admin.api_keys.view'), apiKeysController.apiKeysDashboard);
 router.get('/api-keys/usage/data', requirePermission('admin.api_keys.view'), apiKeysController.apiKeyUsageData);
 
-// Approvals
+// Approvals & Blocks
 router.get('/approvals', requirePermission('admin.approvals.view'), approvalsDashboard);
 router.post('/approvals/:id/approve', requirePermission('admin.approvals.edit'), approveRequest);
 router.post('/approvals/:id/deny', requirePermission('admin.approvals.edit'), denyRequest);
+router.get('/approvals/blocks', requirePermission('admin.users.view'), getUserBlocks);
+router.post('/approvals/blocks/delete', requirePermission('admin.users.edit'), deleteUserBlock);
+router.post('/approvals/blocks/toggle-capability', requirePermission('admin.users.edit'), toggleUserBlockCapability);
 
 // Audit Log
 router.get('/audit', requirePermission('admin.audit.view'), auditDashboard);
@@ -72,8 +75,6 @@ router.post('/settings/force-logout', requirePermission('admin.settings.force_lo
 router.post('/settings/test-email', requirePermission('admin.comms.test'), adminController.testEmail);
 router.post('/settings/test-sms', requirePermission('admin.comms.test'), adminController.testSms);
 router.get('/settings/audit/export', requirePermission('admin.settings.audit_export'), adminController.exportAuditLogs);
-
-// ... existing routes ...
 
 // Media
 router.get('/media', requirePermission('admin.media.view'), mediaController.mediaList);
@@ -161,6 +162,10 @@ router.post('/chat/channels/:id/config', requirePermission('admin.chat.manage'),
 
 // AI Chat
 router.get('/ai-chat', requirePermission('admin.ai_chat.access'), aiChatController.index);
+router.post('/ai-chat', requirePermission('admin.ai_chat.access'), aiChatController.createChat);
+router.get('/ai-chat/:id', requirePermission('admin.ai_chat.access'), aiChatController.getChatHistory);
+router.post('/ai-chat/:id/rename', requirePermission('admin.ai_chat.access'), aiChatController.renameChat);
+router.post('/ai-chat/:id/delete', requirePermission('admin.ai_chat.access'), aiChatController.deleteChat);
 router.get('/ai-chat/models/:provider', requirePermission('admin.ai_chat.access'), aiChatController.getModels);
 router.post('/ai-chat/query', requirePermission('admin.ai_chat.query'), aiChatController.query);
 router.post('/ai-chat/export', requirePermission('admin.ai_chat.export'), aiChatController.exportChat);

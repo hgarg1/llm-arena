@@ -1,0 +1,65 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">User Blocks Audit</h1>
+            <p class="text-sm text-gray-500">Manage user blocklists and blocking capabilities.</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="/admin/approvals" class="btn btn-sm btn-outline-secondary">Back to Approvals</a>
+        </div>
+    </div>
+
+    <% if (typeof success !== 'undefined' && success) { %>
+        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm"><%= success %></div>
+    <% } %>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+        <table class="min-w-full text-xs">
+            <thead class="text-gray-500 uppercase bg-gray-50">
+                <tr>
+                    <th class="p-3 text-left">Blocker</th>
+                    <th class="p-3 text-left">Blocked User</th>
+                    <th class="p-3 text-left">Date</th>
+                    <th class="p-3 text-left">Capabilities</th>
+                    <th class="p-3 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                <% blocks.forEach(block => { %>
+                    <tr>
+                        <td class="p-3">
+                            <div class="text-sm font-semibold text-gray-900"><%= block.blocker.email %></div>
+                            <div class="text-[10px] text-gray-400">ID: <%= block.blocker.id %></div>
+                        </td>
+                        <td class="p-3">
+                            <div class="text-sm font-medium text-gray-800"><%= block.blocked.email %></div>
+                            <div class="text-[10px] text-gray-400">ID: <%= block.blocked.id %></div>
+                        </td>
+                        <td class="p-3 text-gray-500">
+                            <%= new Date(block.created_at).toLocaleString() %>
+                        </td>
+                        <td class="p-3">
+                            <form action="/admin/approvals/blocks/toggle-capability" method="POST">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <input type="hidden" name="userId" value="<%= block.blocker.id %>">
+                                <button class="px-2 py-1 rounded text-[10px] font-semibold <%= block.blocker.can_block_people ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' %>">
+                                    <%= block.blocker.can_block_people ? 'Can Block' : 'Blocking Disabled' %>
+                                </button>
+                            </form>
+                        </td>
+                        <td class="p-3">
+                            <form action="/admin/approvals/blocks/delete" method="POST" onsubmit="return confirm('Remove this block?');">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <input type="hidden" name="id" value="<%= block.id %>">
+                                <button class="text-red-600 hover:text-red-800 hover:underline">Remove Block</button>
+                            </form>
+                        </td>
+                    </tr>
+                <% }) %>
+                <% if (blocks.length === 0) { %>
+                    <tr><td class="p-6 text-center text-gray-500" colspan="5">No active blocks found.</td></tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+<%- include('../../partials/admin_footer') %>

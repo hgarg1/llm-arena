@@ -73,6 +73,23 @@ export const createChannel = async (req: Request, res: Response, next: NextFunct
         const userId = (req.session as any).userId;
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
+        // Validation: Check if admin can assign this role
+        if (min_role_required) {
+            const admin = await db.user.findUnique({
+                where: { id: userId },
+                include: { rbac_roles: { include: { role: true } } }
+            });
+            
+            if (admin?.role !== 'ADMIN') {
+                // If not Global Admin, check specific roles
+                const myRoles = admin?.rbac_roles.map(r => r.role.name) || [];
+                if (!myRoles.includes(min_role_required)) {
+                    // Cannot assign a role you don't have
+                    return res.redirect('/admin/chat?error=Insufficient permissions to assign this role');
+                }
+            }
+        }
+
         await chatService.createChannel(name, slug, type, userId, {
             description,
             minRole: min_role_required || undefined,

@@ -177,7 +177,8 @@ Instructions:
 3. If the user asks about something not in context, explain that your current permission level doesn't expose that data.`;
 
     // Convert history to GameEvent format for the adapter
-    const aiHistory: GameEvent[] = history.map(h => ({
+    const aiHistory: GameEvent[] = history.map((h, i) => ({
+      turn: i,
       actor: h.role === 'user' ? 'user' : 'assistant',
       type: 'chat',
       payload: { 
@@ -189,6 +190,7 @@ Instructions:
 
     // Add current question as an event
     aiHistory.push({
+      turn: aiHistory.length,
       actor: 'user',
       type: 'chat',
       payload: { 

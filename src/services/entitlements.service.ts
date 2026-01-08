@@ -213,3 +213,10 @@ export const resolveEntitlements = async (input: ResolveInput) => {
   };
 };
 
+
+export const entitlementsService = {
+  check: async (userId: string, entitlementKey: string) => {
+    const { hasEntitlement } = await resolveEntitlements({ userId });
+    return hasEntitlement(entitlementKey);
+  }
+};

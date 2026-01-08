@@ -1,0 +1,86 @@
+<% 
+    const isMe = user && msg.user_id === user.id;
+    const isSystem = msg.type === 'SYSTEM';
+    const isContinuation = !isSystem && lastUser === msg.user_id;
+    const isDeleted = !!msg.deleted_at;
+%>
+
+<% if (isSystem) { %>
+    <!-- SYSTEM ALERT BANNER -->
+    <div class="flex justify-center my-6" id="msg-<%= msg.id %>">
+        <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 max-w-2xl w-full shadow-sm flex items-start gap-3">
+            <div class="flex-shrink-0 mt-0.5">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-amber-800 mb-1">System Alert</p>
+                <!-- Use encodeURIComponent for robust data attribute storage -->
+                <div class="text-sm text-amber-900 markdown-body" data-content="<%= encodeURIComponent(msg.content) %>"></div>
+                <div class="mt-2 text-xs text-amber-600/70">
+                    <%= new Date(msg.created_at).toLocaleTimeString([], {weekday: 'short', hour: '2-digit', minute:'2-digit'}) %>
+                </div>
+            </div>
+        </div>
+    </div>
+<% } else { %>
+    <!-- USER MESSAGE -->
+    <div class="flex gap-4 group relative <%= isContinuation ? 'mt-2' : 'mt-6' %>" id="msg-<%= msg.id %>">
+        <div class="flex-shrink-0 w-10">
+            <% if (!isContinuation) { %>
+                <img class="h-10 w-10 rounded-full bg-white shadow-sm object-cover ring-2 ring-white" src="<%= msg.sender && msg.sender.avatar_url ? msg.sender.avatar_url : `https://ui-avatars.com/api/?name=${msg.sender ? encodeURIComponent(msg.sender.name || 'User') : 'U'}&background=random` %>" alt="">
+            <% } %>
+        </div>
+        <div class="flex-1 min-w-0 relative group/content">
+            <% if (!isContinuation) { %>
+                <div class="flex items-baseline gap-2 mb-1">
+                    <span class="text-sm font-bold text-slate-900"><%= msg.sender ? (msg.sender.name || msg.sender.email) : 'Unknown' %></span>
+                    <span class="text-xs text-slate-400"><%= new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) %></span>
+                </div>
+            <% } %>
+            
+            <% if (isDeleted) { %>
+                <div class="text-sm italic text-slate-400 border-l-2 border-slate-200 pl-3 py-1">Message deleted</div>
+            <% } else { %>
+                <div class="text-sm text-slate-700 leading-relaxed markdown-body max-w-3xl" id="content-<%= msg.id %>" data-content="<%= encodeURIComponent(msg.content) %>">
+                    <!-- Content will be rendered by client-side JS -->
+                    <%= msg.content %>
+                </div>
+                <% if (msg.is_edited) { %>
+                    <span class="text-[10px] text-slate-400 select-none">(edited)</span>
+                <% } %>
+
+                <!-- Attachments -->
+                <% if (msg.attachments && msg.attachments.length > 0) { %>
+                    <% msg.attachments.forEach(att => { %>
+                        <% if (att.file_type.startsWith('image/')) { %>
+                            <img src="/<%= att.url %>" class="mt-2 rounded-lg max-h-64 border border-slate-200 bg-white" loading="lazy">
+                        <% } else { %>
+                             <div class="mt-2 p-3 bg-slate-100 rounded-lg flex items-center gap-3 border border-slate-200 max-w-sm">
+                                <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 2H7a2 2 0 00-2 2v15a2 2 0 002 2z"></path></svg>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-medium text-slate-700 truncate"><%= att.file_name %></p>
+                                    <p class="text-xs text-slate-500"><%= Math.round(att.file_size/1024) %> KB</p>
+                                </div>
+                                <a href="/<%= att.url %>" target="_blank" class="ml-auto text-indigo-600 hover:underline text-xs whitespace-nowrap">Download</a>
+                            </div>
+                        <% } %>
+                    <% }) %>
+                <% } %>
+                
+                <div class="flex items-center mt-1 space-x-1 seen-stack" id="seen-<%= msg.id %>"></div>
+
+                <!-- Actions -->
+                <% if (isMe) { %>
+                    <div class="absolute right-0 -top-3 opacity-0 group-hover/content:opacity-100 transition-opacity flex bg-white shadow-sm border border-slate-200 rounded p-0.5 z-10">
+                        <button onclick="editMessage('<%= msg.id %>')" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded" title="Edit">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                        <button onclick="deleteMessage('<%= msg.id %>')" class="p-1 text-slate-400 hover:text-red-600 hover:bg-slate-50 rounded" title="Delete">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                <% } %>
+            <% } %>
+        </div>
+    </div>
+<% } %>

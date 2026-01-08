@@ -57,7 +57,7 @@ Do not provide explanations, just the move.`;
     // For safety in a long-running process, we'll sync internal state to history's last FEN if needed, 
     // but here we assume the runner instance persists for the match duration.
     
-    const turnIndex = history[history.length - 1].turn + 1;
+    const turnIndex = (history[history.length - 1]?.turn ?? 0) + 1;
     const sideToMove = this.chess.turn() === 'w' ? 'white' : 'black';
     
     // Validate it's the correct actor's turn

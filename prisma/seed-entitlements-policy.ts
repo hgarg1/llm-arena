@@ -126,6 +126,13 @@ const DEFAULT_ENTITLEMENTS = [
         overage_behavior: { type: 'string', enum: ['block', 'queue', 'degrade', 'bill_overage'] }
       }
     }
+  },
+  {
+    key: 'chat.access',
+    description: 'Access to chat functionality',
+    value_type: 'BOOL' as const,
+    default_value: true,
+    validation_schema: { type: 'boolean' }
   }
 ];
 
