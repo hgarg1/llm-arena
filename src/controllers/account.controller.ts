@@ -6,7 +6,7 @@ import { comms } from '../services/communication';
 import { mfaService } from '../services/mfa.service';
 import crypto from 'crypto';
 
-const DEFAULT_API_SCOPES = ['models.read', 'matches.read', 'matches.write', 'account.read'];
+const DEFAULT_API_SCOPES = ['models.read', 'matches.read', 'matches.write', 'account.read', 'games.simulate'];
 
 const toScopeLabel = (scope: string) => {
     const parts = scope.split('.');

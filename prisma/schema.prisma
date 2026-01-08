@@ -617,6 +617,7 @@ model GameDefinition {
   capabilities      String[] @default([])
   roles             String[] @default([])
   max_players       Int?
+  assets            Json?
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
 

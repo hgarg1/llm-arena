@@ -28,6 +28,7 @@ export interface GameEngine {
   initialize(seed: number, options?: any): GameEvent[];
   processMove(gameState: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null };
   getSystemPrompt(role: string): string;
+  getRandomMove(gameState: GameEvent[], role: string): PlayerMove;
 }
 
 export interface PlayerMove {

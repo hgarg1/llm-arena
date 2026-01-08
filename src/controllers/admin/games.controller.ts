@@ -485,13 +485,22 @@ export const publishGameEngine = async (req: Request, res: Response) => {
   }
   const game = await prisma.gameDefinition.findUnique({
     where: { id },
-    include: { engine_artifacts: { orderBy: { created_at: 'desc' }, take: 1 } }
+    include: { 
+        engine_artifacts: { orderBy: { created_at: 'desc' }, take: 1 },
+        dry_runs: { orderBy: { created_at: 'desc' }, take: 1 }
+    }
   });
   if (!game || !game.engine_artifacts?.[0]) {
     return res.redirect(`/admin/games/${id}?step=review&error=No engine artifact found`);
   }
 
   const artifact = game.engine_artifacts[0];
+  const lastRun = game.dry_runs?.[0];
+
+  if (!lastRun || lastRun.created_at < artifact.created_at) {
+      return res.redirect(`/admin/games/${id}?step=review&error=Validation failed: You must run a successful simulation (Dry Run) on the latest engine before publishing.`);
+  }
+
   const fileName = `${game.key}.ts`;
   const generatedDir = path.join(process.cwd(), 'src', 'game', 'generated');
   const targetPath = path.join(generatedDir, fileName);
@@ -856,6 +865,24 @@ export const saveGameDraft = async (req: Request, res: Response) => {
       }
     }
 
+    if (step === 'assets') {
+      const toArray = (value: any) => (Array.isArray(value) ? value : value ? [value] : []);
+      const keys = toArray(req.body.asset_keys);
+      const urls = toArray(req.body.asset_urls);
+      
+      const assets: Record<string, string> = {};
+      keys.forEach((key: string, idx: number) => {
+          if (key && urls[idx]) {
+              assets[key.trim()] = urls[idx].trim();
+          }
+      });
+
+      await prisma.gameDefinition.update({
+        where: { id },
+        data: { assets }
+      });
+    }
+
     if (step === 'uiux') {
       const parseJson = (value: string | undefined, label: string) => {
         if (!value || value.trim().length === 0) return null;
@@ -904,7 +931,7 @@ export const saveGameDraft = async (req: Request, res: Response) => {
 
     await logAdminAction(adminId, 'game.save', id, { step });
 
-    const nextStep = step === 'basics' ? 'config' : step === 'config' ? 'uiux' : 'review';
+    const nextStep = step === 'basics' ? 'config' : step === 'config' ? 'assets' : step === 'assets' ? 'uiux' : 'review';
     if (req.body.action === 'continue') {
       return res.redirect(`/admin/games/${id}?step=${nextStep}&success=Game updated`);
     }

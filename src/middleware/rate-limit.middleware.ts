@@ -73,3 +73,26 @@ export const matchCreateRateLimit = async (req: Request, res: Response, next: Ne
 
   next();
 };
+
+export const apiRateLimit = async (req: Request, res: Response, next: NextFunction) => {
+  // If API Key present, skip IP limit (assume metered/billed or high limit)
+  if ((req as any).apiKey) return next();
+
+  const ip = req.ip || 'unknown';
+  const key = `rl:api:${ip}`;
+  const limit = 60; // 60 requests per minute for unauthenticated IPs
+
+  try {
+    const count = await redisConnection.incr(key);
+    if (count === 1) {
+      await redisConnection.expire(key, 60);
+    }
+    if (count > limit) {
+      return res.status(429).json({ error: 'Rate limit exceeded' });
+    }
+  } catch (err) {
+    console.error('API rate limiter failed:', err);
+  }
+
+  next();
+};

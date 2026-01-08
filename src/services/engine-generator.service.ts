@@ -33,7 +33,8 @@ const buildSpec = (game: GameDefinition & { settings: GameSetting[]; ui_schema: 
   engine_contract: {
     initialize: 'initialize(seed: number, options?: Record<string, any>): GameEvent[]',
     processMove: 'processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[]; result: GameResult | null }',
-    getSystemPrompt: 'getSystemPrompt(role: string): string'
+    getSystemPrompt: 'getSystemPrompt(role: string): string',
+    getRandomMove: 'getRandomMove(history: GameEvent[], role: string): PlayerMove'
   }
 });
 
@@ -85,6 +86,10 @@ export default class ${className} implements GameEngine {
 
   getSystemPrompt(role: string): string {
     return \`You are playing ${game.name}. Role: \${role}. Provide the next action.\`;
+  }
+
+  getRandomMove(history: GameEvent[], role: string): PlayerMove {
+    return { actor: role, content: 'PASS' };
   }
 
   processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[]; result: GameResult | null } {
@@ -165,6 +170,7 @@ Constraints:
 - Implement GameEngine from src/game/types.
 - Export default class named ${toPascal(game.key)}Game.
 - Keep deterministic behavior; use seeded RNG if needed.
+- Implement getRandomMove for automated testing.
 - Use the provided spec for settings and roles.
 - ui_schema.create_form_layout must reference existing setting keys.
 Spec:

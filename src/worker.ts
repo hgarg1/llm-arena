@@ -95,10 +95,23 @@ const startWorker = async () => {
           
           if (activePlayer) {
               const systemPrompt = game.getSystemPrompt(activePlayer.role);
-              moveContent = await activePlayer.adapter.generateMove(systemPrompt, gameState);
+              try {
+                  moveContent = await activePlayer.adapter.generateMove(systemPrompt, gameState);
+              } catch (adapterErr) {
+                  console.error(`Adapter error for ${activeRole}:`, adapterErr);
+                  if (typeof (game as any).getRandomMove === 'function') {
+                      moveContent = (game as any).getRandomMove(gameState, activeRole).content;
+                  } else {
+                      moveContent = 'PASS';
+                  }
+              }
           } else {
               console.warn(`No player found for role ${activeRole}, defaulting...`);
-              moveContent = 'STAND'; 
+              if (typeof (game as any).getRandomMove === 'function') {
+                  moveContent = (game as any).getRandomMove(gameState, activeRole).content;
+              } else {
+                  moveContent = 'PASS'; 
+              }
           }
       }
 

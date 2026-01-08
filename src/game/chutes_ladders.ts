@@ -76,6 +76,10 @@ You do not make decisions; the dice determines your move.
 Please acknowledge the game state.`;
   }
 
+  getRandomMove(gameState: GameEvent[], role: string): PlayerMove {
+    return { actor: role, content: 'ACK' };
+  }
+
   processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null } {
     const turnIndex = (history[history.length - 1]?.turn ?? 0) + 1;
     const events: GameEvent[] = [];

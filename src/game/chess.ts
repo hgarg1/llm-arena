@@ -52,6 +52,13 @@ You must output your move in UCI format (e.g., "e2e4", "a7a8q").
 Do not provide explanations, just the move.`;
   }
 
+  getRandomMove(gameState: GameEvent[], role: string): PlayerMove {
+    const moves = this.chess.moves();
+    if (moves.length === 0) return { actor: role, content: 'resign' };
+    const randomMove = moves[Math.floor(Math.random() * moves.length)];
+    return { actor: role, content: randomMove };
+  }
+
   processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null } {
     // Reconstruct state from history to ensure purity (or just trust the internal state since this is a transient runner)
     // For safety in a long-running process, we'll sync internal state to history's last FEN if needed, 

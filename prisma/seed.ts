@@ -162,7 +162,7 @@ async function main() {
       api_provider: 'openai',
       api_model_id: 'gpt-4',
       owner_id: admin.id,
-      capabilities: ['iterated-negotiation', 'chess', 'chutes_and_ladders', 'texas_holdem']
+      capabilities: ['iterated-negotiation', 'chess', 'chutes_and_ladders', 'texas_holdem', 'blackjack']
     }
   });
 

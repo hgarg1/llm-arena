@@ -149,23 +149,14 @@ export class TexasHoldemGame implements GameEngine {
   }
 
   getSystemPrompt(role: string): string {
-    // Role would be "seat1", "seat2" etc.
-    const seatIdx = parseInt(role.replace('seat', '')) - 1;
-    const p = this.players[seatIdx];
-    
-    return `You are playing Texas Hold'em Poker.
-You are Seat ${seatIdx + 1}.
-Your Stack: ${p.stack}.
-Your Hole Cards: ${p.holeCards.join(', ')}.
-Community Cards: ${this.communityCards.join(', ') || 'None'}.
-Pot Size: ${this.pot}.
-Current Round: ${this.currentRound}.
-Call Amount: ${this.minBet - p.currentBet}.
-Valid Actions: FOLD, CHECK, CALL, BET [amount], RAISE [amount].
-Output ONLY your action (e.g., "CALL", "FOLD", "RAISE 20").`;
+    return `You are playing Texas Hold'em. Role: ${role}. Your hand is private. The board is public. Decide: FOLD, CALL, CHECK, RAISE [amount], or ALL-IN.`;
   }
 
-  processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null } {
+  getRandomMove(gameState: GameEvent[], role: string): PlayerMove {
+    return { actor: role, content: 'FOLD' };
+  }
+
+  processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[]; result: GameResult | null; } {
     const turnIndex = (history[history.length - 1]?.turn ?? 0) + 1;
     const events: GameEvent[] = [];
     const seatIdx = this.activeSeatIndex;

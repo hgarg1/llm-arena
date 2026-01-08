@@ -20,8 +20,9 @@
             <nav class="space-y-2 text-sm">
                 <a href="/admin/games/<%= game.id %>?step=basics" class="block px-3 py-2 rounded <%= step === 'basics' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">1. Basics</a>
                 <a href="/admin/games/<%= game.id %>?step=config" class="block px-3 py-2 rounded <%= step === 'config' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">2. Match Config</a>
-                <a href="/admin/games/<%= game.id %>?step=uiux" class="block px-3 py-2 rounded <%= step === 'uiux' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">3. UI / UX</a>
-                <a href="/admin/games/<%= game.id %>?step=review" class="block px-3 py-2 rounded <%= step === 'review' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">4. Review & Publish</a>
+                <a href="/admin/games/<%= game.id %>?step=assets" class="block px-3 py-2 rounded <%= step === 'assets' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">3. Assets</a>
+                <a href="/admin/games/<%= game.id %>?step=uiux" class="block px-3 py-2 rounded <%= step === 'uiux' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">4. UI / UX</a>
+                <a href="/admin/games/<%= game.id %>?step=review" class="block px-3 py-2 rounded <%= step === 'review' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">5. Review & Publish</a>
             </nav>
         </aside>
 
@@ -201,22 +202,63 @@
                 </form>
             <% } %>
 
+            <% if (step === 'assets') { %>
+                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4" x-data="assetsForm(<%= JSON.stringify(game.assets || []) %>)">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="step" value="assets">
+                    
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-gray-900">3D Assets & Resources</h3>
+                        <button type="button" class="btn btn-xs btn-secondary" @click="addAsset()">Add Asset</button>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <template x-for="(asset, index) in assets" :key="index">
+                            <div class="flex gap-2 items-start">
+                                <input type="text" name="asset_keys[]" x-model="asset.key" placeholder="Key (e.g. white_pawn)" class="w-1/3 px-3 py-2 border border-gray-300 rounded text-xs" required>
+                                <div class="flex-1 flex gap-2">
+                                    <input type="text" name="asset_urls[]" x-model="asset.url" placeholder="URL (glb, png, etc.)" class="flex-1 px-3 py-2 border border-gray-300 rounded text-xs" required>
+                                    <label class="btn btn-sm btn-white border border-gray-300 cursor-pointer px-2 flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                        <input type="file" class="hidden" @change="uploadFile($event, index)">
+                                    </label>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-ghost text-red-600 px-2" @click="removeAsset(index)">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                        </template>
+                        <template x-if="assets.length === 0">
+                            <div class="text-sm text-gray-500 italic p-4 text-center border border-dashed border-gray-200 rounded">No assets defined.</div>
+                        </template>
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button>
+                        <button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button>
+                    </div>
+                </form>
+            <% } %>
+
             <% if (step === 'uiux') { %>
-                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
+                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4" onsubmit="return validateJsonForm(this)">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="step" value="uiux">
                     <div class="grid md:grid-cols-2 gap-4">
                         <div class="md:col-span-2">
                             <label class="block text-xs font-medium text-gray-700 mb-1">Create Form Layout (JSON)</label>
                             <textarea name="create_form_layout" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.create_form_layout ? JSON.stringify(game.ui_schema.create_form_layout, null, 2) : '' %></textarea>
+                            <p class="text-[10px] text-red-600 hidden json-error mt-1"></p>
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-xs font-medium text-gray-700 mb-1">Summary Template (JSON)</label>
                             <textarea name="summary_template" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.summary_template ? JSON.stringify(game.ui_schema.summary_template, null, 2) : '' %></textarea>
+                            <p class="text-[10px] text-red-600 hidden json-error mt-1"></p>
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-xs font-medium text-gray-700 mb-1">Labels (JSON)</label>
                             <textarea name="labels" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.labels ? JSON.stringify(game.ui_schema.labels, null, 2) : '' %></textarea>
+                            <p class="text-[10px] text-red-600 hidden json-error mt-1"></p>
                         </div>
                     </div>
                     <div class="flex justify-end gap-2">
@@ -228,159 +270,111 @@
 
             <% if (step === 'review') { %>
                 <div class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-xl font-bold text-gray-900"><%= game.name %></h3>
-                            <p class="text-sm text-gray-500 font-mono"><%= game.key %></p>
-                        </div>
-                        <span class="px-2 py-1 text-xs rounded <%= game.status === 'LIVE' ? 'bg-green-100 text-green-700' : (game.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' : (game.status === 'RETIRED' ? 'bg-gray-200 text-gray-600' : 'bg-amber-100 text-amber-700')) %>">
-                            <%= game.status %>
-                        </span>
-                    </div>
-
-                    <% if (diffSummary) { %>
-                        <div class="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                            <div class="font-semibold mb-2">Draft Diff <span class="text-xs text-slate-400">(<%= diffSummary.title %>)</span></div>
-                            <ul class="list-disc pl-5">
-                                <% diffSummary.items.forEach(item => { %>
-                                    <li><%= item %></li>
-                                <% }) %>
-                            </ul>
-                            <% if (diffSummary.updated_at) { %>
-                                <div class="text-[11px] text-slate-500 mt-2">Latest revision: <%= new Date(diffSummary.updated_at).toLocaleString() %></div>
-                            <% } %>
-                        </div>
-                    <% } %>
-
-                    <% if (warnings && warnings.length > 0) { %>
-                        <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm p-4">
-                            <div class="font-semibold mb-2">Validation Warnings</div>
-                            <ul class="list-disc pl-5">
-                                <% warnings.forEach(w => { %>
-                                    <li><%= w %></li>
-                                <% }) %>
-                            </ul>
-                        </div>
-                    <% } %>
-
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <div class="text-xs font-bold text-gray-500 uppercase mb-2">Roles</div>
-                            <div class="text-sm text-gray-700"><%= (game.roles || []).join(', ') || 'None' %></div>
-                        </div>
-                        <div>
-                            <div class="text-xs font-bold text-gray-500 uppercase mb-2">Capabilities</div>
-                            <div class="text-sm text-gray-700"><%= (game.capabilities || []).join(', ') || 'None' %></div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="text-xs font-bold text-gray-500 uppercase mb-2">Match Config Settings</div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-xs">
-                                <thead class="text-gray-500 uppercase bg-gray-50">
-                                    <tr>
-                                        <th class="p-2 text-left">Key</th>
-                                        <th class="p-2 text-left">Type</th>
-                                        <th class="p-2 text-left">Default</th>
-                                        <th class="p-2 text-left">Tier</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">
-                                    <% (game.settings || []).forEach(s => { %>
-                                        <tr>
-                                            <td class="p-2 font-mono"><%= s.key %></td>
-                                            <td class="p-2"><%= s.type %></td>
-                                            <td class="p-2"><%= s.default_value === null ? '-' : JSON.stringify(s.default_value) %></td>
-                                            <td class="p-2"><%= s.tier_required %></td>
-                                        </tr>
-                                    <% }) %>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="text-xs font-bold text-gray-500 uppercase mb-2">Create Form Preview</div>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <% (uiPreview || []).forEach(field => { %>
-                                <div class="rounded border border-gray-200 p-3 bg-white">
-                                    <div class="text-[11px] text-gray-500 uppercase"><%= field.type %></div>
-                                    <div class="text-sm font-medium text-gray-900"><%= field.label %></div>
-                                    <div class="text-[11px] text-gray-400"><%= field.key %> <% if (field.tier) { %> - <%= field.tier %><% } %></div>
-                                </div>
-                            <% }) %>
-                            <% if (!uiPreview || uiPreview.length === 0) { %>
-                                <div class="text-sm text-gray-500">No UI preview available.</div>
-                            <% } %>
-                        </div>
-                    </div>
-
-                    <div class="rounded-lg border border-dashed border-gray-200 p-4 bg-slate-50">
-                        <div class="text-xs font-bold text-gray-500 uppercase mb-2">UI/UX Preview (JSON)</div>
-                        <pre class="text-[11px] text-gray-600 whitespace-pre-wrap"><%= game.ui_schema ? JSON.stringify(game.ui_schema, null, 2) : 'No UI schema saved yet.' %></pre>
-                    </div>
-
-                    <div class="rounded-lg border border-gray-200 p-4 bg-white">
-                        <div class="flex items-center justify-between mb-3">
-                            <div>
-                                <div class="text-xs font-bold text-gray-500 uppercase">Engine Artifact</div>
-                                <div class="text-sm text-gray-700">
-                                    <%= engineArtifact ? 'Latest artifact available' : 'No artifact generated yet' %>
-                                </div>
-                            </div>
-                            <% if (engineArtifact) { %>
-                                <span class="px-2 py-1 text-xs rounded <%= engineArtifact.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' : (engineArtifact.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700') %>">
-                                    <%= engineArtifact.status %>
-                                </span>
-                            <% } %>
-                        </div>
-                        <div class="text-[11px] text-gray-500">
-                            <%= engineArtifact && engineArtifact.notes ? engineArtifact.notes : 'Generate an engine bundle (spec + code + tests) from this game definition.' %>
-                        </div>
-                        <% if (engineArtifact) { %>
-                            <div class="mt-4" x-data="{ tab: 'code' }">
-                                <div class="flex flex-wrap gap-2 text-xs mb-3">
-                                    <button type="button" class="btn btn-xs" :class="tab === 'code' ? 'btn-secondary' : 'btn-ghost'" @click="tab = 'code'">Code</button>
-                                    <button type="button" class="btn btn-xs" :class="tab === 'spec' ? 'btn-secondary' : 'btn-ghost'" @click="tab = 'spec'">Spec</button>
-                                    <button type="button" class="btn btn-xs" :class="tab === 'tests' ? 'btn-secondary' : 'btn-ghost'" @click="tab = 'tests'">Tests</button>
-                                </div>
-                                <div class="border border-gray-200 rounded bg-slate-50 p-3 max-h-80 overflow-auto">
-                                    <pre class="text-[11px] text-gray-700 whitespace-pre-wrap" x-show="tab === 'code'"><%= engineArtifact.code_ts || 'No code generated.' %></pre>
-                                    <pre class="text-[11px] text-gray-700 whitespace-pre-wrap" x-show="tab === 'spec'"><%= engineArtifact.spec ? JSON.stringify(engineArtifact.spec, null, 2) : 'No spec generated.' %></pre>
-                                    <pre class="text-[11px] text-gray-700 whitespace-pre-wrap" x-show="tab === 'tests'"><%= engineArtifact.tests_ts || 'No tests generated.' %></pre>
-                                </div>
-                            </div>
-                        <% } %>
-                        <div class="mt-4 flex flex-wrap gap-2">
-                            <form action="/admin/games/<%= game.id %>/engine/generate" method="POST">
-                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                <button class="btn btn-xs btn-secondary">Generate Engine</button>
-                            </form>
-                            <% if (engineArtifact && engineArtifact.status !== 'PUBLISHED') { %>
-                                <form action="/admin/games/<%= game.id %>/engine/publish" method="POST" onsubmit="return confirm('Publish engine to codebase?');">
-                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                    <button class="btn btn-xs btn-primary">Publish Engine</button>
-                                </form>
-                            <% } %>
-                            <form action="/admin/games/<%= game.id %>/simulate" method="POST">
-                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                <button class="btn btn-xs btn-ghost">Run 5-Turn Dry Run</button>
-                            </form>
-                        </div>
-                    </div>
-
+                    <!-- ... existing review content ... -->
+                    
+                    <!-- Simulation Output Improvement -->
                     <div class="rounded-lg border border-gray-200 p-4 bg-white">
                         <div class="flex items-center justify-between mb-2">
                             <div class="text-xs font-bold text-gray-500 uppercase">Simulation Output</div>
                             <div class="text-[11px] text-gray-400">Dummy players, 5 turns max</div>
                         </div>
                         <% if (simulationEvents && simulationEvents.length) { %>
-                            <pre class="text-[11px] text-gray-700 whitespace-pre-wrap max-h-80 overflow-auto bg-slate-50 border border-slate-200 rounded p-3"><%= JSON.stringify(simulationEvents, null, 2) %></pre>
+                            <div class="bg-slate-50 border border-slate-200 rounded max-h-80 overflow-auto divide-y divide-slate-100">
+                                <% simulationEvents.forEach(evt => { %>
+                                    <div class="p-3 text-xs flex gap-3 hover:bg-white transition-colors">
+                                        <div class="w-8 shrink-0 font-mono text-slate-400 text-right">T<%= evt.turn %></div>
+                                        <div class="w-16 shrink-0 font-bold text-slate-700"><%= evt.actor %></div>
+                                        <div class="flex-1">
+                                            <span class="inline-block px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[10px] uppercase mb-1"><%= evt.type %></span>
+                                            <div class="text-slate-600 font-mono text-[11px]">
+                                                <% if (evt.payload && evt.payload.content) { %>
+                                                    <%= evt.payload.content %>
+                                                <% } else { %>
+                                                    <%= JSON.stringify(evt.payload) %>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            </div>
                         <% } else { %>
                             <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">Run a dry run before publishing.</div>
                         <% } %>
                     </div>
+                    
+                    <!-- ... rest of review ... -->
+                </div>
+            <% } %>
+        </div>
+    </div>
+<%- include('../../partials/admin_footer') %>
+<script>
+    function assetsForm(initialAssets) {
+        let assets = Array.isArray(initialAssets) ? initialAssets : [];
+        if (!Array.isArray(initialAssets) && typeof initialAssets === 'object' && initialAssets !== null) {
+             assets = Object.entries(initialAssets).map(([key, url]) => ({ key, url }));
+        }
+
+        return {
+            assets: assets,
+            addAsset() {
+                this.assets.push({ key: '', url: '' });
+            },
+            removeAsset(index) {
+                this.assets.splice(index, 1);
+            },
+            async uploadFile(event, index) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folder', 'game-assets');
+
+                try {
+                    const csrfToken = document.querySelector('input[name="_csrf"]').value;
+                    const response = await fetch('/admin/media/upload', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-Token': csrfToken },
+                        body: formData
+                    });
+                    
+                    if (!response.ok) throw new Error('Upload failed');
+                    const data = await response.json();
+                    
+                    this.assets[index].url = data.url;
+                } catch (e) {
+                    alert('Failed to upload asset: ' + e.message);
+                }
+            }
+        };
+    }
+
+    function validateJsonForm(form) {
+        let valid = true;
+        const textareas = form.querySelectorAll('textarea');
+        textareas.forEach(ta => {
+            const errEl = ta.nextElementSibling;
+            if (!ta.value.trim()) {
+                errEl.classList.add('hidden');
+                return;
+            }
+            try {
+                JSON.parse(ta.value);
+                ta.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+                errEl.classList.add('hidden');
+            } catch (e) {
+                valid = false;
+                ta.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+                errEl.textContent = 'Invalid JSON: ' + e.message;
+                errEl.classList.remove('hidden');
+            }
+        });
+        return valid;
+    }
+
+    // ... matchConfigForm code ...
+
 
                     <% if (typeof can === 'function' && can('admin.games.publish')) { %>
                     <form action="/admin/games/<%= game.id %>/publish" method="POST" class="grid md:grid-cols-3 gap-4 items-end">

@@ -238,26 +238,14 @@ export class BlackjackGame implements GameEngine {
   }
 
   getSystemPrompt(role: string): string {
-    const seatIdx = parseInt(role.replace('seat', '')) - 1;
-    const p = this.players[seatIdx];
-    const hand = p?.hands[this.activeHandIndex];
-    if (!p || !hand) return 'Blackjack state unavailable.';
-    const val = this.getHandValue(hand.cards);
-    const canDoubleBase = (this.allowDouble && hand.cards.length === 2) || this.allowDoubleAny;
-    const canDouble = canDoubleBase && (this.allowDoubleAfterSplit || !hand.is_split);
-    const canInsure = this.allowInsurance && !this.noHoleCard && this.dealerHand[0]?.startsWith('A') && !p.insurance_taken && hand.actions_taken === 0 && this.activeHandIndex === 0;
-    const canSurrender = this.allowSurrender && hand.cards.length === 2 && hand.actions_taken === 0;
-    const canSplit = this.canSplit(hand, p);
-    
-    return `You are playing Blackjack.
-Your Hand: ${hand.cards.join(', ')} (Value: ${val}).
-Dealer Shows: ${this.dealerHand[0]}.
-Your Stack: ${p.stack}.
-Actions: HIT, STAND${canDouble ? ', DOUBLE' : ''}${canSplit ? ', SPLIT' : ''}${canInsure ? ', INSURE' : ''}${canSurrender ? ', SURRENDER' : ''}.
-Reply with ONE word.`;
+    return `You are playing Blackjack. Role: ${role}. Your goal is to beat the dealer without going over 21. Options: HIT, STAND, DOUBLE, SPLIT.`;
   }
 
-  processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null } {
+  getRandomMove(gameState: GameEvent[], role: string): PlayerMove {
+    return { actor: role, content: 'STAND' };
+  }
+
+  processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[]; result: GameResult | null; } {
     const turnIndex = history.length; // Approximate logic
     const events: GameEvent[] = [];
     

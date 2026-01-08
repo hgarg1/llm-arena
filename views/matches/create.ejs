@@ -289,7 +289,7 @@
                         <div>
                             <div class="text-xs text-secondary mb-2">Participants</div>
                             <div class="space-y-2">
-                                <template x-for="(modelId, index) in selectedModels.slice(0, (game === 'texas_holdem' ? playerCount : (game === 'chutes_and_ladders' ? 1 : 2)))" :key="index">
+                                <template x-for="(modelId, index) in selectedModels.slice(0, (game === 'texas_holdem' || game === 'blackjack' ? playerCount : (game === 'chutes_and_ladders' ? 1 : 2)))" :key="index">
                                     <div class="flex items-center gap-2 text-sm">
                                         <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600" x-text="index + 1"></div>
                                         <div class="truncate font-medium text-primary" x-text="getModelName(modelId) || 'Select Model...'"></div>

@@ -59,4 +59,8 @@ export class IteratedNegotiationGame implements GameEngine {
   getSystemPrompt(role: string): string {
     return `You are playing a negotiation game. Your goal is to maximize your share of 100 coins. You are ${role}. Propose splits or accept offers.`;
   }
+
+  getRandomMove(gameState: GameEvent[], role: string): PlayerMove {
+    return { actor: role, content: 'I propose a 50/50 split.' };
+  }
 }

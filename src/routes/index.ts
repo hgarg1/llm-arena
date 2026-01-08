@@ -9,11 +9,15 @@ import accountRoutes from './account.routes';
 import adminRoutes from './admin.routes';
 import investorRoutes from './investor.routes';
 import chatRoutes from './chat.routes';
+import apiRoutes from './api.routes';
 import { isAuthenticated } from '../middleware/auth.middleware';
 import { matchCreateRateLimit } from '../middleware/rate-limit.middleware';
 import { apiKeyAuthOptional, apiKeyUsageTracker, requireApiScope } from '../middleware/api-key.middleware';
 
 const router = Router();
+
+// API V1
+router.use('/api/v1', apiRoutes);
 
 // Public Pages
 router.use('/', publicRoutes);
