@@ -18,6 +18,7 @@
     "prisma:seed:hr": "ts-node prisma/seed-hr.ts",
     "prisma:grant:admin-models-edit": "ts-node prisma/assign-admin-models-edit.ts",
     "models:sync": "ts-node src/scripts/sync-models.ts",
+    "models:sync:prod": "node dist/scripts/sync-models.js",
     "docs:build": "ts-node --project tsconfig.scripts.json scripts/docs/generate-engine.ts",
     "lint": "eslint . --ext .ts",
     "test": "jest"
