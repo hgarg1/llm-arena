@@ -44,9 +44,11 @@ services:
       retries: 10
 
   app:
-    image: ghcr.io/hgarg1/llm-arena:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "127.0.0.1:18001:3000"
+      - "3000:3000"
     env_file:
       - .env
     environment:
@@ -60,7 +62,9 @@ services:
         condition: service_healthy
 
   worker:
-    image: ghcr.io/hgarg1/llm-arena:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: ["npm", "run", "start:worker"]
     env_file:
       - .env
