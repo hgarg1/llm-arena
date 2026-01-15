@@ -6,7 +6,7 @@ RUN npm ci
 COPY prisma ./prisma
 RUN npx prisma generate
 COPY . .
-[cite_start]RUN npm run build [cite: 1, 2]
+RUN npm run build
 
 # Stage 2: Runtime
 FROM node:20-alpine AS runtime
