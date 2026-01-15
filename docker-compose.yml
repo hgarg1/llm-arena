@@ -7,8 +7,6 @@ services:
       POSTGRES_USER: llm_user
       POSTGRES_PASSWORD: llm_password
       POSTGRES_DB: llm_arena
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,8 +17,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -32,8 +28,6 @@ services:
   clamav:
     image: clamav/clamav:stable
     container_name: clamav
-    ports:
-      - "3310:3310"
     volumes:
       - ./public:/scan:ro
       - clamav_db:/var/lib/clamav
