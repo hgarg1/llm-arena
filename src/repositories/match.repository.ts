@@ -66,4 +66,16 @@ export class MatchRepository {
   async addEvent(data: Prisma.MatchEventCreateInput) {
     return prisma.matchEvent.create({ data });
   }
+
+  async addEvents(matchId: string, events: { turn: number; type: string; actor: string; payload: any }[]) {
+    return prisma.matchEvent.createMany({
+      data: events.map(event => ({
+        match_id: matchId,
+        turn_index: event.turn,
+        type: event.type,
+        actor_role: event.actor,
+        payload: event.payload
+      }))
+    });
+  }
 }
