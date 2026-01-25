@@ -829,21 +829,19 @@ export const saveGameDraft = async (req: Request, res: Response) => {
 
       await prisma.$transaction(async tx => {
         await tx.gameSetting.deleteMany({ where: { game_id: id } });
-        for (const setting of settings) {
-          await tx.gameSetting.create({
-            data: {
-              game_id: id,
-              key: setting.key,
-              type: setting.type,
-              min_value: parseSettingValue(setting.type, setting.min),
-              max_value: parseSettingValue(setting.type, setting.max),
-              default_value: parseSettingValue(setting.type, setting.default),
-              tier_required: setting.tier,
-              help_text: setting.help || null,
-              enum_options: parseList(setting.enum)
-            }
-          });
-        }
+        await tx.gameSetting.createMany({
+          data: settings.map(setting => ({
+            game_id: id,
+            key: setting.key,
+            type: setting.type,
+            min_value: parseSettingValue(setting.type, setting.min),
+            max_value: parseSettingValue(setting.type, setting.max),
+            default_value: parseSettingValue(setting.type, setting.default),
+            tier_required: setting.tier,
+            help_text: setting.help || null,
+            enum_options: parseList(setting.enum)
+          }))
+        });
       });
 
       const updatedGame = await prisma.gameDefinition.findUnique({
