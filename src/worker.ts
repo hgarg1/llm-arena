@@ -33,14 +33,14 @@ const startWorker = async () => {
     let gameState = (game as any).initialize(match.seed, options); 
 
     // Persist initial events
-    for (const event of gameState) {
-      await matchRepo.addEvent({
-        match: { connect: { id: matchId } },
+    if (gameState.length > 0) {
+      await matchRepo.addEvents(gameState.map((event: any) => ({
+        match_id: matchId,
         turn_index: event.turn,
         type: event.type,
         actor_role: event.actor,
         payload: event.payload
-      });
+      })));
     }
 
     // Initialize Adapters
@@ -122,15 +122,15 @@ const startWorker = async () => {
       });
 
       // Persist new events
-      for (const event of step.events) {
-        await matchRepo.addEvent({
-          match: { connect: { id: matchId } },
+      if (step.events.length > 0) {
+        await matchRepo.addEvents(step.events.map((event: any) => ({
+          match_id: matchId,
           turn_index: event.turn,
           type: event.type,
           actor_role: event.actor,
           payload: event.payload
-        });
-        gameState.push(event);
+        })));
+        gameState.push(...step.events);
       }
 
       result = step.result;
