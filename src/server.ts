@@ -17,6 +17,7 @@ import { attachPermissions } from './middleware/rbac.middleware';
 import { attachEntitlements } from './middleware/entitlements.middleware';
 import { stripeWebhookHandler } from './controllers/stripe.controller';
 import { prisma as db } from './config/db';
+import { ensureDefaultGames } from './services/game-init.service';
 
 dotenv.config();
 
@@ -242,6 +243,12 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).render('errors/500', { errorId: 'ERR-' + Date.now().toString(36).toUpperCase() });
 });
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  try {
+    await ensureDefaultGames();
+    console.log('Default games ensured');
+  } catch (err) {
+    console.error('Failed to ensure default games:', err);
+  }
 });
