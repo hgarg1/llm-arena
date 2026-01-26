@@ -506,14 +506,22 @@ export const publishGameEngine = async (req: Request, res: Response) => {
   const targetPath = path.join(generatedDir, fileName);
   const distGeneratedDir = path.join(process.cwd(), 'dist', 'game', 'generated');
 
-  fs.mkdirSync(generatedDir, { recursive: true });
-  fs.writeFileSync(targetPath, artifact.code_ts, 'utf8');
+  await fs.promises.mkdir(generatedDir, { recursive: true });
+  await fs.promises.writeFile(targetPath, artifact.code_ts, 'utf8');
   if (artifact.tests_ts) {
-    fs.writeFileSync(path.join(generatedDir, `${game.key}.test.ts`), artifact.tests_ts, 'utf8');
+    await fs.promises.writeFile(path.join(generatedDir, `${game.key}.test.ts`), artifact.tests_ts, 'utf8');
   }
-  if (fs.existsSync(path.join(process.cwd(), 'dist'))) {
-    fs.mkdirSync(distGeneratedDir, { recursive: true });
-    fs.writeFileSync(path.join(distGeneratedDir, fileName), artifact.code_ts, 'utf8');
+  let distExists = false;
+  try {
+    await fs.promises.access(path.join(process.cwd(), 'dist'));
+    distExists = true;
+  } catch (err) {
+    // dist directory does not exist, skipping
+  }
+
+  if (distExists) {
+    await fs.promises.mkdir(distGeneratedDir, { recursive: true });
+    await fs.promises.writeFile(path.join(distGeneratedDir, fileName), artifact.code_ts, 'utf8');
   }
 
   await prisma.gameEngineArtifact.update({
