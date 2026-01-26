@@ -230,6 +230,10 @@
                         // DOM manipulation approach instead of string replacement
                         const clone = template.cloneNode(true);
 
+                        // Remove or update the ID of the cloned root element to avoid duplicates in DOM
+                        // which would confuse subsequent getElementById calls
+                        clone.id = 'inst-' + node.id;
+
                         // Handle canvas ID to avoid collisions
                         const canvas = clone.querySelector('canvas');
                         if (canvas) {
