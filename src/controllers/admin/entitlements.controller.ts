@@ -20,20 +20,25 @@ const ensureDefaultPlans = async () => {
     { key: 'enterprise', name: 'Enterprise', level: 3, description_short: 'Enterprise-grade controls.', description_long: 'Full control, compliance features, and dedicated support.' }
   ];
 
-  for (const plan of defaults) {
-    const existing = await prisma.subscriptionPlan.findUnique({ where: { key: plan.key } });
-    if (!existing) {
-      await prisma.subscriptionPlan.create({
-        data: {
-          key: plan.key,
-          name: plan.name,
-          level: plan.level,
-          description_short: plan.description_short,
-          description_long: plan.description_long,
-          price_cents: plan.key === 'pro' ? 4900 : null
-        }
-      });
-    }
+  const existingPlans = await prisma.subscriptionPlan.findMany({
+    where: { key: { in: defaults.map(p => p.key) } },
+    select: { key: true }
+  });
+  const existingKeys = new Set(existingPlans.map(p => p.key));
+
+  const plansToCreate = defaults.filter(p => !existingKeys.has(p.key));
+
+  if (plansToCreate.length > 0) {
+    await prisma.subscriptionPlan.createMany({
+      data: plansToCreate.map(plan => ({
+        key: plan.key,
+        name: plan.name,
+        level: plan.level,
+        description_short: plan.description_short,
+        description_long: plan.description_long,
+        price_cents: plan.key === 'pro' ? 4900 : null
+      }))
+    });
   }
 };
 
