@@ -538,8 +538,15 @@ export const syncStripePlan = async (req: Request, res: Response) => {
     });
 
     const priceList = await stripe.prices.list({ product: product.stripe_product_id, limit: 100 });
+
+    const stripePriceIds = priceList.data.map(p => p.id);
+    const existingPrices = await prisma.subscriptionPlanPrice.findMany({
+      where: { stripe_price_id: { in: stripePriceIds } }
+    });
+    const existingMap = new Map(existingPrices.map(ep => [ep.stripe_price_id, ep]));
+
     for (const price of priceList.data) {
-      const existing = await prisma.subscriptionPlanPrice.findUnique({ where: { stripe_price_id: price.id } });
+      const existing = existingMap.get(price.id);
       const nextStatus = existing?.status === StripePriceStatus.LEGACY
         ? StripePriceStatus.LEGACY
         : (price.active ? StripePriceStatus.ACTIVE : StripePriceStatus.INACTIVE);
