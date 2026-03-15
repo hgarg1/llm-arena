@@ -44,13 +44,36 @@ const findUser = async (query?: string) => {
 };
 
 const ensurePermissions = async () => {
+  const existingPerms = await prisma.rbacPermission.findMany();
+  const existingMap = new Map(existingPerms.map((p: any) => [p.key, p]));
+
+  const toCreate: { key: string; description: string }[] = [];
+  const toUpdate: { key: string; description: string }[] = [];
+
   for (const perm of RBAC_PERMISSIONS) {
-    await prisma.rbacPermission.upsert({
-      where: { key: perm.key },
-      update: { description: perm.description },
-      create: { key: perm.key, description: perm.description }
-    });
+    const existing = existingMap.get(perm.key);
+    if (!existing) {
+      toCreate.push({ key: perm.key, description: perm.description });
+    } else if (existing.description !== perm.description) {
+      toUpdate.push({ key: perm.key, description: perm.description });
+    }
   }
+
+  if (toCreate.length > 0) {
+    await prisma.rbacPermission.createMany({ data: toCreate, skipDuplicates: true });
+  }
+
+  if (toUpdate.length > 0) {
+    await Promise.all(
+      toUpdate.map(perm =>
+        prisma.rbacPermission.update({
+          where: { key: perm.key },
+          data: { description: perm.description }
+        })
+      )
+    );
+  }
+
   const superAdmin = await prisma.rbacRole.upsert({
     where: { name: 'SuperAdmin' },
     update: { description: 'Full access' },
@@ -58,9 +81,16 @@ const ensurePermissions = async () => {
   });
   const perms = await prisma.rbacPermission.findMany({ select: { id: true, key: true } });
   await prisma.rbacRolePermission.deleteMany({ where: { role_id: superAdmin.id } });
-  for (const perm of perms) {
-    await prisma.rbacRolePermission.create({
-      data: { role_id: superAdmin.id, permission_id: perm.id, effect: 'ALLOW' }
+
+  const permissionData = perms.map((perm: any) => ({
+    role_id: superAdmin.id,
+    permission_id: perm.id,
+    effect: 'ALLOW' as const
+  }));
+
+  if (permissionData.length > 0) {
+    await prisma.rbacRolePermission.createMany({
+      data: permissionData
     });
   }
 };
