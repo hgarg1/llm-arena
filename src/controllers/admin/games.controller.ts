@@ -201,11 +201,15 @@ const DEFAULT_GAMES = [
 ];
 
 const ensureDefaultGames = async () => {
+  const defaultGameKeys = DEFAULT_GAMES.map(g => g.key);
+  const existingGames = await prisma.gameDefinition.findMany({
+    where: { key: { in: defaultGameKeys } },
+    include: { settings: true, ui_schema: true, releases: true }
+  });
+  const existingGamesMap = new Map(existingGames.map(g => [g.key, g]));
+
   for (const game of DEFAULT_GAMES) {
-    const existing = await prisma.gameDefinition.findUnique({
-      where: { key: game.key },
-      include: { settings: true, ui_schema: true, releases: true }
-    });
+    const existing = existingGamesMap.get(game.key);
 
     if (!existing) {
       await prisma.gameDefinition.create({
