@@ -66,4 +66,8 @@ export class MatchRepository {
   async addEvent(data: Prisma.MatchEventCreateInput) {
     return prisma.matchEvent.create({ data });
   }
+
+  async addEvents(data: Prisma.MatchEventCreateManyInput[]) {
+    return prisma.matchEvent.createMany({ data });
+  }
 }
