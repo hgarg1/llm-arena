@@ -971,15 +971,14 @@ export const updateSettings = async (req: Request, res: Response) => {
         'default_user_tier'
     ];
 
-    for (const key of booleanKeys) {
-        await settingsService.update(key, req.body[key] ? 'true' : 'false');
-    }
-
-    for (const key of settingsKeys) {
-        if (req.body[key] !== undefined) {
-            await settingsService.update(key, String(req.body[key]));
-        }
-    }
+    await Promise.all([
+        ...booleanKeys.map(key =>
+            settingsService.update(key, req.body[key] ? 'true' : 'false')
+        ),
+        ...settingsKeys
+            .filter(key => req.body[key] !== undefined)
+            .map(key => settingsService.update(key, String(req.body[key])))
+    ]);
 
     const contentKeys = [
         'public:home:hero_title',
