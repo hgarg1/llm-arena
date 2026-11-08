@@ -79,3 +79,25 @@ Provider keys (`OPENAI_API_KEY`, ...) must be available to the slice function as
 ## Local development
 `MATCH_RUNNER=inline npm run dev` runs matches in the same process. `npm test` covers the runner, and
 `npm run test:db` runs the same code against a real Postgres engine (PGlite) including lease races and the sweeper's SQL.
+
+## Verified against Neon's pooler (2026-11-08)
+
+The match log is written with interactive transactions (`recordMove`, `addEvents`: read the stored tail, then insert), and the runtime reaches Neon through the `-pooler` endpoint (PgBouncer, transaction mode, `pgbouncer=true`, `connection_limit=1` on Vercel). This was checked on a throwaway Neon branch of the production project, using the exact connection settings production uses:
+
+- Both M1 migrations apply cleanly on Neon Postgres.
+- An interactive transaction commits, and rolls back completely when it throws.
+- Recording a move with its events takes about 100 to 150 ms at the median through the pooler.
+- With 8 independent connections racing to record the same move, exactly one wins every time and the losers are rejected cleanly; 8 writers racing to append the same next event, at five positions in a row, also produce exactly one winner each time.
+- 8 contending writers extended one chain to 40 events: 40 appended, 280 attempts rejected, and the final chain had no gap, repeat or fork and verified with the independent reference verifier.
+
+Re-run it (use a throwaway branch, never production data; `neonctl branches create --name pooler-check --project-id <id>`, apply migrations to the branch with the direct URL, then delete the branch):
+
+```
+VERCEL=1 PARALLEL_CONNECTIONS=1 INTEGRATION_DATABASE_URL=<pooled branch url> \
+  npx jest tests/integration/pooler.integration.test.ts
+# the longer end-to-end tests need more time over the internet:
+VERCEL=1 INTEGRATION_DATABASE_URL=<pooled branch url> \
+  npx jest tests/integration/db.integration.test.ts --testTimeout=240000 -t "hash chain written through Postgres"
+```
+
+Neon branches inherit the parent's role passwords, so a branch connection string is as sensitive as production's. `neonctl branches create` prints the connection string; run it with its output redirected.
