@@ -195,13 +195,23 @@ The version string is `arena-integrity/<major>`. A new major version is required
 
 [`integrity/test-vectors.json`](integrity/test-vectors.json) holds known answers for every section above: canonicalization (valid and rejected inputs), genesis hashes, hash chains (including the empty log), test keys, and 14 verification cases covering each failure code. The keys in that file are **test keys** and MUST NOT be used for real signatures.
 
-Every implementation (the production verifier in story m1-05, the CLI in m1-13, the browser verifier in m1-12) MUST reproduce every vector. The file is checked by `tests/integrity-spec.test.ts`, and the same values were also re-derived with an independent implementation (Python, `hashlib` and `cryptography`) before publishing.
+Every implementation MUST reproduce every vector. The production library is `src/integrity/verify.ts`: pure TypeScript with no database access and no Node or browser globals except `TextEncoder`, so the same code runs in Node (CLI, tests) and in a web page. The two crypto primitives (SHA-256 and Ed25519 verification) are injected: `nodeProvider` (`verify-node.ts`) and `webProvider` (`verify-web.ts`, WebCrypto; Ed25519 needs Chrome 137, Firefox 129 or Safari 17). Where Ed25519 is unavailable the library reports `ERROR`, never a pass.
+
+```ts
+import { verifyMatch } from './integrity/verify';
+import { nodeProvider } from './integrity/verify-node';   // or webProvider from './integrity/verify-web'
+const outcome = await verifyMatch(nodeProvider, matchId, events, envelope /* or null */, trustedKeys);
+// { result: 'VERIFIED' } | { result: 'UNVERIFIED' } | { result: 'FAILED', code, detail? } | { result: 'ERROR', code }
+```
+
+The file is checked by `tests/integrity-spec.test.ts` (reference implementation), `tests/integrity-verify.test.ts` (the library with both providers, a tamper matrix, and 600 random mutations compared with the reference) and `tests/browser/integrity-verify.browser.test.ts` (a real browser). The same values were also re-derived with an independent implementation (Python, `hashlib` and `cryptography`) before publishing.
 
 Regenerating after an intentional spec change: `UPDATE_INTEGRITY_VECTORS=1 npx jest tests/integrity-spec.test.ts`, then bump the spec version if verification rules changed.
 
 ## 10. Open items handed to later stories
 
 - Done: storage columns (m1-02) and chaining on every append path with the no-fork index (m1-03).
+- Done: the verification library (m1-05).
 - Done: signing at match completion with an environment-held key behind a `Signer` interface, rotation and revocation (m1-04). Still open: provisioning the production key and publishing it (docs/INTEGRITY_KEYS.md).
 - m1-06, m1-07, m1-08: the reserved manifest members.
 - m1-11: the key-set URL and the export bundle format.
