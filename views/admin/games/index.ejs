@@ -41,7 +41,7 @@
     <% } %>
 
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table class="responsive-table min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Game</th>
@@ -54,13 +54,14 @@
             <tbody class="divide-y">
                 <% games.forEach(game => { 
                     const release = game.releases && game.releases[0];
+                    const builtIn = (builtInKeys || []).includes(game.key);
                 %>
                     <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4">
+                        <td class="rt-title px-6 py-4">
                             <div class="text-sm font-semibold text-gray-900"><%= game.name %></div>
                             <div class="text-xs font-mono text-gray-500"><%= game.key %></div>
                         </td>
-                        <td class="px-6 py-4 text-sm">
+                        <td class="px-6 py-4 text-sm" data-label="Status">
                             <span class="px-2 py-1 text-xs rounded <%= game.status === 'LIVE' ? 'bg-green-100 text-green-700' : (game.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' : (game.status === 'RETIRED' ? 'bg-gray-200 text-gray-600' : 'bg-amber-100 text-amber-700')) %>">
                                 <%= game.status %>
                             </span>
@@ -68,20 +69,20 @@
                                 <div class="text-[11px] text-gray-500 mt-1">Publishes: <%= new Date(release.publish_at).toLocaleString() %></div>
                             <% } %>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600">
+                        <td class="px-6 py-4 text-sm text-gray-600" data-label="Tier Gate">
                             <%= (game.settings || []).reduce((tier, s) => {
                                 if (s.tier_required === 'ENTERPRISE') return 'Enterprise';
                                 if (s.tier_required === 'PRO') return tier === 'Enterprise' ? tier : 'Pro+';
                                 return tier || 'Free+';
                             }, '') || 'Free+' %>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">
+                        <td class="px-6 py-4 text-sm text-gray-500" data-label="Updated">
                             <%= new Date(game.updated_at).toLocaleDateString() %>
                         </td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="rt-actions px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="/admin/games/<%= game.id %>?step=basics" class="btn btn-xs btn-secondary">Edit</a>
-                                <% if (typeof can === 'function' && can('admin.games.edit')) { %>
+                                <% if (!builtIn && typeof can === 'function' && can('admin.games.edit')) { %>
                                 <form action="/admin/games/<%= game.id %>/delete" method="POST" onsubmit="return confirm('Delete this game? This cannot be undone.');">
                                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                     <button class="btn btn-xs btn-ghost text-red-600">Delete</button>

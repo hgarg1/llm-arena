@@ -5,6 +5,7 @@ export class ChessGame implements GameEngine {
   gameType = 'chess';
   private chess: Chess;
   private maxPlies = 200;
+  private plies = 0;
 
   constructor() {
     this.chess = new Chess();
@@ -14,6 +15,7 @@ export class ChessGame implements GameEngine {
     // We can use the seed to potentially randomize the starting position (Fischer Random) in the future.
     const maxPlies = options?.maxPlies && options.maxPlies > 20 ? options.maxPlies : this.maxPlies;
     this.maxPlies = maxPlies;
+    this.plies = 0;
     if (options?.startFen && options.startFen !== 'start') {
       try {
         this.chess.load(options.startFen);
@@ -32,7 +34,8 @@ export class ChessGame implements GameEngine {
         payload: {
           game_key: 'chess',
           seed,
-          ruleset_version: '1.0.0',
+          // 1.1.0: models receive a compact observation (SAN move list + current FEN) instead of the full event log.
+          ruleset_version: '1.1.0',
           start_fen: this.chess.fen(),
           max_plies: this.maxPlies,
           allow_draws: options?.allowDraws !== false,
@@ -53,10 +56,64 @@ Do not provide explanations, just the move.`;
   }
 
   getRandomMove(gameState: GameEvent[], role: string): PlayerMove {
-    const moves = this.chess.moves();
+    const moves = this.chess.moves({ verbose: true });
     if (moves.length === 0) return { actor: role, content: 'resign' };
     const randomMove = moves[Math.floor(Math.random() * moves.length)];
-    return { actor: role, content: randomMove };
+    return { actor: role, content: `${randomMove.from}${randomMove.to}${randomMove.promotion || ''}` };
+  }
+
+  /**
+   * What a model is shown. The full event log repeats two FEN strings per move, so prompt size grows with
+   * the square of the game length (about 1.4M tokens for a 200-ply game); the SAN list plus the current
+   * position carries the same information in about 3% of that.
+   */
+  getObservation(history: GameEvent[], role: string): GameEvent[] {
+    const start = history.find(e => e.type === 'MATCH_START');
+    const moves = history.filter(e => e.type === 'MOVE');
+    const startFen: string = start?.payload?.start_fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    const currentFen: string = moves.length ? moves[moves.length - 1].payload.fen_after : startFen;
+    const [, turn = 'w', , , , full = '1'] = startFen.split(' ');
+    let moveNumber = parseInt(full, 10) || 1;
+    let whiteToMove = turn === 'w';
+    const parts: string[] = [];
+    moves.forEach((event, index) => {
+      if (whiteToMove) parts.push(`${moveNumber}.`);
+      else if (index === 0) parts.push(`${moveNumber}...`);
+      parts.push(String(event.payload.san));
+      if (!whiteToMove) moveNumber++;
+      whiteToMove = !whiteToMove;
+    });
+    const sideToMove = currentFen.split(' ')[1] === 'b' ? 'black' : 'white';
+    const lastTurn = history[history.length - 1]?.turn ?? 0;
+    const compactStart: GameEvent = start
+      ? { ...start, payload: { game_key: 'chess', start_fen: startFen, max_plies: start.payload.max_plies } }
+      : { turn: 0, actor: 'system', type: 'MATCH_START', payload: { game_key: 'chess', start_fen: startFen } };
+    return [
+      compactStart,
+      {
+        turn: lastTurn,
+        actor: 'system',
+        type: 'POSITION',
+        payload: {
+          content: `Moves so far: ${parts.length ? parts.join(' ') : '(none)'}\nCurrent position (FEN): ${currentFen}\nSide to move: ${sideToMove}. You are ${role}.`,
+          current_fen: currentFen,
+          ply: moves.length
+        }
+      }
+    ];
+  }
+
+  getActiveRole(): string {
+    return this.chess.turn() === 'w' ? 'white' : 'black';
+  }
+
+  private parseMove(raw: string) {
+    const token = raw.trim().split(/\s+/)[0] || '';
+    const uci = /^([a-h][1-8])([a-h][1-8])([qrbn])?$/i.exec(token);
+    if (uci) {
+      return this.chess.move({ from: uci[1].toLowerCase(), to: uci[2].toLowerCase(), promotion: uci[3]?.toLowerCase() });
+    }
+    return this.chess.move(token);
   }
 
   processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null } {
@@ -67,29 +124,18 @@ Do not provide explanations, just the move.`;
     const turnIndex = (history[history.length - 1]?.turn ?? 0) + 1;
     const sideToMove = this.chess.turn() === 'w' ? 'white' : 'black';
     
-    // Validate it's the correct actor's turn
-    if (move.actor !== sideToMove) {
-        // Technically this shouldn't happen if the worker orchestrates correctly,
-        // but if it does, it's a system error, not necessarily a player forfeit unless we strictly enforce it.
-    }
-
     const fenBefore = this.chess.fen();
     let moveObj;
-    let illegalReason = null;
+    let illegalReason: string | null = null;
 
-    // 1. Parse Move
-    try {
-        // clean input
-        const cleanContent = move.content.trim().split(/\s+/)[0]; // Take first token
-        // Try UCI first
-        moveObj = this.chess.move(cleanContent, { strict: false }); 
-        
-        // If strict UCI fails, chess.js move() handles SAN automatically too, 
-        // but we want to know if it was UCI or SAN for logging? 
-        // chess.js 'move' accepts string SAN or object. 
-        // Let's rely on chess.js's broad parsing for now.
-    } catch (e) {
-        illegalReason = 'Parse error or illegal move';
+    if (move.actor !== sideToMove) {
+        illegalReason = `Out of turn: ${move.actor} moved while ${sideToMove} was to move`;
+    } else {
+        try {
+            moveObj = this.parseMove(move.content);
+        } catch (e) {
+            illegalReason = 'Parse error or illegal move';
+        }
     }
 
     const events: GameEvent[] = [];
@@ -108,17 +154,32 @@ Do not provide explanations, just the move.`;
             }
         });
 
+        const forfeitWinner = sideToMove === 'white' ? 'black' : 'white';
+        events.push({
+            turn: turnIndex,
+            actor: 'system',
+            type: 'RESULT',
+            payload: {
+                outcome: forfeitWinner === 'white' ? '1-0' : '0-1',
+                winner: forfeitWinner,
+                reason: 'illegal_move',
+                final_fen: fenBefore,
+                total_plies: this.plies
+            }
+        });
+
         return {
             events,
             result: {
                 isFinished: true,
                 scores: sideToMove === 'white' ? { white: 0, black: 1 } : { white: 1, black: 0 },
-                winnerId: sideToMove === 'white' ? 'black' : 'white'
+                winnerId: forfeitWinner
             }
         };
     }
 
     // 2. Valid Move - Record it
+    this.plies += 1;
     events.push({
         turn: turnIndex,
         actor: move.actor,
@@ -166,7 +227,7 @@ Do not provide explanations, just the move.`;
                 winner,
                 reason,
                 final_fen: this.chess.fen(),
-                total_plies: turnIndex
+                total_plies: this.plies
             }
         });
 
@@ -181,7 +242,7 @@ Do not provide explanations, just the move.`;
     }
 
     // 4. Max Plies Check
-    if (turnIndex >= this.maxPlies) {
+    if (this.plies >= this.maxPlies) {
          events.push({
             turn: turnIndex,
             actor: 'system',
@@ -191,7 +252,7 @@ Do not provide explanations, just the move.`;
                 winner: null,
                 reason: 'max_plies_draw',
                 final_fen: this.chess.fen(),
-                total_plies: turnIndex
+                total_plies: this.plies
             }
         });
         return {

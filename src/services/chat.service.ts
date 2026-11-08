@@ -1,6 +1,7 @@
 import { PrismaClient, ChatChannel, ChatMessage, ChatChannelType, ChatMemberRole, User, ChatAuditAction } from '@prisma/client';
 import { prisma as db } from '../config/db';
 import { entitlementsService } from './entitlements.service';
+import { settingsService } from './settings.service';
 
 class ChatService {
   /**
@@ -204,15 +205,25 @@ class ChatService {
     userId: string,
     content: string,
     type: 'TEXT' | 'IMAGE' | 'SYSTEM' = 'TEXT',
-    attachments?: { filename: string, path: string, mimetype: string, size: number }[]
+    attachments?: { filename: string, path: string, url?: string, mimetype: string, size: number }[]
   ): Promise<ChatMessage> {
-    const membership = await db.chatParticipant.findUnique({
-      where: { channel_id_user_id: { channel_id: channelId, user_id: userId } }
-    });
+    const [membership, isAdmin, channel] = await Promise.all([
+      db.chatParticipant.findUnique({
+        where: { channel_id_user_id: { channel_id: channelId, user_id: userId } }
+      }),
+      this.isAdmin(userId),
+      db.chatChannel.findUnique({ where: { id: channelId } })
+    ]);
 
-    if (!membership && !(await this.isAdmin(userId))) {
+    if (!channel) {
+      throw new Error('Channel not found');
+    }
+
+    if (!membership && !isAdmin) {
        throw new Error('Must join channel to post');
     }
+
+    await this.enforcePostingGuards(channel, userId, isAdmin, type);
 
     const msg = await db.chatMessage.create({
       data: {
@@ -222,19 +233,16 @@ class ChatService {
         type: type,
         attachments: attachments && attachments.length > 0 ? {
             create: attachments.map(att => {
-                // Normalize path separators
                 const normalized = att.path.replace(/\\/g, '/');
-                let url = normalized;
-                
-                // Try to find relative path from 'uploads/'
-                // Supports both /app/public/uploads/... and C:/.../public/uploads/...
-                const uploadIndex = normalized.toLowerCase().indexOf('/uploads/');
-                if (uploadIndex !== -1) {
-                    // Extract starting from 'uploads/' (remove leading slash if present in substring)
-                    url = normalized.substring(uploadIndex + 1); 
-                } else if (normalized.toLowerCase().indexOf('uploads/') !== -1) {
-                     // Fallback for paths starting with uploads/ or windows path normalized
-                     url = normalized.substring(normalized.toLowerCase().indexOf('uploads/'));
+                let url = att.url || normalized;
+
+                if (!att.url) {
+                  const uploadIndex = normalized.toLowerCase().indexOf('/uploads/');
+                  if (uploadIndex !== -1) {
+                      url = normalized.substring(uploadIndex + 1); 
+                  } else if (normalized.toLowerCase().indexOf('uploads/') !== -1) {
+                       url = normalized.substring(normalized.toLowerCase().indexOf('uploads/'));
+                  }
                 }
                 
                 return {
@@ -451,6 +459,64 @@ class ChatService {
   private async isAdmin(userId: string): Promise<boolean> {
       const user = await db.user.findUnique({ where: { id: userId } });
       return user?.role === 'ADMIN';
+  }
+
+  private async enforcePostingGuards(
+    channel: ChatChannel,
+    userId: string,
+    isAdmin: boolean,
+    type: 'TEXT' | 'IMAGE' | 'SYSTEM'
+  ): Promise<void> {
+      if (isAdmin || type === 'SYSTEM') {
+          return;
+      }
+
+      const settings = await settingsService.getAll();
+      if (settings.chat_maintenance_mode === 'true') {
+          throw new Error('Chat is in maintenance mode. New messages are temporarily disabled.');
+      }
+
+      if (channel.is_read_only) {
+          throw new Error('This channel is read-only.');
+      }
+
+      const globalRateLimitSeconds = Math.max(0, parseInt(settings.chat_global_rate_limit || '0', 10) || 0);
+      const channelRateLimitSeconds = Math.max(0, channel.rate_limit || 0);
+      await this.enforceRateLimit(userId, globalRateLimitSeconds, undefined, 'You are sending messages too quickly across channels. Please wait');
+      await this.enforceRateLimit(userId, channelRateLimitSeconds, channel.id, 'You are sending messages too quickly in this channel. Please wait');
+  }
+
+  private async enforceRateLimit(
+    userId: string,
+    minimumSeconds: number,
+    channelId?: string,
+    messagePrefix = 'You are sending messages too quickly. Please wait'
+  ): Promise<void> {
+      if (minimumSeconds <= 0) {
+          return;
+      }
+
+      const lastMessage = await db.chatMessage.findFirst({
+          where: {
+              user_id: userId,
+              deleted_at: null,
+              ...(channelId ? { channel_id: channelId } : {})
+          },
+          orderBy: { created_at: 'desc' },
+          select: { created_at: true }
+      });
+
+      if (!lastMessage) {
+          return;
+      }
+
+      const elapsedSeconds = (Date.now() - lastMessage.created_at.getTime()) / 1000;
+      if (elapsedSeconds >= minimumSeconds) {
+          return;
+      }
+
+      const remaining = Math.ceil(minimumSeconds - elapsedSeconds);
+      throw new Error(`${messagePrefix} ${remaining} second${remaining === 1 ? '' : 's'}.`);
   }
 }
 

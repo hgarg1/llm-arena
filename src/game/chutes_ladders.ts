@@ -24,27 +24,33 @@ export class ChutesLaddersGame implements GameEngine {
   // Simple LCG for deterministic RNG
   private rand(): number {
     this.rngState = (this.rngState * 1664525 + 1013904223) % 4294967296;
-    return Math.abs(this.rngState);
+    return this.rngState;
   }
 
+  // LCG low bits have very short periods; use the high bits.
   private rollDie(): number {
-    return (this.rand() % 6) + 1;
+    return ((this.rand() >>> 16) % 6) + 1;
   }
 
   initialize(seed: number, options?: { boardSize?: number; winExact?: boolean; chutesEnabled?: boolean; laddersEnabled?: boolean }): GameEvent[] {
-    this.rngState = seed;
+    this.rngState = seed >>> 0;
     this.currentPosition = 0; // Start off-board
     this.boardSize = Math.max(25, Math.min(200, options?.boardSize || 100));
     this.winExact = options?.winExact === true;
     const chutesEnabled = options?.chutesEnabled !== false;
     const laddersEnabled = options?.laddersEnabled !== false;
     this.transitions = {};
+    // The standard layout is defined for 100 squares; scale it to the configured board.
+    const scale = this.boardSize / 100;
+    const used = new Set<number>();
     Object.entries(this.baseTransitions).forEach(([fromKey, toValue]) => {
-      const from = parseInt(fromKey, 10);
-      if (from > this.boardSize || toValue > this.boardSize) return;
-      if (toValue > from && !laddersEnabled) return;
-      if (toValue < from && !chutesEnabled) return;
-      this.transitions[from] = toValue;
+      const from = Math.max(1, Math.round(parseInt(fromKey, 10) * scale));
+      const to = Math.max(1, Math.min(this.boardSize, Math.round(toValue * scale)));
+      if (from >= this.boardSize || from === to || used.has(from)) return;
+      if (to > from && !laddersEnabled) return;
+      if (to < from && !chutesEnabled) return;
+      used.add(from);
+      this.transitions[from] = to;
     });
 
     return [
@@ -61,7 +67,8 @@ export class ChutesLaddersGame implements GameEngine {
           board_size: this.boardSize,
           win_exact: this.winExact,
           chutes_enabled: chutesEnabled,
-          ladders_enabled: laddersEnabled
+          ladders_enabled: laddersEnabled,
+          transitions: Object.entries(this.transitions).map(([from, to]) => ({ from: parseInt(from, 10), to }))
         }
       }
     ];
@@ -70,14 +77,19 @@ export class ChutesLaddersGame implements GameEngine {
   getSystemPrompt(role: string): string {
     return `You are playing Chutes and Ladders.
 You are currently at square ${this.currentPosition}.
-The game is played on a 10x10 grid from 1 to 100.
-Your goal is to reach square 100 or greater.
+The board has squares 1 to ${this.boardSize}.
+Your goal is to reach the last square (${this.boardSize}).
 You do not make decisions; the dice determines your move.
 Please acknowledge the game state.`;
   }
 
   getRandomMove(gameState: GameEvent[], role: string): PlayerMove {
     return { actor: role, content: 'ACK' };
+  }
+
+  // Movement is decided entirely by the dice, so no model call is ever needed.
+  isAutomatic(): boolean {
+    return true;
   }
 
   processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[], result: GameResult | null } {

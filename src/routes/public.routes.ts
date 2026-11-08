@@ -4,7 +4,10 @@ import * as careersController from '../controllers/careers.controller';
 
 const router = Router();
 
+router.get('/users/:id/avatar', PublicController.userAvatar);
 router.get('/', PublicController.home);
+router.get('/og/home.png', PublicController.ogHome);
+router.get('/og/page/:slug.png', PublicController.ogStaticPage);
 router.get('/how-it-works', PublicController.howItWorks);
 router.get('/benchmarks', PublicController.benchmarks);
 router.get('/methodology', PublicController.methodology);
@@ -15,6 +18,7 @@ router.get('/terms', PublicController.terms);
 router.get('/privacy', PublicController.privacy);
 router.get('/sitemap.xml', PublicController.sitemap);
 router.get('/careers', careersController.careersIndex);
+router.get('/og/careers/:slug.png', careersController.ogImage);
 router.get('/careers/:slug', careersController.careersDetail);
 router.get('/careers/:slug/apply', careersController.applyStart);
 router.post('/careers/:slug/apply/parse', careersController.resumeUpload, careersController.parseResume);

@@ -1,9 +1,13 @@
 import { prisma } from '../config/db';
 import { Model, Prisma } from '@prisma/client';
 import { settingsService } from '../services/settings.service';
+import { isDatabaseConfigured } from '../config/runtime';
 
 export class ModelRepository {
   async create(data: Prisma.ModelCreateInput): Promise<Model> {
+    if (!isDatabaseConfigured()) {
+      throw new Error('Database is not configured');
+    }
     const ownerId = (data as any)?.owner?.connect?.id || (data as any)?.owner_id;
     if (ownerId) {
       const settings = await settingsService.getAll();
@@ -26,6 +30,10 @@ export class ModelRepository {
   }
 
   async findAll(options?: { search?: string; provider?: string; capability?: string; includeInactive?: boolean }): Promise<Model[]> {
+    if (!isDatabaseConfigured()) {
+      return [];
+    }
+
     const where: Prisma.ModelWhereInput = {};
 
     if (!options?.includeInactive) {
@@ -52,6 +60,10 @@ export class ModelRepository {
   }
 
   async findById(id: string): Promise<Model | null> {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
     return prisma.model.findUnique({
       where: { id },
       include: { owner: { select: { email: true, id: true } } }

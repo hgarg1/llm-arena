@@ -1,6 +1,70 @@
-import { ModelAdapter, GameEvent } from './types';
+import { ModelAdapter, GameEvent, MoveRequestOptions } from './types';
 import axios from 'axios';
 import { prisma } from '../config/db';
+
+export const REQUEST_TIMEOUT_MS = 90_000;
+
+export class ModelUnavailableError extends Error {
+  /** True when the provider answered 429: waiting is the fix, so it must not burn the move's retry budget. */
+  public readonly rateLimited: boolean;
+  public readonly retryAfterMs?: number;
+
+  constructor(message: string, public readonly cause?: unknown, info: { rateLimited?: boolean; retryAfterMs?: number } = {}) {
+    super(message);
+    this.name = 'ModelUnavailableError';
+    this.rateLimited = Boolean(info.rateLimited);
+    this.retryAfterMs = info.retryAfterMs;
+  }
+}
+
+const MAX_RETRY_AFTER_MS = 120_000;
+
+/** `Retry-After` is either seconds or an HTTP date. Capped so a bad header cannot stall a match. */
+export const parseRetryAfter = (value: unknown, now = Date.now()): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const text = String(Array.isArray(value) ? value[0] : value).trim();
+  const seconds = Number(text);
+  const ms = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(text) - now;
+  if (!Number.isFinite(ms) || ms < 0) return undefined;
+  return Math.min(Math.round(ms), MAX_RETRY_AFTER_MS);
+};
+
+const eventText = (e: GameEvent) => {
+  const text = e.payload?.content;
+  return typeof text === 'string' && text.length > 0 ? text : JSON.stringify(e.payload ?? {});
+};
+
+type ChatMessage = { role: 'user' | 'assistant'; content: string };
+
+/**
+ * Turns the event log into a chat transcript from `role`'s point of view: the player's own earlier
+ * moves are `assistant` turns, everything else is `user` context. Consecutive same-role turns are
+ * merged (some providers reject them) and the transcript always ends with an explicit prompt to move.
+ */
+export const buildChatMessages = (history: GameEvent[], role?: string): ChatMessage[] => {
+  const messages: ChatMessage[] = [];
+  const push = (r: 'user' | 'assistant', content: string) => {
+    const last = messages[messages.length - 1];
+    if (last && last.role === r) last.content += `\n${content}`;
+    else messages.push({ role: r, content });
+  };
+  for (const e of history) {
+    const own = Boolean(role) && e.actor === role;
+    push(own ? 'assistant' : 'user', own ? eventText(e) : `[${e.actor}/${e.type}] ${eventText(e)}`);
+  }
+  push('user', role ? `It is your move (${role}). Reply with your move only.` : 'Make your move.');
+  if (messages[0].role !== 'user') messages.unshift({ role: 'user', content: 'Game log follows.' });
+  return messages;
+};
+
+const failure = (provider: string, modelId: string, error: any) => {
+  const status = error?.response?.status;
+  const detail = error?.response?.data?.error?.message || error?.message || 'unknown error';
+  return new ModelUnavailableError(`${provider} ${modelId} failed${status ? ` (${status})` : ''}: ${detail}`, error, {
+    rateLimited: status === 429,
+    retryAfterMs: parseRetryAfter(error?.response?.headers?.['retry-after'])
+  });
+};
 
 export class MockModelAdapter implements ModelAdapter {
   constructor(private deterministicMode: boolean = true) {}
@@ -23,34 +87,35 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
       private headers: Record<string, string> = {}
   ) {}
 
-  async generateMove(systemPrompt: string, history: GameEvent[]): Promise<string> {
+  async generateMove(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<string> {
+    if (!this.apiKey) throw new ModelUnavailableError(`No API key configured for ${this.baseUrl}`);
     try {
         const messages = [
             { role: 'system', content: systemPrompt },
             ...history.map(e => {
-                const role = e.actor === 'assistant' ? 'assistant' : (e.actor === 'system' ? 'system' : 'user');
-                
-                // If there are images, use content array format (OpenAI Vision)
-                if (e.payload.images && e.payload.images.length > 0) {
-                    const content: any[] = [{ type: 'text', text: e.payload.content || JSON.stringify(e.payload) }];
+                const own = Boolean(role) && e.actor === role;
+                const msgRole = own ? 'assistant' : 'user';
+                const text = own ? eventText(e) : `[${e.actor}/${e.type}] ${eventText(e)}`;
+                if (!own && e.payload?.images && e.payload.images.length > 0) {
+                    const content: any[] = [{ type: 'text', text }];
                     e.payload.images.forEach((url: string) => {
                         content.push({ type: 'image_url', image_url: { url: url.startsWith('http') ? url : `data:image/jpeg;base64,${url}` } });
                     });
-                    return { role, content };
+                    return { role: msgRole, content };
                 }
-
-                return {
-                    role,
-                    content: e.payload.content || JSON.stringify(e.payload)
-                };
-            })
+                return { role: msgRole, content: text };
+            }),
+            { role: 'user', content: role ? `It is your move (${role}). Reply with your move only.` : 'Make your move.' }
         ];
 
+        // Reasoning models reject a custom temperature.
+        const fixedTemperature = /^(o\d|gpt-5)/i.test(this.modelId);
         const res = await axios.post(`${this.baseUrl}/chat/completions`, {
             model: this.modelId,
-            messages: messages,
-            temperature: 0 // Enforce determinism where possible
+            messages,
+            ...(fixedTemperature ? {} : { temperature: 0 })
         }, {
+            timeout: options?.timeoutMs ?? REQUEST_TIMEOUT_MS,
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`,
                 'Content-Type': 'application/json',
@@ -58,10 +123,12 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
             }
         });
 
-        return res.data.choices[0].message.content;
+        const text = res.data?.choices?.[0]?.message?.content;
+        if (typeof text !== 'string') throw new Error('Empty completion');
+        return text;
     } catch (error: any) {
-        console.error(`[Adapter Error] ${this.modelId}:`, error.message);
-        return `[Error] Failed to generate move: ${error.message}`;
+        if (error instanceof ModelUnavailableError) throw error;
+        throw failure('openai-compatible', this.modelId, error);
     }
   }
 }
@@ -69,33 +136,30 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
 export class AnthropicAdapter implements ModelAdapter {
     constructor(private apiKey: string, private modelId: string) {}
   
-    async generateMove(systemPrompt: string, history: GameEvent[]): Promise<string> {
+    async generateMove(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<string> {
+      if (!this.apiKey) throw new ModelUnavailableError('No API key configured for Anthropic');
       try {
-          // Anthropic Messages API
-          const messages = history.map(e => ({
-              role: e.actor === 'system' ? 'user' : 'user', // Anthropic strict roles: user/assistant
-              content: JSON.stringify(e.payload)
-          }));
-          // Note: Anthropic system prompt is a top-level parameter, not a message
-  
           const res = await axios.post('https://api.anthropic.com/v1/messages', {
               model: this.modelId,
               system: systemPrompt,
-              messages: messages.length > 0 ? messages : [{ role: 'user', content: 'Start game.' }],
+              messages: buildChatMessages(history, role),
               max_tokens: 1024,
               temperature: 0
           }, {
+              timeout: options?.timeoutMs ?? REQUEST_TIMEOUT_MS,
               headers: {
                   'x-api-key': this.apiKey,
                   'anthropic-version': '2023-06-01',
                   'content-type': 'application/json'
               }
           });
-  
-          return res.data.content[0].text;
+
+          const text = (res.data?.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
+          if (!text) throw new Error('Empty completion');
+          return text;
       } catch (error: any) {
-          console.error(`[Anthropic Error] ${this.modelId}:`, error.message);
-          return `[Error] Failed to generate move: ${error.message}`;
+          if (error instanceof ModelUnavailableError) throw error;
+          throw failure('anthropic', this.modelId, error);
       }
     }
 }
@@ -103,27 +167,29 @@ export class AnthropicAdapter implements ModelAdapter {
 export class GoogleAdapter implements ModelAdapter {
     constructor(private apiKey: string, private modelId: string) {}
   
-    async generateMove(systemPrompt: string, history: GameEvent[]): Promise<string> {
+    async generateMove(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<string> {
+      if (!this.apiKey) throw new ModelUnavailableError('No API key configured for Google');
       try {
-          // Google Gemini API (generateContent)
-          // Simplified: Concatenate history into a prompt or use multi-turn chat if supported cleanly
-          // For MVP, we'll just prompt with context.
-          
-          const prompt = `${systemPrompt}\n\nHistory:\n${history.map(h => JSON.stringify(h.payload)).join('\n')}\n\nYour Move:`
+          const contents = buildChatMessages(history, role).map(m => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content }]
+          }));
 
-          const res = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/${this.modelId}:generateContent?key=${this.apiKey}`, {
-              contents: [{
-                  parts: [{ text: prompt }]
-              }],
-              generationConfig: {
-                  temperature: 0
-              }
+          const res = await axios.post(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.modelId)}:generateContent`, {
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents,
+              generationConfig: { temperature: 0 }
+          }, {
+              timeout: options?.timeoutMs ?? REQUEST_TIMEOUT_MS,
+              headers: { 'x-goog-api-key': this.apiKey, 'Content-Type': 'application/json' }
           });
-  
-          return res.data.candidates[0].content.parts[0].text;
+
+          const text = res.data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('');
+          if (!text) throw new Error('Empty completion');
+          return text;
       } catch (error: any) {
-          console.error(`[Google Error] ${this.modelId}:`, error.message);
-          return `[Error] Failed to generate move: ${error.message}`;
+          if (error instanceof ModelUnavailableError) throw error;
+          throw failure('google', this.modelId, error);
       }
     }
 }
@@ -195,47 +261,36 @@ export class CompositeAdapter implements ModelAdapter {
     return this.adapters[this.adapters.length - 1];
   }
 
-  async generateMove(systemPrompt: string, history: GameEvent[]): Promise<string> {
+  async generateMove(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<string> {
     await this.ensureLoaded();
 
     if (this.strategy === 'PIPELINE') {
       let input = '';
       for (const step of this.pipeline) {
         const prompt = renderPipelinePrompt(step.promptTemplate, systemPrompt, history, input);
-        try {
-          const response = await step.adapter.generateMove(prompt, history);
-          if (response.startsWith('[Error]')) return response;
-          input = response;
-        } catch (err: any) {
-          return `[Error] ${err.message || 'Pipeline step failed'}`;
-        }
+        input = await step.adapter.generateMove(prompt, history, role, options);
       }
-      return input || '[Error] Pipeline produced no output';
+      if (!input) throw new ModelUnavailableError('Pipeline produced no output');
+      return input;
     }
 
     if (this.strategy === 'FALLBACK') {
-      let lastError = '[Error] Composite fallback failed';
+      let lastError: unknown = new ModelUnavailableError('Composite fallback has no members');
       for (const adapter of this.adapters) {
         try {
-          const response = await adapter.adapter.generateMove(systemPrompt, history);
-          if (!response.startsWith('[Error]')) return response;
-          lastError = response;
-        } catch (err: any) {
-          lastError = `[Error] ${err.message || 'Fallback adapter failed'}`;
+          return await adapter.adapter.generateMove(systemPrompt, history, role, options);
+        } catch (err) {
+          lastError = err;
         }
       }
-      return lastError;
+      throw lastError;
     }
 
     const choice = this.strategy === 'RANDOM'
       ? this.pickWeighted()
       : this.adapters[this.pointer++ % this.adapters.length];
 
-    try {
-      return await choice.adapter.generateMove(systemPrompt, history);
-    } catch (err: any) {
-      return `[Error] ${err.message || 'Composite adapter failed'}`;
-    }
+    return choice.adapter.generateMove(systemPrompt, history, role, options);
   }
 }
 

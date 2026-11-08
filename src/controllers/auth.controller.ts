@@ -1,3 +1,4 @@
+import { sanitizeNextPath } from '../utils/safe-redirect';
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { UserRepository } from '../repositories/user.repository';
@@ -8,9 +9,74 @@ import { webAuthnService } from '../services/webauthn.service';
 
 const userRepo = new UserRepository();
 
-// ... existing login/logout ...
+const getPasskeyRequestContext = (req: Request) => {
+  const forwardedProto = (req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
+  const forwardedHost = (req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim();
+  const origin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : undefined;
+  const rpID = forwardedHost ? forwardedHost.replace(/:\d+$/, '') : undefined;
+  return { origin, rpID };
+};
+
+const regenerateSession = (req: Request) =>
+  new Promise<void>((resolve, reject) => {
+    req.session.regenerate((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+
+const saveSession = (req: Request) =>
+  new Promise<void>((resolve, reject) => {
+    req.session.save((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+
+const destroySession = (req: Request) =>
+  new Promise<void>((resolve, reject) => {
+    req.session.destroy((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+
+const applyAuthenticatedSession = async (req: Request, res: Response, user: { id: string; email: string; role: string; tier: string }, remember = false) => {
+  const settings = res.locals.settings || {};
+  const idleMinutes = parseInt(settings.session_idle_minutes || '60', 10);
+  const rememberDays = parseInt(settings.session_remember_days || '7', 10);
+
+  await regenerateSession(req);
+
+  (req.session as any).userId = user.id;
+  (req.session as any).user = { id: user.id, email: user.email, role: user.role, tier: user.tier };
+  (req.session as any).sessionVersion = settings.session_version || '1';
+
+  if (req.session.cookie) {
+    const maxAgeMinutes = remember ? rememberDays * 24 * 60 : idleMinutes;
+    req.session.cookie.maxAge = Math.max(1, maxAgeMinutes) * 60 * 1000;
+  }
+
+  await saveSession(req);
+};
+
 export const loginPage = (req: Request, res: Response) => {
-  res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: null });
+  if ((req.session as any).userId) {
+    return req.session.destroy(() => {
+      res.clearCookie('connect.sid');
+      res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: null, next: sanitizeNextPath(req.query.next, '') });
+    });
+  }
+  res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: null, next: sanitizeNextPath(req.query.next, '') });
 };
 
 export const login = async (req: Request, res: Response) => {
@@ -20,16 +86,16 @@ export const login = async (req: Request, res: Response) => {
   try {
     const user = await userRepo.findByEmail(email);
     if (!user) {
-      return res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'Invalid credentials' });
+      return res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'Invalid credentials', next: sanitizeNextPath(req.body.next, '') });
     }
 
     if (!user.password_hash) {
-        return res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'Please sign in with SSO' });
+        return res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'Please sign in with SSO', next: sanitizeNextPath(req.body.next, '') });
     }
 
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
-      return res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'Invalid credentials' });
+      return res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'Invalid credentials', next: sanitizeNextPath(req.body.next, '') });
     }
 
     const requireEmailVerification = settings.auth_require_email_verification !== 'false';
@@ -40,39 +106,40 @@ export const login = async (req: Request, res: Response) => {
           data: { email_verified: true, email_verification_token: null }
         });
       } else {
-        return res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'Please verify your email before signing in' });
+        return res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'Please verify your email before signing in', next: sanitizeNextPath(req.body.next, '') });
       }
     }
 
-    // Set Session
-    (req.session as any).userId = user.id;
-    (req.session as any).user = { id: user.id, email: user.email, role: user.role, tier: user.tier };
-    (req.session as any).sessionVersion = settings.session_version || '1';
     const remember = req.body.remember_me === 'on';
-    const idleMinutes = parseInt(settings.session_idle_minutes || '60', 10);
-    const rememberDays = parseInt(settings.session_remember_days || '7', 10);
-    if (req.session.cookie) {
-      const maxAgeMinutes = remember ? rememberDays * 24 * 60 : idleMinutes;
-      req.session.cookie.maxAge = Math.max(1, maxAgeMinutes) * 60 * 1000;
-    }
-    
-    req.session.save(() => {
-        res.redirect('/');
-    });
+    await applyAuthenticatedSession(req, res, {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      tier: user.tier
+    }, remember);
+
+    return res.redirect(sanitizeNextPath(req.body.next));
 
   } catch (error) {
     console.error(error);
-    res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'An error occurred' });
+    res.render('auth/login', { title: 'Sign In', path: '/auth/login', error: 'An error occurred', next: sanitizeNextPath(req.body.next, '') });
   }
 };
 
-export const logout = (req: Request, res: Response) => {
-  req.session.destroy(() => {
-    res.redirect('/');
-  });
+export const logout = async (req: Request, res: Response) => {
+  try {
+    await destroySession(req);
+  } catch (error) {
+    console.error(error);
+  }
+  res.clearCookie('connect.sid');
+  res.redirect('/');
 };
 
 export const signupPage = (req: Request, res: Response) => {
+    if ((req.session as any).userId) {
+        return res.redirect('/');
+    }
     res.render('auth/signup', { title: 'Create Account', path: '/auth/signup', error: null, step: 1 });
 };
 
@@ -131,15 +198,17 @@ export const signup = async (req: Request, res: Response) => {
             await comms.sendSMS(phone, `Your verification code is: ${phoneCode}`);
         }
 
-        // Auto login
-        (req.session as any).userId = user.id;
-        (req.session as any).user = { id: user.id, email: user.email, role: user.role, tier: user.tier };
-        (req.session as any).sessionVersion = settings.session_version || '1';
+        await applyAuthenticatedSession(req, res, {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            tier: user.tier
+        });
         
         if (phone) {
-            res.redirect('/auth/verify-phone');
+            return res.redirect('/auth/verify-phone');
         } else {
-            res.redirect('/');
+            return res.redirect('/');
         }
 
     } catch (e) {
@@ -191,6 +260,9 @@ export const verifyPhone = async (req: Request, res: Response) => {
 };
 
 export const forgotPasswordPage = (req: Request, res: Response) => {
+    if ((req.session as any).userId) {
+        return res.redirect('/');
+    }
     res.render('auth/forgot-password', { title: 'Forgot Password', path: '/auth/forgot-password', message: null, error: null });
 };
 
@@ -251,7 +323,8 @@ export const getPasskeyRegistration = async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const options = await webAuthnService.getRegistrationOptions(user.id, user.email);
+    const { origin, rpID } = getPasskeyRequestContext(req);
+    const options = await webAuthnService.getRegistrationOptions(user.id, user.email, origin, rpID);
     (req.session as any).currentChallenge = options.challenge;
     
     res.json(options);
@@ -264,7 +337,8 @@ export const verifyPasskeyRegistration = async (req: Request, res: Response) => 
     if (!userId || !challenge) return res.status(400).json({ error: 'Invalid session' });
 
     try {
-        const verified = await webAuthnService.verifyRegistration(userId, req.body, challenge);
+        const { origin, rpID } = getPasskeyRequestContext(req);
+        const verified = await webAuthnService.verifyRegistration(userId, req.body, challenge, origin, rpID);
         delete (req.session as any).currentChallenge;
         
         if (verified) return res.json({ verified: true });
@@ -276,7 +350,8 @@ export const verifyPasskeyRegistration = async (req: Request, res: Response) => 
 };
 
 export const getPasskeyAuthOptions = async (req: Request, res: Response) => {
-    const options = await webAuthnService.getAuthenticationOptions();
+    const { origin, rpID } = getPasskeyRequestContext(req);
+    const options = await webAuthnService.getAuthenticationOptions(origin, rpID);
     (req.session as any).currentChallenge = options.challenge;
     res.json(options);
 };
@@ -287,7 +362,8 @@ export const verifyPasskeyAuth = async (req: Request, res: Response) => {
     const settings = res.locals.settings || {};
 
     try {
-        const userId = await webAuthnService.verifyAuthentication(req.body, challenge);
+        const { origin, rpID } = getPasskeyRequestContext(req);
+        const userId = await webAuthnService.verifyAuthentication(req.body, challenge, origin, rpID);
         if (userId) {
             const user = await prisma.user.findUnique({ where: { id: userId } });
             if (user) {
@@ -302,15 +378,13 @@ export const verifyPasskeyAuth = async (req: Request, res: Response) => {
                         return res.status(403).json({ error: 'Email verification required' });
                     }
                 }
-                // Login successful
-                (req.session as any).userId = user.id;
-                (req.session as any).user = { id: user.id, email: user.email, role: user.role, tier: user.tier };
-                (req.session as any).sessionVersion = settings.session_version || '1';
-                const idleMinutes = parseInt(settings.session_idle_minutes || '60', 10);
-                if (req.session.cookie) {
-                    req.session.cookie.maxAge = Math.max(1, idleMinutes) * 60 * 1000;
-                }
                 delete (req.session as any).currentChallenge;
+                await applyAuthenticatedSession(req, res, {
+                    id: user.id,
+                    email: user.email,
+                    role: user.role,
+                    tier: user.tier
+                });
                 return res.json({ verified: true });
             }
         }

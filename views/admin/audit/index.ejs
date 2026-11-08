@@ -74,7 +74,7 @@
     </div>
 
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        <table class="min-w-full text-xs">
+        <table class="responsive-table min-w-full text-xs">
             <thead class="text-gray-500 uppercase bg-gray-50">
                 <tr>
                     <th class="p-3 text-left">Time</th>
@@ -87,17 +87,17 @@
             <tbody class="divide-y">
                 <% logs.forEach(log => { %>
                     <tr>
-                        <td class="p-3 text-[11px] text-gray-500"><%= new Date(log.created_at).toLocaleString() %></td>
-                        <td class="p-3 text-sm text-gray-800"><%= log.admin?.email || 'Unknown' %></td>
-                        <td class="p-3">
+                        <td class="rt-title p-3 text-[11px] text-gray-500"><%= new Date(log.created_at).toLocaleString() %></td>
+                        <td class="p-3 text-sm text-gray-800" data-label="Admin"><%= log.admin?.email || 'Unknown' %></td>
+                        <td class="p-3" data-label="Action">
                             <span class="text-[11px] font-medium px-2 py-1 rounded <%= log.action === 'access.denied' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700' %>"><%= log.action %></span>
                         </td>
-                        <td class="p-3 text-[11px] text-gray-600"><%= log.target || '-' %></td>
-                        <td class="p-3 text-[11px] text-gray-500 font-mono break-all"><%= JSON.stringify(log.metadata || {}) %></td>
+                        <td class="p-3 text-[11px] text-gray-600" data-label="Target"><%= log.target || '-' %></td>
+                        <td class="p-3 text-[11px] text-gray-500 font-mono break-all" data-label="Metadata"><%= JSON.stringify(log.metadata || {}) %></td>
                     </tr>
                 <% }) %>
                 <% if (logs.length === 0) { %>
-                    <tr><td class="p-6 text-center text-gray-500" colspan="5">No audit events found.</td></tr>
+                    <tr><td class="rt-title p-6 text-center text-gray-500" colspan="5">No audit events found.</td></tr>
                 <% } %>
             </tbody>
         </table>

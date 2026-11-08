@@ -3,6 +3,12 @@ module.exports = {
   content: ["./views/**/*.ejs", "./public/**/*.js", "./src/**/*.ts"],
   theme: {
     extend: {
+      screens: {
+        // Roomy screens: wide AND tall enough for app-like, fixed-height layouts (a phone held sideways is wide but short).
+        rv: { raw: '(min-width: 768px) and (min-height: 600px)' },
+        // Touch is the primary input: bigger tap targets, whatever the screen width.
+        coarse: { raw: '(pointer: coarse)' },
+      },
       colors: {
         primary: "#0F172A", // Midnight Slate
         accent: "#2563EB",  // Steel Blue

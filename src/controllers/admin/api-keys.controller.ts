@@ -66,7 +66,9 @@ export const apiKeysDashboard = async (req: Request, res: Response) => {
     keys,
     scopes,
     usageMap,
-    query: req.query
+    query: req.query,
+    success: req.query.success,
+    error: req.query.error
   });
 };
 
@@ -106,7 +108,7 @@ export const updateApiKey = async (req: Request, res: Response) => {
   const scopes = Array.isArray(req.body.scopes) ? req.body.scopes : req.body.scopes ? [req.body.scopes] : [];
 
   const key = await prisma.apiKey.findUnique({ where: { id }, include: { scopes: true } });
-  if (!key) return res.redirect('/admin/users?error=API key not found');
+  if (!key) return res.redirect('/admin/api-keys?error=API key not found');
 
   const sanitizedStatus = (['ACTIVE', 'REVOKED', 'SUSPENDED'] as ApiKeyStatus[]).includes(status as ApiKeyStatus)
     ? (status as ApiKeyStatus)
@@ -136,13 +138,13 @@ export const updateApiKey = async (req: Request, res: Response) => {
     });
   });
 
-  res.redirect(`/admin/users/${key.user_id}?success=API key updated`);
+  res.redirect('/admin/api-keys?success=API key updated');
 };
 
 export const revokeApiKey = async (req: Request, res: Response) => {
   const { id } = req.params;
   const key = await prisma.apiKey.findUnique({ where: { id }, include: { scopes: true } });
-  if (!key) return res.redirect('/admin/users?error=API key not found');
+  if (!key) return res.redirect('/admin/api-keys?error=API key not found');
 
   await prisma.$transaction(async tx => {
     await tx.apiKey.update({ where: { id }, data: { status: 'REVOKED' } });
@@ -157,5 +159,5 @@ export const revokeApiKey = async (req: Request, res: Response) => {
     });
   });
 
-  res.redirect(`/admin/users/${key.user_id}?success=API key revoked`);
+  res.redirect('/admin/api-keys?success=API key revoked');
 };

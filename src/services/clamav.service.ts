@@ -4,7 +4,7 @@ import path from 'path';
 const PUBLIC_ROOT = path.join(__dirname, '../../public');
 
 const getConfig = () => ({
-  enabled: (process.env.CLAMAV_ENABLED || 'true').toLowerCase() !== 'false',
+  enabled: (process.env.CLAMAV_ENABLED || (process.env.VERCEL ? 'false' : 'true')).toLowerCase() !== 'false',
   service: process.env.CLAMAV_SERVICE_NAME || 'clamav',
   scanRoot: process.env.CLAMAV_SCAN_ROOT || '/scan'
 });

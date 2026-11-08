@@ -17,7 +17,7 @@ export class ModelSyncService {
   async syncAll() {
     console.log('Starting model sync...');
     const models: ImportedModel[] = [];
-    const defaultCapabilities = ['iterated-negotiation', 'chess', 'chutes_and_ladders', 'texas_holdem'];
+    const defaultCapabilities = ['iterated-negotiation', 'chess', 'chutes_and_ladders', 'texas_holdem', 'blackjack'];
 
     // 1. OpenAI
     if (process.env.OPENAI_API_KEY) {

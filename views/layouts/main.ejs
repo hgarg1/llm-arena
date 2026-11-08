@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= typeof title !== 'undefined' ? title : 'LLM Arena' %> | LLM Arena</title>
+    <title><%= typeof seo !== 'undefined' && seo && seo.title ? seo.title : (typeof title !== 'undefined' ? title : 'LLM Arena') %> | LLM Arena</title>
     <meta name="csrf-token" content="<%= csrfToken %>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/nav.css" rel="stylesheet">
+    <link href="/css/session-watch.css" rel="stylesheet">
     <%- include('../partials/seo') %>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>[x-cloak]{display:none !important;}</style>
@@ -14,7 +16,7 @@
 <body class="min-h-screen font-sans">
     <div class="relative flex min-h-screen flex-col">
         <%- include('../partials/nav') %>
-        <main class="flex-1">
+        <main id="main-content" tabindex="-1" class="flex-1 focus:outline-none">
             <%- body %>
         </main>
         <%- include('../partials/footer') %>

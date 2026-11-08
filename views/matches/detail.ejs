@@ -1,19 +1,31 @@
 <%- include('../partials/header_layout') %>
-    <div x-data="replayViewer('<%= match.id %>')" x-init="init()" class="flex flex-col h-[calc(100vh-60px)]">
+    <div x-data="replayViewer('<%= match.id %>', '<%= match.status %>', <%= boardSize %>)" x-init="init()" class="flex flex-col rv:h-[calc(100vh-60px)]">
         
+        <% if (match.status === 'FAILED') { %>
+        <div class="bg-red-50 border-b border-red-200 text-red-800 text-sm px-4 rv:px-6 py-2 shrink-0 break-words">
+            This match failed<%= match.failure_reason ? ': ' + match.failure_reason : '.' %> Results are not scored.
+        </div>
+        <% } else if (match.status === 'CANCELLED') { %>
+        <div class="bg-gray-100 border-b border-gray-300 text-gray-700 text-sm px-4 rv:px-6 py-2 shrink-0 break-words">This match was cancelled by an administrator. Results are not scored.</div>
+        <% } else if (match.status === 'COMPLETED' && match.failure_reason) { %>
+        <div class="bg-amber-50 border-b border-amber-200 text-amber-900 text-sm px-4 rv:px-6 py-2 shrink-0 break-words"><%= match.failure_reason %></div>
+        <% } %>
+        <div x-show="live" x-cloak class="bg-emerald-50 border-b border-emerald-200 text-emerald-800 text-xs px-4 rv:px-6 py-1 shrink-0 flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Live: updating as moves are played
+        </div>
         <!-- Toolbar -->
-        <div class="border-b border-border bg-white px-6 py-3 flex justify-between items-center shadow-sm z-10 shrink-0">
-            <div class="flex items-center gap-4">
-                <a href="/matches" class="text-secondary hover:text-primary transition-colors">
+        <div class="sticky top-0 z-20 rv:static rv:z-10 border-b border-border bg-white px-3 py-2 sm:px-6 sm:py-3 flex justify-between items-center gap-2 shadow-sm shrink-0">
+            <div class="flex min-w-0 items-center gap-1 sm:gap-4">
+                <a href="/matches" aria-label="Back to matches" class="-ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-secondary hover:text-primary transition-colors sm:ml-0">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </a>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight">Match Replay</h1>
-                    <div class="text-xs font-mono text-secondary"><%= match.id %></div>
+                <div class="min-w-0">
+                    <h1 class="sr-only font-bold text-lg leading-tight sm:not-sr-only">Match Replay</h1>
+                    <div class="sr-only truncate text-xs font-mono text-secondary sm:not-sr-only"><%= match.id %></div>
                 </div>
             </div>
             
-            <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+            <div class="ml-auto flex shrink-0 items-center gap-1 rounded-lg bg-gray-100 p-1 sm:ml-0 sm:gap-2">
                 <button @click="reset()" class="btn btn-sm btn-ghost hover:bg-white shadow-sm transition-all" title="Reset">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>
                 </button>
@@ -28,12 +40,12 @@
         </div>
 
         <!-- Main Content Area -->
-        <div class="flex-grow flex overflow-hidden bg-gray-50">
+        <div class="flex flex-grow flex-col bg-gray-50 rv:flex-row rv:overflow-hidden">
             
-            <% if (match.game_type === 'chess') { %>
+            <% if (renderer === 'chess') { %>
             <!-- Chess Board (Left) -->
-            <div class="flex-1 flex justify-center items-center p-4 lg:p-8 bg-slate-200 min-w-[400px]" id="board-container">
-                 <div class="relative aspect-square w-full max-w-[600px] max-h-[80vh] bg-white shadow-2xl rounded-sm border-4 border-slate-800">
+            <div class="flex flex-none justify-center items-center p-4 pb-8 pl-8 rv:flex-1 rv:pb-4 rv:pl-4 lg:p-8 bg-slate-200 rv:min-w-[400px]" id="board-container">
+                 <div class="relative aspect-square w-full [container-type:inline-size] max-w-[min(100%,62dvh)] rv:max-w-[600px] rv:max-h-[80vh] bg-white shadow-2xl rounded-sm border-4 border-slate-800">
                      <!-- Rank Labels -->
                      <div class="absolute left-[-20px] top-0 bottom-0 flex flex-col justify-around text-xs font-bold text-slate-500">
                          <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
@@ -50,7 +62,7 @@
                                  <div class="w-full h-full flex items-center justify-center select-none relative"
                                       :class="(rIndex + cIndex) % 2 === 0 ? 'bg-[#f0d9b5]' : 'bg-[#b58863]'">
                                      <span x-html="getPieceSymbol(square)" 
-                                           class="absolute inset-0 flex items-center justify-center text-[min(8vw,4rem)] leading-none transition-transform duration-200"
+                                           class="absolute inset-0 flex items-center justify-center text-[9.5cqw] leading-none transition-transform duration-200"
                                            :class="square?.color === 'w' ? 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]' : 'text-black drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]'">
                                      </span>
                                  </div>
@@ -59,10 +71,11 @@
                      </div>
                  </div>
             </div>
-            <% } else if (match.game_type === 'chutes_and_ladders') { %>
+            <% } else if (renderer === 'chutes') { %>
             <!-- Chutes & Ladders Board (Left) -->
-            <div class="flex-1 flex justify-center items-center p-4 lg:p-8 bg-slate-100 min-w-[400px]" id="board-container">
-                <div class="relative aspect-square w-full max-w-[600px] max-h-[80vh] bg-white shadow-xl border-2 border-slate-300 grid grid-cols-10 grid-rows-10">
+            <div class="flex flex-none rv:flex-1 justify-center items-center p-4 lg:p-8 bg-slate-100 rv:min-w-[400px]" id="board-container">
+                <div class="relative w-full max-w-[min(100%,600px,calc(62dvh*10/var(--rows)))] rv:max-w-[min(100%,600px,calc(80vh*10/var(--rows)))] bg-white shadow-xl border-2 border-slate-300 grid"
+                     :style="`--rows: ${boardRows}; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(${boardRows}, 1fr); aspect-ratio: 10 / ${boardRows};`">
                     <!-- SVG Overlay for Transitions -->
                     <svg class="absolute inset-0 w-full h-full pointer-events-none z-10" id="transitions-layer">
                         <defs>
@@ -73,34 +86,11 @@
                                 <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626" />
                             </marker>
                         </defs>
-                        <!-- Transitions will be drawn by JS or we can hardcode if known -->
-                        <!-- Hardcoding standard layout based on Milton Bradley -->
-                        <!-- Ladders -->
-                        <line x1="5%" y1="95%" x2="25%" y2="65%" stroke="#16A34A" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-ladder)" /> <!-- 1->38 -->
-                        <line x1="35%" y1="95%" x2="65%" y2="85%" stroke="#16A34A" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-ladder)" /> <!-- 4->14 -->
-                        <line x1="85%" y1="95%" x2="95%" y2="65%" stroke="#16A34A" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-ladder)" /> <!-- 9->31 -->
-                        <line x1="5%" y1="75%" x2="15%" y2="55%" stroke="#16A34A" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-ladder)" /> <!-- 21->42 -->
-                        <line x1="75%" y1="75%" x2="35%" y2="15%" stroke="#16A34A" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-ladder)" /> <!-- 28->84 (Long!) -->
-                        <line x1="45%" y1="65%" x2="35%" y2="55%" stroke="#16A34A" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-ladder)" /> <!-- 36->44 -->
-                        <line x1="95%" y1="45%" x2="65%" y2="35%" stroke="#16A34A" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-ladder)" /> <!-- 51->67 -->
-                        <line x1="95%" y1="25%" x2="95%" y2="5%" stroke="#16A34A" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-ladder)" /> <!-- 71->91 -->
-                        <line x1="5%" y1="25%" x2="5%" y2="5%" stroke="#16A34A" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-ladder)" /> <!-- 80->100 -->
-
-                        <!-- Chutes -->
-                        <line x1="45%" y1="85%" x2="55%" y2="95%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 16->6 -->
-                        <line x1="65%" y1="55%" x2="55%" y2="75%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 47->26 -->
-                        <line x1="85%" y1="55%" x2="95%" y2="85%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 49->11 -->
-                        <line x1="45%" y1="45%" x2="75%" y2="45%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 56->53 -->
-                        <line x1="15%" y1="35%" x2="15%" y2="85%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 62->19 (Long drop) -->
-                        <line x1="35%" y1="35%" x2="5%" y2="45%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 64->60 -->
-                        <line x1="65%" y1="15%" x2="35%" y2="75%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 87->24 (Massive drop) -->
-                        <line x1="75%" y1="5%" x2="75%" y2="25%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 93->73 -->
-                        <line x1="55%" y1="5%" x2="55%" y2="25%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 95->75 -->
-                        <line x1="25%" y1="5%" x2="25%" y2="25%" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-chute)" /> <!-- 98->78 -->
+                        <g x-html="transitionsSvg()"></g>
                     </svg>
 
                     <!-- Cells -->
-                    <template x-for="i in 100" :key="i">
+                    <template x-for="i in boardSize" :key="i">
                         <div class="border border-slate-100 flex items-center justify-center relative text-xs text-slate-400"
                              :class="getBgColor(getGridIndex(i))"
                              :style="getGridStyle(i)">
@@ -114,10 +104,68 @@
                     </template>
                 </div>
             </div>
-            <% } else if (match.game_type === 'texas_holdem') { %>
+            <% } else if (renderer === 'poker') { %>
             <!-- Poker Table (Left) -->
-            <div class="flex-1 flex justify-center items-center p-4 lg:p-8 bg-slate-900 min-w-[400px]" id="board-container">
-                <div class="relative w-full max-w-[900px] aspect-[16/9] bg-[#2d5a40] rounded-[150px] border-[16px] border-[#3e2723] shadow-2xl flex items-center justify-center overflow-visible">
+            <div class="flex flex-none rv:flex-1 justify-center items-center p-3 rv:p-4 lg:p-8 bg-slate-900 rv:min-w-[400px]" id="board-container">
+                <!-- Phone version: felt panel with the board, seats listed below (the oval table needs more room than a phone has) -->
+                <div class="w-full rv:hidden" data-testid="poker-mobile">
+                    <div class="rounded-[1.75rem] border-[6px] border-[#3e2723] bg-[radial-gradient(ellipse_at_center,_#35654d_0%,_#244635_100%)] p-3 shadow-xl">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="rounded-lg bg-black/30 px-3 py-1.5">
+                                <span class="block text-xs font-bold uppercase tracking-widest text-green-300">Pot Size</span>
+                                <span class="font-mono text-xl font-bold text-white"><span class="mr-1 text-yellow-400">$</span><span x-text="pot"></span></span>
+                            </div>
+                            <label class="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full bg-black/40 px-3">
+                                <input type="checkbox" x-model="auditMode" class="h-5 w-5 rounded accent-yellow-500">
+                                <span class="text-xs font-medium uppercase tracking-wide text-white">Audit Cards</span>
+                            </label>
+                        </div>
+                        <div class="mt-3 flex min-h-[4.75rem] items-center justify-center gap-1.5 rounded-xl bg-[#1a382b]/40 p-2">
+                            <template x-for="(card, i) in communityCards" :key="i">
+                                <div class="flex h-16 w-11 flex-col items-center justify-center rounded-md bg-white shadow-lg"
+                                     :class="['h','d'].includes(card.slice(-1)) ? 'text-red-600' : 'text-slate-900'">
+                                    <div class="text-base font-bold leading-none" x-text="getCardRank(card)"></div>
+                                    <div class="text-lg leading-none" x-text="getCardSuit(card)"></div>
+                                </div>
+                            </template>
+                            <template x-if="communityCards.length === 0">
+                                <div class="font-mono text-xs uppercase tracking-widest text-green-100/60">Waiting for Flop</div>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                        <template x-for="(player, index) in players" :key="index">
+                            <div class="min-w-0 rounded-xl border p-2 text-white"
+                                 :class="activeSeat === (index + 1) ? 'border-yellow-400 bg-slate-800 ring-2 ring-yellow-400/40' : 'border-slate-700 bg-slate-800/70'">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex min-w-0 items-center gap-1.5">
+                                        <span class="text-xs font-bold uppercase tracking-wide text-slate-300" x-text="'Seat ' + (index + 1)"></span>
+                                        <span x-show="dealerSeat === (index + 1)" class="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-black text-slate-900" title="Dealer">D</span>
+                                    </div>
+                                    <span x-show="player.folded" class="text-xs uppercase text-slate-400">Fold</span>
+                                </div>
+                                <div class="mt-1 flex items-baseline justify-between gap-2">
+                                    <span class="font-mono text-sm">$<span x-text="player.stack"></span></span>
+                                    <span x-show="player.currentBet > 0" class="font-mono text-xs font-bold text-yellow-400">+<span x-text="player.currentBet"></span></span>
+                                </div>
+                                <div class="mt-2 flex h-12 gap-1" :class="{'opacity-50': player.folded}">
+                                    <template x-for="card in player.holeCards">
+                                        <div class="relative flex h-12 w-9 flex-col items-center justify-center rounded border border-gray-200 bg-white"
+                                             :class="['h','d'].includes(card.slice(-1)) ? 'text-red-600' : 'text-slate-900'">
+                                            <div x-show="auditMode || isShowdown" class="flex flex-col items-center">
+                                                <div class="text-sm font-bold leading-none" x-text="getCardRank(card)"></div>
+                                                <div class="text-base leading-none" x-text="getCardSuit(card)"></div>
+                                            </div>
+                                            <div x-show="!auditMode && !isShowdown" class="absolute inset-0 rounded border-2 border-white/20"
+                                                 style="background-image: repeating-linear-gradient(45deg, #1e40af 0, #1e40af 2px, #172554 0, #172554 4px);"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="relative hidden rv:flex w-full max-w-[900px] aspect-[16/9] bg-[#2d5a40] rounded-[150px] border-[16px] border-[#3e2723] shadow-2xl flex items-center justify-center overflow-visible">
                     <!-- Felt Texture -->
                     <div class="absolute inset-0 rounded-[135px] border-[2px] border-[#1a382b] bg-[radial-gradient(ellipse_at_center,_#35654d_0%,_#244635_100%)]"></div>
                     
@@ -166,13 +214,13 @@
                                  :class="{'translate-y-2 opacity-50': player.folded}"
                                  x-show="player.holeCards.length > 0">
                                 <template x-for="card in player.holeCards">
-                                    <div class="w-10 h-14 md:w-12 md:h-16 rounded-md shadow-lg border border-gray-200 flex flex-col items-center justify-center relative bg-white"
+                                    <div class="w-10 h-14 rv:w-12 rv:h-16 rounded-md shadow-lg border border-gray-200 flex flex-col items-center justify-center relative bg-white"
                                          :class="['h','d'].includes(card.slice(-1)) ? 'text-red-600' : 'text-slate-900'">
                                         
                                         <!-- Front -->
                                         <div x-show="auditMode || isShowdown" class="flex flex-col items-center justify-center w-full h-full">
-                                            <div class="text-sm md:text-lg font-bold leading-none" x-text="getCardRank(card)"></div>
-                                            <div class="text-base md:text-xl leading-none" x-text="getCardSuit(card)"></div>
+                                            <div class="text-sm rv:text-lg font-bold leading-none" x-text="getCardRank(card)"></div>
+                                            <div class="text-base rv:text-xl leading-none" x-text="getCardSuit(card)"></div>
                                         </div>
                                         
                                         <!-- Back (Hidden) -->
@@ -185,11 +233,11 @@
 
                             <!-- Avatar -->
                             <div class="relative group">
-                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-full border-4 flex items-center justify-center shadow-xl relative bg-slate-100 transition-all duration-300"
+                                <div class="w-14 h-14 rv:w-16 rv:h-16 rounded-full border-4 flex items-center justify-center shadow-xl relative bg-slate-100 transition-all duration-300"
                                      :class="activeSeat === (index + 1) ? 'border-yellow-400 ring-4 ring-yellow-400/30 scale-110 z-30' : 'border-slate-300 grayscale opacity-90'">
                                     <div class="text-center">
                                         <div class="text-[8px] uppercase font-bold text-slate-500 tracking-wider" x-text="'Seat ' + (index + 1)"></div>
-                                        <div class="font-black text-slate-800 text-xs md:text-sm">AI</div>
+                                        <div class="font-black text-slate-800 text-xs rv:text-sm">AI</div>
                                     </div>
                                     <!-- Dealer Button -->
                                     <div x-show="dealerSeat === (index + 1)" class="absolute -top-2 -right-2 w-5 h-5 bg-white rounded-full border-2 border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-900 shadow-md z-40">D</div>
@@ -212,10 +260,65 @@
 
                 </div>
             </div>
-            <% } else if (match.game_type === 'blackjack') { %>
+            <% } else if (renderer === 'blackjack') { %>
             <!-- Blackjack Table (Left) -->
-            <div class="flex-1 flex justify-center items-center p-4 lg:p-8 bg-slate-900 min-w-[400px]" id="board-container">
-                <div class="relative w-full max-w-[900px] aspect-[16/9] bg-[#0f3828] rounded-[150px] border-[16px] border-[#3e2723] shadow-2xl flex flex-col items-center justify-between py-12 overflow-visible">
+            <div class="flex flex-none rv:flex-1 justify-center items-center p-3 rv:p-4 lg:p-8 bg-slate-900 rv:min-w-[400px]" id="board-container">
+                <!-- Phone version: dealer panel with the seats listed below -->
+                <div class="w-full rv:hidden" data-testid="blackjack-mobile">
+                    <div class="rounded-[1.75rem] border-[6px] border-[#3e2723] bg-[radial-gradient(ellipse_at_center,_#1a4533_0%,_#0a261a_100%)] p-3 text-center shadow-xl">
+                        <div class="text-xs font-bold uppercase tracking-widest text-green-200">Dealer</div>
+                        <div class="mt-2 flex min-h-[4.5rem] justify-center gap-1.5">
+                            <template x-for="(card, i) in dealerHand" :key="i">
+                                <div class="relative flex h-16 w-11 flex-col items-center justify-center rounded-md bg-white shadow-lg"
+                                     :class="['h','d'].includes(card.slice(-1)) ? 'text-red-600' : 'text-slate-900'">
+                                    <template x-if="!dealerRevealed && i > 0 && !auditMode">
+                                        <div class="absolute inset-0 rounded-md border-2 border-white/20"
+                                             style="background-image: repeating-linear-gradient(45deg, #7f1d1d 0, #7f1d1d 2px, #991b1b 0, #991b1b 4px);"></div>
+                                    </template>
+                                    <div x-show="dealerRevealed || i === 0 || auditMode" class="flex flex-col items-center">
+                                        <div class="text-base font-bold leading-none" x-text="getCardRank(card)"></div>
+                                        <div class="text-lg leading-none" x-text="getCardSuit(card)"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="mt-2 inline-block rounded-full bg-black/40 px-3 py-1 font-mono text-sm text-white" x-show="dealerRevealed || auditMode">
+                            <span x-text="getHandValue(dealerHand)"></span>
+                        </div>
+                    </div>
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                        <template x-for="(player, index) in players" :key="index">
+                            <div class="min-w-0 rounded-xl border p-2 text-white"
+                                 :class="activeSeat === (index + 1) ? 'border-yellow-400 bg-slate-800 ring-2 ring-yellow-400/40' : 'border-slate-700 bg-slate-800/70'">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-bold uppercase tracking-wide text-slate-300" x-text="'Seat ' + (index + 1)"></span>
+                                    <span class="rounded px-1.5 py-0.5 text-xs font-bold uppercase"
+                                          :class="{
+                                              'bg-yellow-500 text-black': player.status === 'active' && activeSeat === (index + 1),
+                                              'bg-green-500 text-white': player.status === 'stand',
+                                              'bg-red-500 text-white': player.status === 'bust',
+                                              'bg-slate-600 text-slate-300': player.status === 'active' && activeSeat !== (index + 1)
+                                          }"
+                                          x-text="player.status"></span>
+                                </div>
+                                <div class="mt-1 flex items-baseline justify-between gap-2 font-mono">
+                                    <span class="text-lg font-bold" x-text="getHandValue(player.hand)"></span>
+                                    <span class="text-xs text-slate-400" x-text="'$' + player.stack"></span>
+                                </div>
+                                <div class="mt-2 flex min-h-[3rem] flex-wrap gap-1">
+                                    <template x-for="card in player.hand">
+                                        <div class="relative flex h-12 w-9 flex-col items-center justify-center rounded border border-gray-200 bg-white shadow"
+                                             :class="['h','d'].includes(card.slice(-1)) ? 'text-red-600' : 'text-slate-900'">
+                                            <div class="text-sm font-bold leading-none" x-text="getCardRank(card)"></div>
+                                            <div class="text-base leading-none" x-text="getCardSuit(card)"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="relative hidden rv:flex w-full max-w-[900px] aspect-[16/9] bg-[#0f3828] rounded-[150px] border-[16px] border-[#3e2723] shadow-2xl flex flex-col items-center justify-between py-12 overflow-visible">
                     <!-- Felt Texture -->
                     <div class="absolute inset-0 rounded-[135px] border-[2px] border-[#0a261a] bg-[radial-gradient(ellipse_at_center,_#1a4533_0%,_#0a261a_100%)]"></div>
                     
@@ -294,41 +397,76 @@
             </div>
             <% } %>
 
+            <% if (renderer === 'generic') { %>
+            <!-- Generic scoreboard, phone version: a strip of players above the transcript -->
+            <ul class="scroll-strip flex gap-4 border-b border-border bg-white px-4 py-2 rv:hidden" aria-label="Players">
+                <% (match.participants || []).forEach((p, idx) => { const role = p.role || ('player' + (idx + 1)); %>
+                <li class="flex min-w-0 max-w-[16rem] items-center gap-2">
+                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold" :class="roleColor('<%= role %>')" x-text="roleInitial('<%= role %>')"></span>
+                    <span class="min-w-0">
+                        <span class="block truncate text-sm font-medium"><%= p.model ? p.model.name : role %></span>
+                        <span class="block truncate font-mono text-xs text-secondary"><%= role %> &middot; <span x-text="(eventCounts['<%= role %>'] || 0) + ' moves'"></span><% if (p.score !== null && p.score !== undefined) { %> &middot; score <%= p.score %><% } %></span>
+                    </span>
+                </li>
+                <% }) %>
+            </ul>
+            <!-- Generic scoreboard (generated games) -->
+            <aside class="hidden rv:flex w-72 shrink-0 flex-col border-r border-border bg-white" aria-label="Scoreboard">
+                <div class="px-4 py-3 border-b border-border bg-gray-50/50">
+                    <h3 class="font-semibold text-sm text-secondary uppercase tracking-wider">Players</h3>
+                </div>
+                <ul class="divide-y divide-border">
+                    <% (match.participants || []).forEach((p, idx) => { const role = p.role || ('player' + (idx + 1)); %>
+                    <li class="px-4 py-3 flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0" :class="roleColor('<%= role %>')" x-text="roleInitial('<%= role %>')"></span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-sm font-medium truncate"><%= p.model ? p.model.name : role %></span>
+                            <span class="block text-[11px] text-secondary font-mono"><%= role %> &middot; <span x-text="(eventCounts['<%= role %>'] || 0) + ' moves'"></span></span>
+                        </span>
+                        <% if (p.score !== null && p.score !== undefined) { %>
+                        <span class="text-sm font-semibold tabular-nums" title="Final score"><%= p.score %></span>
+                        <% } %>
+                    </li>
+                    <% }) %>
+                </ul>
+                <div class="px-4 py-3 border-t border-border text-xs text-secondary">
+                    <div class="font-semibold uppercase tracking-wider mb-1">Latest event</div>
+                    <div class="font-mono break-words" x-text="currentEvent ? (currentEvent.type + ': ' + getEventText(currentEvent)) : 'Not started'"></div>
+                </div>
+            </aside>
+            <% } %>
+
             <!-- Transcript (Center/Left) -->
-            <div class="<%= match.game_type === 'chess' ? 'w-full md:w-96 border-l border-border shrink-0' : 'flex-1' %> overflow-y-auto p-4 md:p-6 flex flex-col items-center bg-gray-50/50" id="transcript">
+            <div class="h-[36dvh] min-h-[200px] flex-none rv:h-auto rv:min-h-0 <%= renderer === 'chess' ? 'w-full rv:w-96 border-t border-border rv:border-t-0 rv:border-l' : 'rv:flex-1' %> overflow-y-auto p-4 rv:p-6 flex flex-col items-center bg-gray-50/50" id="transcript">
                 <div class="w-full max-w-3xl space-y-6 pb-12">
                     <template x-for="(event, index) in visibleEvents" :key="event.id">
                         <div class="animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <!-- System Message -->
                             <div x-show="event.actor_role === 'system'" class="flex justify-center my-4">
-                                <span class="bg-gray-200 text-gray-600 text-[10px] md:text-xs font-mono px-3 py-1 rounded-full uppercase tracking-wide text-center break-all" x-text="getEventText(event)"></span>
+                                <span class="bg-gray-200 text-gray-600 text-[10px] rv:text-xs font-mono px-3 py-1 rounded-full uppercase tracking-wide text-center break-all" x-text="getEventText(event)"></span>
                             </div>
 
                             <!-- Player Message -->
                             <div x-show="event.actor_role !== 'system'" 
-                                 class="flex gap-3 md:gap-4" 
+                                 class="flex gap-3 rv:gap-4" 
                                  :class="{'flex-row-reverse': event.actor_role === 'player2' || event.actor_role === 'black'}">
                                 
                                 <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold shadow-sm ring-2 ring-white"
-                                     :class="{
-                                         'bg-blue-100 text-blue-700': event.actor_role === 'player1' || event.actor_role === 'white', 
-                                         'bg-emerald-100 text-emerald-700': event.actor_role === 'player2' || event.actor_role === 'black'
-                                     }">
-                                     <span x-text="(event.actor_role === 'player1' || event.actor_role === 'white') ? 'W' : 'B'"></span>
+                                     :class="roleColor(event.actor_role)">
+                                     <span x-text="roleInitial(event.actor_role)"></span>
                                 </div>
 
                                 <div class="max-w-[85%] min-w-0">
-                                    <div class="text-[10px] md:text-xs text-secondary mb-1 px-1 flex items-center gap-1" 
+                                    <div class="text-[10px] rv:text-xs text-secondary mb-1 px-1 flex items-center gap-1" 
                                          :class="{'flex-row-reverse': event.actor_role === 'player2' || event.actor_role === 'black'}">
                                         <span class="font-medium uppercase truncate" x-text="event.actor_role"></span>
                                         <span class="opacity-50">•</span>
                                         <span class="font-mono opacity-75 whitespace-nowrap" x-text="'T' + event.turn_index"></span>
                                     </div>
-                                    <div class="p-3 md:p-4 rounded-2xl text-sm leading-relaxed shadow-sm border border-transparent overflow-hidden"
-                                         :class="{
-                                             'bg-white text-primary rounded-tl-none border-gray-200': event.actor_role === 'player1' || event.actor_role === 'white',
-                                             'bg-blue-600 text-white rounded-tr-none shadow-md': event.actor_role === 'player2' || event.actor_role === 'black'
-                                         }">
+                                    <div class="p-3 rv:p-4 rounded-2xl text-sm leading-relaxed shadow-sm border border-transparent overflow-hidden"
+                                         :class="(event.actor_role === 'player2' || event.actor_role === 'black')
+                                             ? 'bg-blue-600 text-white rounded-tr-none shadow-md'
+                                             : 'bg-white text-primary rounded-tl-none border-gray-200'">
                                         <div class="font-mono break-words whitespace-pre-wrap" x-text="getEventText(event)"></div>
                                     </div>
                                 </div>
@@ -375,7 +513,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        function replayViewer(matchId) {
+        function replayViewer(matchId, initialStatus, initialBoardSize) {
             return {
                 matchId,
                 events: [],
@@ -399,16 +537,97 @@
                 dealerHand: [],
                 dealerRevealed: false,
 
-                async init() {
-                    const res = await fetch(`/matches/${this.matchId}/events`);
-                    this.events = await res.json();
+                boardSize: initialBoardSize || 100,
+                get boardRows() { return Math.ceil(this.boardSize / 10); },
+                transitions: [],
+
+                // Fallback for matches recorded before engines published their layout.
+                STANDARD_TRANSITIONS: [[1,38],[4,14],[9,31],[21,42],[28,84],[36,44],[51,67],[71,91],[80,100],[16,6],[47,26],[49,11],[56,53],[62,19],[64,60],[87,24],[93,73],[95,75],[98,78]],
+
+                cellCenter(i) {
+                    const cols = 10;
+                    const rowFromBottom = Math.floor((i - 1) / cols);
+                    const col = rowFromBottom % 2 === 0 ? (i - 1) % cols : cols - 1 - ((i - 1) % cols);
+                    return { x: (col + 0.5) / cols * 100, y: 100 - (rowFromBottom + 0.5) / this.boardRows * 100 };
+                },
+
+                transitionsSvg() {
+                    const list = this.transitions.length ? this.transitions : this.STANDARD_TRANSITIONS
+                        .filter(([from, to]) => from <= this.boardSize && to <= this.boardSize)
+                        .map(([from, to]) => ({ from, to }));
+                    return list.map(({ from, to }) => {
+                        const a = this.cellCenter(from);
+                        const b = this.cellCenter(to);
+                        const ladder = to > from;
+                        const color = ladder ? '#16A34A' : '#DC2626';
+                        const marker = ladder ? 'arrowhead-ladder' : 'arrowhead-chute';
+                        return `<line x1="${a.x}%" y1="${a.y}%" x2="${b.x}%" y2="${b.y}%" stroke="${color}" stroke-width="2" ${ladder ? 'stroke-dasharray="4"' : ''} marker-end="url(#${marker})"><title>${from} to ${to}</title></line>`;
+                    }).join('');
+                },
+
+                // Generic replay helpers
+                roleColor(role) {
+                    const palette = ['bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700', 'bg-amber-100 text-amber-800', 'bg-purple-100 text-purple-700', 'bg-rose-100 text-rose-700', 'bg-cyan-100 text-cyan-800'];
+                    let hash = 0;
+                    for (const ch of String(role || '')) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+                    return palette[hash % palette.length];
+                },
+                roleInitial(role) {
+                    const text = String(role || '?');
+                    return text === 'system' ? 'S' : text.charAt(0).toUpperCase() + (text.match(/\d+$/) || [''])[0];
+                },
+                get eventCounts() {
+                    const counts = {};
+                    for (let i = 0; i <= this.currentIndex; i++) {
+                        const role = this.events[i] && this.events[i].actor_role;
+                        if (role && role !== 'system') counts[role] = (counts[role] || 0) + 1;
+                    }
+                    return counts;
+                },
+
+                live: initialStatus === 'PENDING' || initialStatus === 'RUNNING',
+                pollTimer: null,
+
+                async loadEvents() {
+                    // After the first load only newer events are fetched (?after=<last seq>).
+                    const lastSeq = this.events.length ? this.events[this.events.length - 1].seq : null;
+                    const url = `/matches/${this.matchId}/events` + (lastSeq !== null && lastSeq !== undefined ? `?after=${lastSeq}` : '');
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error('Failed to load events');
+                    const status = res.headers.get('X-Match-Status');
+                    const fetched = await res.json();
+                    const followTail = this.currentIndex === this.events.length - 1;
+                    const incremental = lastSeq !== null && lastSeq !== undefined;
+                    const known = new Set(this.events.map(e => e.seq));
+                    const events = incremental ? this.events.concat(fetched.filter(e => !known.has(e.seq))) : fetched;
+                    const start = events.find(e => e.type === 'MATCH_START');
+                    if (start && start.payload) {
+                        if (start.payload.board_size) this.boardSize = start.payload.board_size;
+                        if (Array.isArray(start.payload.transitions)) this.transitions = start.payload.transitions;
+                    }
+                    this.events = events;
+                    if (this.live && followTail && events.length) this.currentIndex = events.length - 1;
+                    if (status && status !== 'PENDING' && status !== 'RUNNING' && this.live) {
+                        this.live = false;
+                        clearInterval(this.pollTimer);
+                        // Reload once so the final status banner and result are shown.
+                        window.location.reload();
+                        return;
+                    }
                     this.updateBoard();
+                },
+
+                async init() {
+                    await this.loadEvents();
+                    if (this.live) {
+                        this.pollTimer = setInterval(() => this.loadEvents().catch(() => {}), 3000);
+                    }
                 },
 
                 getHandValue(cards) {
                     let value = 0;
                     let aces = 0;
-                    for (const card of cards) {
+                    for (const card of (cards || [])) {
                         const rank = this.getCardRank(card);
                         if (['10', 'J', 'Q', 'K'].includes(rank)) value += 10;
                         else if (rank === 'A') { value += 11; aces++; }
@@ -489,7 +708,7 @@
                 // Helper to map 1-100 to CSS Grid order (Boustrophedon / Zig-Zag)
                 getGridStyle(i) {
                     const rowFromBottom = Math.floor((i - 1) / 10);
-                    const cssRow = 10 - rowFromBottom;
+                    const cssRow = this.boardRows - rowFromBottom;
                     let cssCol;
                     if (rowFromBottom % 2 === 0) {
                         cssCol = (i - 1) % 10 + 1;
@@ -556,7 +775,7 @@
                                 const count = p.player_count || 1;
                                 bjPlayers = [];
                                 for(let j=0; j<count; j++) {
-                                    bjPlayers.push({id: `seat${j+1}`, hand: [], stack: 1000 - (p.fixed_bet || 10), status: 'active', bet: p.fixed_bet || 10});
+                                    bjPlayers.push({id: `seat${j+1}`, hand: [], stack: (p.starting_stack || 1000) - (p.fixed_bet || 10), status: 'active', bet: p.fixed_bet || 10});
                                 }
                             } else if (e.type === 'DEAL_CARD') {
                                 if (bjPlayers[p.seat - 1]) bjPlayers[p.seat - 1].hand.push(p.card);
@@ -665,7 +884,12 @@
                     if (event.payload?.san) return event.payload.san;
                     if (event.payload?.content) return event.payload.content;
                     if (event.payload?.message) return event.payload.message;
-                    if (event.type === 'RESULT') return `Game Over: ${event.payload.outcome || ''} (${event.payload.reason || ''})`;
+                    if (event.type === 'RESULT') {
+                        const bits = [event.payload.outcome, event.payload.reason].filter(Boolean).join(' - ');
+                        const winner = event.payload.winner_seat !== undefined ? ` (winner: seat ${event.payload.winner_seat})` : '';
+                        return `Game Over${bits ? ': ' + bits : ''}${winner}`;
+                    }
+                    if (event.type === 'MATCH_TRUNCATED') return `Stopped early: ${event.payload.reason}`;
                     return JSON.stringify(event.payload);
                 },
 

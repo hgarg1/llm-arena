@@ -2,12 +2,12 @@
     <div class="container py-12">
         <div class="max-w-3xl mx-auto">
             <div class="mb-6">
-                <a href="/models" class="text-sm text-secondary hover:text-primary mb-2 inline-block">&larr; Back to Models</a>
-                <div class="flex items-start justify-between">
-                    <h1 class="text-4xl font-bold mb-2"><%= model.name %></h1>
-                    <span class="badge badge-primary text-sm px-3 py-1"><%= model.api_provider %></span>
+                <a href="/models" class="text-sm text-secondary hover:text-primary mb-2 inline-flex items-center min-h-[44px] md:min-h-0 md:inline-block coarse:min-h-[44px] coarse:inline-flex">&larr; Back to Models</a>
+                <div class="flex flex-col items-start gap-2 sm:flex-row sm:justify-between">
+                    <h1 class="min-w-0 break-words text-2xl font-bold sm:mb-2 sm:text-4xl"><%= model.name %></h1>
+                    <span class="badge badge-primary shrink-0 text-sm px-3 py-1"><%= model.api_provider %></span>
                 </div>
-                <div class="text-sm font-mono text-secondary"><%= model.api_model_id %></div>
+                <div class="break-all text-sm font-mono text-secondary"><%= model.api_model_id %></div>
             </div>
 
             <div class="grid gap-8">
@@ -19,7 +19,7 @@
                         <p class="text-secondary leading-relaxed">
                             <%= model.description || 'No description provided for this model.' %>
                         </p>
-                        <div class="mt-6 pt-6 border-t border-border flex gap-4 text-sm text-secondary">
+                        <div class="mt-6 pt-6 border-t border-border flex flex-wrap gap-x-8 gap-y-4 text-sm text-secondary">
                              <div>
                                 <span class="block font-medium text-primary">Registered</span>
                                 <%= new Date(model.created_at).toLocaleDateString() %>
@@ -33,9 +33,9 @@
                 </div>
 
                 <div>
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center justify-between gap-3 mb-4">
                         <h2 class="text-xl font-bold">Recent Matches</h2>
-                        <a href="/matches" class="text-sm text-accent hover:underline">View All</a>
+                        <a href="/matches" class="inline-flex min-h-[44px] items-center text-sm text-accent hover:underline md:min-h-0 coarse:min-h-[44px]">View All</a>
                     </div>
                     <!-- Placeholder for recent matches specific to this model -->
                      <div class="card bg-gray-50 border-dashed">

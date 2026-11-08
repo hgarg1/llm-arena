@@ -1,493 +1,179 @@
 <%- include('../../partials/admin_header') %>
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Game Builder</h1>
-        <p class="mt-1 text-sm text-gray-500">Iterate on your game definition and save drafts.</p>
-    </div>
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-gray-900">Game Builder</h1>
+  <p class="mt-1 text-sm text-gray-500">Iterate on your game definition and save drafts.</p>
+</div>
+<% if (success) { %>
+  <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm flex items-center justify-between">
+    <span><%= success %></span>
+    <a href="/admin/games?success=<%= encodeURIComponent(String(success)) %>&newId=<%= game.id %>" class="text-xs uppercase tracking-widest underline">Back to Games</a>
+  </div>
+<% } %>
+<% if (error) { %><div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div><% } %>
+<% if (warning) { %><div class="mb-6 rounded-md bg-amber-50 p-4 border border-amber-200 text-amber-800 text-sm"><%= warning %></div><% } %>
+<% if (builtInReadOnly) { %>
+  <div class="mb-6 rounded-md bg-blue-50 p-4 border border-blue-200 text-blue-800 text-sm">
+    This is a built-in game. Its rules, engine lifecycle, and availability are managed in code, so the admin game builder treats it as read-only.
+  </div>
+<% } %>
 
-    <% if (success) { %>
-        <div class="mb-6 rounded-md bg-green-50 p-4 border border-green-200 text-green-700 text-sm flex items-center justify-between">
-            <span><%= success %></span>
-            <a href="/admin/games?success=<%= encodeURIComponent(success) %>&newId=<%= game.id %>" class="text-xs uppercase tracking-widest text-green-700 underline">Back to Games</a>
+<div class="grid lg:grid-cols-4 gap-6">
+  <aside class="lg:col-span-1 bg-white rounded-lg shadow border border-gray-200 p-4">
+    <h3 class="text-xs font-bold uppercase text-gray-500 mb-3">Steps</h3>
+    <nav class="space-y-2 text-sm">
+      <a href="/admin/games/<%= game.id %>?step=basics" class="block px-3 py-2 rounded <%= step === 'basics' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">1. Basics</a>
+      <a href="/admin/games/<%= game.id %>?step=config" class="block px-3 py-2 rounded <%= step === 'config' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">2. Match Config</a>
+      <a href="/admin/games/<%= game.id %>?step=assets" class="block px-3 py-2 rounded <%= step === 'assets' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">3. Assets</a>
+      <a href="/admin/games/<%= game.id %>?step=uiux" class="block px-3 py-2 rounded <%= step === 'uiux' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">4. UI / UX</a>
+      <a href="/admin/games/<%= game.id %>?step=review" class="block px-3 py-2 rounded <%= step === 'review' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">5. Review & Publish</a>
+    </nav>
+  </aside>
+
+  <div class="lg:col-span-3 space-y-6">
+    <% if (step === 'basics') { %>
+      <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="step" value="basics">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Game Name</label><input type="text" name="name" value="<%= game.name %>" class="w-full px-3 py-2 border border-gray-300 rounded" required></div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Game Key</label><input type="text" name="key" value="<%= game.key %>" class="w-full px-3 py-2 border border-gray-300 rounded"></div>
         </div>
-    <% } %>
-    <% if (error) { %>
-        <div class="mb-6 rounded-md bg-red-50 p-4 border border-red-200 text-red-700 text-sm"><%= error %></div>
-    <% } %>
-
-    <div class="grid lg:grid-cols-4 gap-6">
-        <aside class="lg:col-span-1 bg-white rounded-lg shadow border border-gray-200 p-4">
-            <h3 class="text-xs font-bold uppercase text-gray-500 mb-3">Steps</h3>
-            <nav class="space-y-2 text-sm">
-                <a href="/admin/games/<%= game.id %>?step=basics" class="block px-3 py-2 rounded <%= step === 'basics' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">1. Basics</a>
-                <a href="/admin/games/<%= game.id %>?step=config" class="block px-3 py-2 rounded <%= step === 'config' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">2. Match Config</a>
-                <a href="/admin/games/<%= game.id %>?step=assets" class="block px-3 py-2 rounded <%= step === 'assets' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">3. Assets</a>
-                <a href="/admin/games/<%= game.id %>?step=uiux" class="block px-3 py-2 rounded <%= step === 'uiux' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">4. UI / UX</a>
-                <a href="/admin/games/<%= game.id %>?step=review" class="block px-3 py-2 rounded <%= step === 'review' ? 'bg-slate-900 text-white' : 'text-gray-600 hover:bg-gray-100' %>">5. Review & Publish</a>
-            </nav>
-        </aside>
-
-        <div class="lg:col-span-3 space-y-6">
-            <% if (step === 'basics') { %>
-                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <input type="hidden" name="step" value="basics">
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Game Name</label>
-                            <input type="text" name="name" value="<%= game.name %>" class="w-full px-3 py-2 border border-gray-300 rounded" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Game Key</label>
-                            <input type="text" name="key" value="<%= game.key %>" class="w-full px-3 py-2 border border-gray-300 rounded">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Short Description</label>
-                        <input type="text" name="description_short" value="<%= game.description_short || '' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Long Description</label>
-                        <textarea name="description_long" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded"><%= game.description_long || '' %></textarea>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Roles (comma separated)</label>
-                            <input type="text" name="roles" value="<%= (game.roles || []).join(', ') %>" class="w-full px-3 py-2 border border-gray-300 rounded">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Capabilities (comma separated)</label>
-                            <input type="text" name="capabilities" value="<%= (game.capabilities || []).join(', ') %>" class="w-full px-3 py-2 border border-gray-300 rounded">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Max Players</label>
-                        <input type="number" min="1" name="max_players" value="<%= game.max_players || '' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
-                    </div>
-                    <div class="flex justify-end gap-2">
-                        <button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button>
-                        <button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button>
-                    </div>
-                </form>
-            <% } %>
-
-            <% if (step === 'config') { %>
-                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4" x-data="matchConfigForm(<%= Math.max(game.settings.length, 1) %>)" @submit.prevent="if (validate()) $el.submit()">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <input type="hidden" name="step" value="config">
-                    <div class="flex items-center justify-between">
-                        <h3 class="font-bold text-gray-900">Match Config Settings</h3>
-                        <button type="button" class="btn btn-xs btn-secondary" @click="rows++">Add Setting</button>
-                    </div>
-                    <p class="text-xs text-gray-500">Fields adapt to each setting type. Enum options are required for Enum types.</p>
-                    <div x-show="errors.length" x-cloak class="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                        <div class="font-semibold mb-1">Fix these issues before saving:</div>
-                        <ul class="list-disc pl-5 space-y-1">
-                            <template x-for="err in errors" :key="err">
-                                <li x-text="err"></li>
-                            </template>
-                        </ul>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-xs">
-                            <thead class="text-gray-500 uppercase bg-gray-50">
-                                <tr>
-                                    <th class="p-2 text-left">Key</th>
-                                    <th class="p-2 text-left">Type</th>
-                                    <th class="p-2 text-left">Min</th>
-                                    <th class="p-2 text-left">Max</th>
-                                    <th class="p-2 text-left">Default</th>
-                                    <th class="p-2 text-left">Tier</th>
-                                    <th class="p-2 text-left">Enum Options</th>
-                                    <th class="p-2 text-left">Help Text</th>
-                                    <th class="p-2 text-left">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y">
-                                <% const settings = game.settings || []; %>
-                                <% for (let i = 0; i < Math.max(settings.length, 1); i++) { 
-                                    const s = settings[i] || {};
-                                %>
-                                <tr x-data="{ type: '<%= s.type || 'TEXT' %>' }" data-setting-row>
-                                    <td class="p-2"><input type="text" name="setting_key" value="<%= s.key || '' %>" class="w-40 px-2 py-1 border border-gray-300 rounded" data-field="key"></td>
-                                    <td class="p-2">
-                                        <select name="setting_type" class="w-28 px-2 py-1 border border-gray-300 rounded" x-model="type" data-field="type">
-                                            <option value="BOOLEAN" <%= s.type === 'BOOLEAN' ? 'selected' : '' %>>Boolean</option>
-                                            <option value="INT" <%= s.type === 'INT' ? 'selected' : '' %>>Int</option>
-                                            <option value="FLOAT" <%= s.type === 'FLOAT' ? 'selected' : '' %>>Float</option>
-                                            <option value="ENUM" <%= s.type === 'ENUM' ? 'selected' : '' %>>Enum</option>
-                                            <option value="TEXT" <%= s.type === 'TEXT' ? 'selected' : '' %>>Text</option>
-                                        </select>
-                                    </td>
-                                    <td class="p-2">
-                                        <input type="number" name="setting_min" value="<%= s.min_value ?? '' %>" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="min">
-                                    </td>
-                                    <td class="p-2">
-                                        <input type="number" name="setting_max" value="<%= s.max_value ?? '' %>" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="max">
-                                    </td>
-                                    <td class="p-2">
-                                        <input type="text" name="setting_default" value="<%= s.default_value ?? '' %>" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'TEXT' || type === 'ENUM'" x-cloak :disabled="!(type === 'TEXT' || type === 'ENUM')" data-field="default">
-                                        <input type="number" name="setting_default" value="<%= s.default_value ?? '' %>" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="default">
-                                        <select name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'BOOLEAN'" x-cloak :disabled="type !== 'BOOLEAN'" data-field="default">
-                                            <option value="">-</option>
-                                            <option value="true" <%= s.default_value === true ? 'selected' : '' %>>true</option>
-                                            <option value="false" <%= s.default_value === false ? 'selected' : '' %>>false</option>
-                                        </select>
-                                    </td>
-                                    <td class="p-2">
-                                        <select name="setting_tier" class="w-28 px-2 py-1 border border-gray-300 rounded">
-                                            <option value="FREE" <%= s.tier_required === 'FREE' ? 'selected' : '' %>>Free</option>
-                                            <option value="PRO" <%= s.tier_required === 'PRO' ? 'selected' : '' %>>Pro</option>
-                                            <option value="ENTERPRISE" <%= s.tier_required === 'ENTERPRISE' ? 'selected' : '' %>>Enterprise</option>
-                                        </select>
-                                    </td>
-                                    <td class="p-2">
-                                        <input type="text" name="setting_enum" value="<%= (s.enum_options || []).join(', ') %>" class="w-36 px-2 py-1 border border-gray-300 rounded" x-show="type === 'ENUM'" x-cloak :disabled="type !== 'ENUM'" data-field="enum">
-                                    </td>
-                                    <td class="p-2"><input type="text" name="setting_help" value="<%= s.help_text || '' %>" class="w-48 px-2 py-1 border border-gray-300 rounded"></td>
-                                    <td class="p-2">
-                                        <button type="button" class="btn btn-xs btn-ghost text-red-600" @click="disableRow($event)">Delete</button>
-                                    </td>
-                                </tr>
-                                <% } %>
-                                <template x-for="idx in Array.from({ length: rows - <%= Math.max(settings.length, 1) %> }, (_, i) => i)" :key="idx">
-                                    <tr x-data="{ type: 'TEXT' }" data-setting-row>
-                                        <td class="p-2"><input type="text" name="setting_key" class="w-40 px-2 py-1 border border-gray-300 rounded" data-field="key"></td>
-                                        <td class="p-2">
-                                            <select name="setting_type" class="w-28 px-2 py-1 border border-gray-300 rounded" x-model="type" data-field="type">
-                                                <option value="BOOLEAN">Boolean</option>
-                                                <option value="INT">Int</option>
-                                                <option value="FLOAT">Float</option>
-                                                <option value="ENUM">Enum</option>
-                                                <option value="TEXT">Text</option>
-                                            </select>
-                                        </td>
-                                        <td class="p-2">
-                                            <input type="number" name="setting_min" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="min">
-                                        </td>
-                                        <td class="p-2">
-                                            <input type="number" name="setting_max" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="max">
-                                        </td>
-                                        <td class="p-2">
-                                            <input type="text" name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'TEXT' || type === 'ENUM'" x-cloak :disabled="!(type === 'TEXT' || type === 'ENUM')" data-field="default">
-                                            <input type="number" name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="default">
-                                            <select name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'BOOLEAN'" x-cloak :disabled="type !== 'BOOLEAN'" data-field="default">
-                                                <option value="">-</option>
-                                                <option value="true">true</option>
-                                                <option value="false">false</option>
-                                            </select>
-                                        </td>
-                                        <td class="p-2">
-                                            <select name="setting_tier" class="w-28 px-2 py-1 border border-gray-300 rounded">
-                                                <option value="FREE">Free</option>
-                                                <option value="PRO">Pro</option>
-                                                <option value="ENTERPRISE">Enterprise</option>
-                                            </select>
-                                        </td>
-                                        <td class="p-2">
-                                            <input type="text" name="setting_enum" class="w-36 px-2 py-1 border border-gray-300 rounded" x-show="type === 'ENUM'" x-cloak :disabled="type !== 'ENUM'" data-field="enum">
-                                        </td>
-                                        <td class="p-2"><input type="text" name="setting_help" class="w-48 px-2 py-1 border border-gray-300 rounded"></td>
-                                        <td class="p-2">
-                                            <button type="button" class="btn btn-xs btn-ghost text-red-600" @click="disableRow($event)">Delete</button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="flex justify-end gap-2">
-                        <button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button>
-                        <button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button>
-                    </div>
-                </form>
-            <% } %>
-
-            <% if (step === 'assets') { %>
-                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4" x-data="assetsForm(<%= JSON.stringify(game.assets || []) %>)">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <input type="hidden" name="step" value="assets">
-                    
-                    <div class="flex items-center justify-between">
-                        <h3 class="font-bold text-gray-900">3D Assets & Resources</h3>
-                        <button type="button" class="btn btn-xs btn-secondary" @click="addAsset()">Add Asset</button>
-                    </div>
-                    
-                    <div class="space-y-3">
-                        <template x-for="(asset, index) in assets" :key="index">
-                            <div class="flex gap-2 items-start">
-                                <input type="text" name="asset_keys[]" x-model="asset.key" placeholder="Key (e.g. white_pawn)" class="w-1/3 px-3 py-2 border border-gray-300 rounded text-xs" required>
-                                <div class="flex-1 flex gap-2">
-                                    <input type="text" name="asset_urls[]" x-model="asset.url" placeholder="URL (glb, png, etc.)" class="flex-1 px-3 py-2 border border-gray-300 rounded text-xs" required>
-                                    <label class="btn btn-sm btn-white border border-gray-300 cursor-pointer px-2 flex items-center justify-center">
-                                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                        <input type="file" class="hidden" @change="uploadFile($event, index)">
-                                    </label>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-ghost text-red-600 px-2" @click="removeAsset(index)">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                            </div>
-                        </template>
-                        <template x-if="assets.length === 0">
-                            <div class="text-sm text-gray-500 italic p-4 text-center border border-dashed border-gray-200 rounded">No assets defined.</div>
-                        </template>
-                    </div>
-
-                    <div class="flex justify-end gap-2">
-                        <button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button>
-                        <button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button>
-                    </div>
-                </form>
-            <% } %>
-
-            <% if (step === 'uiux') { %>
-                <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4" onsubmit="return validateJsonForm(this)">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <input type="hidden" name="step" value="uiux">
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Create Form Layout (JSON)</label>
-                            <textarea name="create_form_layout" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.create_form_layout ? JSON.stringify(game.ui_schema.create_form_layout, null, 2) : '' %></textarea>
-                            <p class="text-[10px] text-red-600 hidden json-error mt-1"></p>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Summary Template (JSON)</label>
-                            <textarea name="summary_template" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.summary_template ? JSON.stringify(game.ui_schema.summary_template, null, 2) : '' %></textarea>
-                            <p class="text-[10px] text-red-600 hidden json-error mt-1"></p>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Labels (JSON)</label>
-                            <textarea name="labels" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.labels ? JSON.stringify(game.ui_schema.labels, null, 2) : '' %></textarea>
-                            <p class="text-[10px] text-red-600 hidden json-error mt-1"></p>
-                        </div>
-                    </div>
-                    <div class="flex justify-end gap-2">
-                        <button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button>
-                        <button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button>
-                    </div>
-                </form>
-            <% } %>
-
-            <% if (step === 'review') { %>
-                <div class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-6">
-                    <!-- ... existing review content ... -->
-                    
-                    <!-- Simulation Output Improvement -->
-                    <div class="rounded-lg border border-gray-200 p-4 bg-white">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="text-xs font-bold text-gray-500 uppercase">Simulation Output</div>
-                            <div class="text-[11px] text-gray-400">Dummy players, 5 turns max</div>
-                        </div>
-                        <% if (simulationEvents && simulationEvents.length) { %>
-                            <div class="bg-slate-50 border border-slate-200 rounded max-h-80 overflow-auto divide-y divide-slate-100">
-                                <% simulationEvents.forEach(evt => { %>
-                                    <div class="p-3 text-xs flex gap-3 hover:bg-white transition-colors">
-                                        <div class="w-8 shrink-0 font-mono text-slate-400 text-right">T<%= evt.turn %></div>
-                                        <div class="w-16 shrink-0 font-bold text-slate-700"><%= evt.actor %></div>
-                                        <div class="flex-1">
-                                            <span class="inline-block px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[10px] uppercase mb-1"><%= evt.type %></span>
-                                            <div class="text-slate-600 font-mono text-[11px]">
-                                                <% if (evt.payload && evt.payload.content) { %>
-                                                    <%= evt.payload.content %>
-                                                <% } else { %>
-                                                    <%= JSON.stringify(evt.payload) %>
-                                                <% } %>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <% }) %>
-                            </div>
-                        <% } else { %>
-                            <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">Run a dry run before publishing.</div>
-                        <% } %>
-                    </div>
-                    
-                    <!-- ... rest of review ... -->
-                </div>
-            <% } %>
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">Short Description</label><input type="text" name="description_short" value="<%= game.description_short || '' %>" class="w-full px-3 py-2 border border-gray-300 rounded"></div>
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">Long Description</label><textarea name="description_long" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded"><%= game.description_long || '' %></textarea></div>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Roles (comma separated)</label><input type="text" name="roles" value="<%= (game.roles || []).join(', ') %>" class="w-full px-3 py-2 border border-gray-300 rounded"></div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Capabilities (comma separated)</label><input type="text" name="capabilities" value="<%= (game.capabilities || []).join(', ') %>" class="w-full px-3 py-2 border border-gray-300 rounded"></div>
         </div>
-    </div>
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">Max Players</label><input type="number" min="1" name="max_players" value="<%= game.max_players || '' %>" class="w-full px-3 py-2 border border-gray-300 rounded"></div>
+        <% if (!builtInReadOnly) { %><div class="flex justify-end gap-2"><button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button><button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button></div><% } %>
+      </form>
+    <% } %>
+
+    <% if (step === 'config') { %>
+      <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4" x-data="matchConfigForm(<%= Math.max(game.settings.length, 1) %>)" @submit.prevent="if (validate()) $el.submit()">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="step" value="config">
+        <div class="flex items-center justify-between"><h3 class="font-bold text-gray-900">Match Config Settings</h3><button type="button" class="btn btn-xs btn-secondary" @click="rows++">Add Setting</button></div>
+        <div x-show="errors.length" x-cloak class="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+          <div class="font-semibold mb-1">Fix these issues before saving:</div>
+          <ul class="list-disc pl-5 space-y-1"><template x-for="err in errors" :key="err"><li x-text="err"></li></template></ul>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-xs">
+            <thead class="text-gray-500 uppercase bg-gray-50"><tr><th class="p-2 text-left">Key</th><th class="p-2 text-left">Type</th><th class="p-2 text-left">Min</th><th class="p-2 text-left">Max</th><th class="p-2 text-left">Default</th><th class="p-2 text-left">Tier</th><th class="p-2 text-left">Enum Options</th><th class="p-2 text-left">Help Text</th><th class="p-2 text-left">Actions</th></tr></thead>
+            <tbody class="divide-y">
+              <% const settings = game.settings || []; %>
+              <% for (let i = 0; i < Math.max(settings.length, 1); i++) { const s = settings[i] || {}; %>
+                <tr x-data="{ type: '<%= s.type || 'TEXT' %>' }" data-setting-row>
+                  <td class="p-2"><input type="text" name="setting_key" value="<%= s.key || '' %>" class="w-40 px-2 py-1 border border-gray-300 rounded" data-field="key"></td>
+                  <td class="p-2"><select name="setting_type" class="w-28 px-2 py-1 border border-gray-300 rounded" x-model="type" data-field="type"><option value="BOOLEAN" <%= s.type === 'BOOLEAN' ? 'selected' : '' %>>Boolean</option><option value="INT" <%= s.type === 'INT' ? 'selected' : '' %>>Int</option><option value="FLOAT" <%= s.type === 'FLOAT' ? 'selected' : '' %>>Float</option><option value="ENUM" <%= s.type === 'ENUM' ? 'selected' : '' %>>Enum</option><option value="TEXT" <%= s.type === 'TEXT' ? 'selected' : '' %>>Text</option></select></td>
+                  <td class="p-2"><input type="number" name="setting_min" value="<%= s.min_value ?? '' %>" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="min"></td>
+                  <td class="p-2"><input type="number" name="setting_max" value="<%= s.max_value ?? '' %>" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="max"></td>
+                  <td class="p-2">
+                    <input type="text" name="setting_default" value="<%= s.default_value ?? '' %>" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'TEXT' || type === 'ENUM'" x-cloak :disabled="!(type === 'TEXT' || type === 'ENUM')" data-field="default">
+                    <input type="number" name="setting_default" value="<%= s.default_value ?? '' %>" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="default">
+                    <select name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'BOOLEAN'" x-cloak :disabled="type !== 'BOOLEAN'" data-field="default"><option value="">-</option><option value="true" <%= s.default_value === true ? 'selected' : '' %>>true</option><option value="false" <%= s.default_value === false ? 'selected' : '' %>>false</option></select>
+                  </td>
+                  <td class="p-2"><select name="setting_tier" class="w-28 px-2 py-1 border border-gray-300 rounded"><option value="FREE" <%= s.tier_required === 'FREE' ? 'selected' : '' %>>Free</option><option value="PRO" <%= s.tier_required === 'PRO' ? 'selected' : '' %>>Pro</option><option value="ENTERPRISE" <%= s.tier_required === 'ENTERPRISE' ? 'selected' : '' %>>Enterprise</option></select></td>
+                  <td class="p-2"><input type="text" name="setting_enum" value="<%= (s.enum_options || []).join(', ') %>" class="w-36 px-2 py-1 border border-gray-300 rounded" x-show="type === 'ENUM'" x-cloak :disabled="type !== 'ENUM'" data-field="enum"></td>
+                  <td class="p-2"><input type="text" name="setting_help" value="<%= s.help_text || '' %>" class="w-48 px-2 py-1 border border-gray-300 rounded"></td>
+                  <td class="p-2"><button type="button" class="btn btn-xs btn-ghost text-red-600" @click="disableRow($event)">Delete</button></td>
+                </tr>
+              <% } %>
+              <template x-for="idx in Array.from({ length: rows - <%= Math.max(settings.length, 1) %> }, (_, i) => i)" :key="idx">
+                <tr x-data="{ type: 'TEXT' }" data-setting-row>
+                  <td class="p-2"><input type="text" name="setting_key" class="w-40 px-2 py-1 border border-gray-300 rounded" data-field="key"></td>
+                  <td class="p-2"><select name="setting_type" class="w-28 px-2 py-1 border border-gray-300 rounded" x-model="type" data-field="type"><option value="BOOLEAN">Boolean</option><option value="INT">Int</option><option value="FLOAT">Float</option><option value="ENUM">Enum</option><option value="TEXT">Text</option></select></td>
+                  <td class="p-2"><input type="number" name="setting_min" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="min"></td>
+                  <td class="p-2"><input type="number" name="setting_max" class="w-20 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="max"></td>
+                  <td class="p-2"><input type="text" name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'TEXT' || type === 'ENUM'" x-cloak :disabled="!(type === 'TEXT' || type === 'ENUM')" data-field="default"><input type="number" name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'INT' || type === 'FLOAT'" x-cloak :disabled="!(type === 'INT' || type === 'FLOAT')" data-field="default"><select name="setting_default" class="w-24 px-2 py-1 border border-gray-300 rounded" x-show="type === 'BOOLEAN'" x-cloak :disabled="type !== 'BOOLEAN'" data-field="default"><option value="">-</option><option value="true">true</option><option value="false">false</option></select></td>
+                  <td class="p-2"><select name="setting_tier" class="w-28 px-2 py-1 border border-gray-300 rounded"><option value="FREE">Free</option><option value="PRO">Pro</option><option value="ENTERPRISE">Enterprise</option></select></td>
+                  <td class="p-2"><input type="text" name="setting_enum" class="w-36 px-2 py-1 border border-gray-300 rounded" x-show="type === 'ENUM'" x-cloak :disabled="type !== 'ENUM'" data-field="enum"></td>
+                  <td class="p-2"><input type="text" name="setting_help" class="w-48 px-2 py-1 border border-gray-300 rounded"></td>
+                  <td class="p-2"><button type="button" class="btn btn-xs btn-ghost text-red-600" @click="disableRow($event)">Delete</button></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <% if (!builtInReadOnly) { %><div class="flex justify-end gap-2"><button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button><button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button></div><% } %>
+      </form>
+    <% } %>
+
+    <% if (step === 'assets') { %>
+      <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4" x-data="assetsForm(<%- JSON.stringify(game.assets || {}) %>)">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="step" value="assets">
+        <div class="flex items-center justify-between"><h3 class="font-bold text-gray-900">Assets & Resources</h3><button type="button" class="btn btn-xs btn-secondary" @click="addAsset()">Add Asset</button></div>
+        <div class="space-y-3">
+          <template x-for="(asset, index) in assets" :key="index">
+            <div class="flex gap-2 items-start">
+              <input type="text" name="asset_keys[]" x-model="asset.key" placeholder="Key" class="w-1/3 px-3 py-2 border border-gray-300 rounded text-xs" required>
+              <div class="flex-1 flex gap-2">
+                <input type="text" name="asset_urls[]" x-model="asset.url" placeholder="URL" class="flex-1 px-3 py-2 border border-gray-300 rounded text-xs" required>
+                <label class="btn btn-sm btn-white border border-gray-300 cursor-pointer px-2 flex items-center justify-center"><svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg><input type="file" class="hidden" @change="uploadFile($event, index)"></label>
+              </div>
+              <button type="button" class="btn btn-sm btn-ghost text-red-600 px-2" @click="removeAsset(index)">X</button>
+            </div>
+          </template>
+          <template x-if="assets.length === 0"><div class="text-sm text-gray-500 italic p-4 text-center border border-dashed border-gray-200 rounded">No assets defined.</div></template>
+        </div>
+        <% if (!builtInReadOnly) { %><div class="flex justify-end gap-2"><button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button><button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button></div><% } %>
+      </form>
+    <% } %>
+
+    <% if (step === 'uiux') { %>
+      <form action="/admin/games/<%= game.id %>/save" method="POST" class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4" onsubmit="return validateJsonForm(this)">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="step" value="uiux">
+        <% const currentRenderer = (game.ui_schema && game.ui_schema.replay_schema && game.ui_schema.replay_schema.renderer) || 'generic'; %>
+        <div><label for="replay-renderer" class="block text-xs font-medium text-gray-700 mb-1">Replay Renderer</label><select id="replay-renderer" name="replay_renderer" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"><% [['generic','Generic: scoreboard and transcript (works for any game)'],['chess','Chess board'],['chutes','Numbered race board (chutes and ladders style)'],['poker','Card table with community cards'],['blackjack','Dealer and seats']].forEach(opt => { %><option value="<%= opt[0] %>" <%= currentRenderer === opt[0] ? 'selected' : '' %>><%= opt[1] %></option><% }) %></select><p class="text-[11px] text-gray-500 mt-1">Specialised renderers expect the same event types as the built-in game of that style.</p></div>
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">Create Form Layout (JSON)</label><textarea name="create_form_layout" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.create_form_layout ? JSON.stringify(game.ui_schema.create_form_layout, null, 2) : '' %></textarea><p class="text-[10px] text-red-600 hidden json-error mt-1"></p></div>
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">Summary Template (JSON)</label><textarea name="summary_template" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.summary_template ? JSON.stringify(game.ui_schema.summary_template, null, 2) : '' %></textarea><p class="text-[10px] text-red-600 hidden json-error mt-1"></p></div>
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">Labels (JSON)</label><textarea name="labels" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded font-mono text-xs"><%= game.ui_schema && game.ui_schema.labels ? JSON.stringify(game.ui_schema.labels, null, 2) : '' %></textarea><p class="text-[10px] text-red-600 hidden json-error mt-1"></p></div>
+        <% if (!builtInReadOnly) { %><div class="flex justify-end gap-2"><button name="action" value="save" class="btn btn-sm btn-secondary">Save Draft</button><button name="action" value="continue" class="btn btn-sm btn-primary">Save & Continue</button></div><% } %>
+      </form>
+    <% } %>
+
+    <% if (step === 'review') { %>
+      <div class="grid gap-6">
+          <div class="grid md:grid-cols-4 gap-4">
+          <div class="bg-white rounded-lg shadow border border-gray-200 p-4"><div class="text-[11px] uppercase tracking-wider text-gray-500">Status</div><div class="mt-2 text-lg font-semibold text-gray-900"><%= game.status %></div></div>
+          <div class="bg-white rounded-lg shadow border border-gray-200 p-4"><div class="text-[11px] uppercase tracking-wider text-gray-500">Settings</div><div class="mt-2 text-lg font-semibold text-gray-900"><%= game.settings.length %></div></div>
+          <div class="bg-white rounded-lg shadow border border-gray-200 p-4"><div class="text-[11px] uppercase tracking-wider text-gray-500">Engine</div><div class="mt-2 text-sm font-semibold text-gray-900"><%= engineArtifact ? engineArtifact.status : 'Not generated' %></div><div class="mt-1 text-[11px] text-gray-500"><%= engineArtifact?.compiled_at ? 'Compiled' : 'Not compiled' %></div></div>
+          <div class="bg-white rounded-lg shadow border border-gray-200 p-4"><div class="text-[11px] uppercase tracking-wider text-gray-500">Dry Run</div><div class="mt-2 text-sm font-semibold text-gray-900"><%= latestDryRun ? (latestDryRun.success ? 'Passed' : 'Failed') : 'Missing' %></div><div class="mt-1 text-[11px] text-gray-500"><%= latestDryRun?.engine_artifact_id ? 'Linked to latest artifact' : 'No artifact link' %></div></div>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-6">
+          <div class="flex items-start justify-between gap-4"><div><h2 class="text-lg font-semibold text-gray-900"><%= game.name %></h2><div class="text-xs font-mono text-gray-500 mt-1"><%= game.key %></div></div><div class="text-right text-xs text-gray-500"><div>Roles: <%= (game.roles || []).join(', ') || 'None' %></div><div>Capabilities: <%= (game.capabilities || []).join(', ') || 'None' %></div></div></div>
+          <% if (warnings && warnings.length) { %><div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><div class="font-semibold mb-2">Warnings</div><ul class="list-disc pl-5 space-y-1"><% warnings.forEach(warning => { %><li><%= warning %></li><% }) %></ul></div><% } %>
+          <% if (diffSummary) { %><div class="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700"><div class="font-semibold mb-2"><%= diffSummary.title %></div><ul class="list-disc pl-5 space-y-1"><% diffSummary.items.forEach(item => { %><li><%= item %></li><% }) %></ul></div><% } %>
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="rounded-lg border border-gray-200 p-4"><div class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Config</div><% if (game.settings.length) { %><div class="space-y-2 text-xs"><% game.settings.forEach(setting => { %><div class="flex justify-between gap-4 border-b border-gray-100 pb-2"><div><div class="font-medium text-gray-900"><%= setting.key %></div><div class="text-gray-500"><%= setting.type %> · <%= setting.tier_required %></div></div><div class="text-right text-gray-600"><div>Default: <%= setting.default_value === null ? '-' : JSON.stringify(setting.default_value) %></div></div></div><% }) %></div><% } else { %><div class="text-sm text-gray-500">No settings defined.</div><% } %></div>
+            <div class="rounded-lg border border-gray-200 p-4"><div class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">UI Preview</div><% if (uiPreview && uiPreview.length) { %><div class="space-y-2"><% uiPreview.forEach(field => { %><div class="rounded border border-gray-200 px-3 py-2"><div class="flex items-center justify-between gap-3 text-sm"><span class="font-medium text-gray-900"><%= field.label %></span><span class="text-[11px] uppercase tracking-wider text-gray-500"><%= field.type %></span></div><div class="text-[11px] text-gray-500 mt-1"><%= field.key %><% if (field.tier) { %> · <%= field.tier %><% } %></div></div><% }) %></div><% } else { %><div class="text-sm text-gray-500">No UI schema preview available.</div><% } %></div>
+          </div>
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="rounded-lg border border-gray-200 p-4 space-y-4">
+              <div class="flex items-center justify-between gap-3"><div><div class="text-xs font-bold uppercase tracking-wider text-gray-500">Engine</div><div class="text-sm text-gray-600 mt-1">Generate and publish the runtime engine.</div></div><% if (engineArtifact) { %><span class="px-2 py-1 rounded text-[11px] uppercase tracking-wider <%= engineArtifact.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' : (engineArtifact.status === 'FAILED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700') %>"><%= engineArtifact.status %></span><% } %></div>
+              <% if (engineArtifact) { %><div class="text-xs text-gray-600 space-y-2"><div><span class="font-semibold text-gray-900">Created:</span> <%= new Date(engineArtifact.created_at).toLocaleString() %></div><div><span class="font-semibold text-gray-900">Provider:</span> <%= engineArtifact.generation_provider || 'unknown' %></div><div><span class="font-semibold text-gray-900">Compile:</span> <%= engineArtifact.compiled_at ? 'Passed' : 'Failed or pending' %></div><div><span class="font-semibold text-gray-900">Fallback:</span> <%= engineArtifact.used_fallback ? 'Yes' : 'No' %></div><% if (engineArtifact.generation_error) { %><div class="rounded border border-amber-200 bg-amber-50 p-3 text-amber-800 whitespace-pre-wrap"><span class="font-semibold text-amber-900">Generation Issue:</span> <%= engineArtifact.generation_error %></div><% } %><% if (engineArtifact.compile_error) { %><div class="rounded border border-red-200 bg-red-50 p-3 text-red-700 whitespace-pre-wrap"><span class="font-semibold text-red-900">Compile Error:</span> <%= engineArtifact.compile_error %></div><% } %><% if (engineArtifact.notes) { %><div><span class="font-semibold text-gray-900">Notes:</span> <%= engineArtifact.notes %></div><% } %></div><details class="rounded border border-gray-200 bg-gray-50 p-3"><summary class="cursor-pointer text-sm font-medium text-gray-900">View Engine Spec</summary><pre class="mt-3 text-[11px] text-gray-700 whitespace-pre-wrap"><%= JSON.stringify(engineArtifact.spec, null, 2) %></pre></details><% } else { %><div class="text-sm text-gray-500">No engine artifact has been generated yet.</div><% } %>
+              <div class="flex flex-wrap gap-2">
+                <% if (!builtInReadOnly && typeof can === 'function' && can('admin.games.edit')) { %><form action="/admin/games/<%= game.id %>/engine/generate" method="POST"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-secondary">Generate Engine</button></form><% } %>
+                <% if (!builtInReadOnly && typeof can === 'function' && can('admin.games.publish')) { %><form action="/admin/games/<%= game.id %>/engine/publish" method="POST"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-primary" <%= !engineArtifact ? 'disabled' : '' %>>Publish Engine Runtime</button></form><% } %>
+              </div>
+            </div>
+            <div class="rounded-lg border border-gray-200 p-4 space-y-4">
+              <div class="flex items-center justify-between gap-3"><div><div class="text-xs font-bold uppercase tracking-wider text-gray-500">Simulation Output</div><div class="text-sm text-gray-600 mt-1">Plays seeded games with random legal moves and checks the engine contract.</div></div><% if (!builtInReadOnly && typeof can === 'function' && can('admin.games.edit')) { %><form action="/admin/games/<%= game.id %>/simulate" method="POST"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-secondary">Run Dry Run</button></form><% } %></div>
+              <% if (latestDryRun && Array.isArray(latestDryRun.checks) && latestDryRun.checks.length) { %><ul class="text-xs space-y-1" aria-label="Validation checks"><% latestDryRun.checks.forEach(check => { %><li class="flex items-start gap-2"><span class="<%= check.ok ? 'text-green-600' : 'text-red-600' %> font-bold" aria-hidden="true"><%= check.ok ? '✓' : '✗' %></span><span class="<%= check.ok ? 'text-gray-700' : 'text-red-700' %>"><span class="sr-only"><%= check.ok ? 'Passed: ' : 'Failed: ' %></span><%= check.name %><% if (!check.ok && check.detail) { %><span class="block text-[11px] text-red-600"><%= check.detail %></span><% } %></span></li><% }) %></ul><% } %>
+              <% if (latestDryRun && !latestDryRun.success && latestDryRun.error_message && !(Array.isArray(latestDryRun.checks) && latestDryRun.checks.length)) { %><div class="rounded border border-red-200 bg-red-50 p-3 text-xs text-red-700 whitespace-pre-wrap"><span class="font-semibold text-red-900">Dry Run Error:</span> <%= latestDryRun.error_message %></div><% } %>
+              <% if (simulationEvents && simulationEvents.length) { %><div class="bg-slate-50 border border-slate-200 rounded max-h-80 overflow-auto divide-y divide-slate-100"><% simulationEvents.forEach(evt => { %><div class="p-3 text-xs flex gap-3 hover:bg-white transition-colors"><div class="w-8 shrink-0 font-mono text-slate-400 text-right">T<%= evt.turn %></div><div class="w-16 shrink-0 font-bold text-slate-700"><%= evt.actor %></div><div class="flex-1"><span class="inline-block px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[10px] uppercase mb-1"><%= evt.type %></span><div class="text-slate-600 font-mono text-[11px] whitespace-pre-wrap"><%= JSON.stringify(evt.payload) %></div></div></div><% }) %></div><% } else { %><div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">Run a dry run before publishing.</div><% } %>
+            </div>
+          </div>
+          <% if (!builtInReadOnly && typeof can === 'function' && can('admin.games.publish')) { %><form action="/admin/games/<%= game.id %>/publish" method="POST" class="rounded-lg border border-gray-200 p-4 grid md:grid-cols-3 gap-4 items-end"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="tz_offset" value="" id="tz-offset-field"><script>document.getElementById('tz-offset-field').value = String(new Date().getTimezoneOffset());</script><div class="md:col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">Schedule (optional)</label><input type="datetime-local" name="publish_at" class="w-full px-3 py-2 border border-gray-300 rounded"><p class="text-[11px] text-gray-500 mt-1">Times are in your local timezone. Leave empty to publish immediately.</p></div><div class="flex gap-2 justify-end"><button name="action" value="schedule" class="btn btn-sm btn-secondary">Schedule</button><button name="action" value="publish" class="btn btn-sm btn-primary">Publish Now</button><button name="action" value="retire" class="btn btn-sm btn-danger" onclick="return confirm('Retire this game? It will disappear from match creation; existing matches stay replayable.');">Retire</button></div></form><% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div>
 <%- include('../../partials/admin_footer') %>
 <script>
-    function assetsForm(initialAssets) {
-        let assets = Array.isArray(initialAssets) ? initialAssets : [];
-        if (!Array.isArray(initialAssets) && typeof initialAssets === 'object' && initialAssets !== null) {
-             assets = Object.entries(initialAssets).map(([key, url]) => ({ key, url }));
-        }
-
-        return {
-            assets: assets,
-            addAsset() {
-                this.assets.push({ key: '', url: '' });
-            },
-            removeAsset(index) {
-                this.assets.splice(index, 1);
-            },
-            async uploadFile(event, index) {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('folder', 'game-assets');
-
-                try {
-                    const csrfToken = document.querySelector('input[name="_csrf"]').value;
-                    const response = await fetch('/admin/media/upload', {
-                        method: 'POST',
-                        headers: { 'X-CSRF-Token': csrfToken },
-                        body: formData
-                    });
-                    
-                    if (!response.ok) throw new Error('Upload failed');
-                    const data = await response.json();
-                    
-                    this.assets[index].url = data.url;
-                } catch (e) {
-                    alert('Failed to upload asset: ' + e.message);
-                }
-            }
-        };
-    }
-
-    function validateJsonForm(form) {
-        let valid = true;
-        const textareas = form.querySelectorAll('textarea');
-        textareas.forEach(ta => {
-            const errEl = ta.nextElementSibling;
-            if (!ta.value.trim()) {
-                errEl.classList.add('hidden');
-                return;
-            }
-            try {
-                JSON.parse(ta.value);
-                ta.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
-                errEl.classList.add('hidden');
-            } catch (e) {
-                valid = false;
-                ta.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
-                errEl.textContent = 'Invalid JSON: ' + e.message;
-                errEl.classList.remove('hidden');
-            }
-        });
-        return valid;
-    }
-
-    // ... matchConfigForm code ...
-
-
-                    <% if (typeof can === 'function' && can('admin.games.publish')) { %>
-                    <form action="/admin/games/<%= game.id %>/publish" method="POST" class="grid md:grid-cols-3 gap-4 items-end">
-                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Schedule (optional)</label>
-                            <input type="datetime-local" name="publish_at" class="w-full px-3 py-2 border border-gray-300 rounded">
-                            <p class="text-[11px] text-gray-500 mt-1">Leave empty to publish immediately.</p>
-                        </div>
-                        <div class="flex gap-2 justify-end">
-                            <button name="action" value="schedule" class="btn btn-sm btn-secondary">Schedule</button>
-                            <button name="action" value="publish" class="btn btn-sm btn-primary">Publish Now</button>
-                            <button name="action" value="retire" class="btn btn-sm btn-danger">Retire</button>
-                        </div>
-                    </form>
-                    <% } %>
-                </div>
-            <% } %>
-        </div>
-    </div>
-<%- include('../../partials/admin_footer') %>
-<script>
-    function matchConfigForm(initialRows) {
-        return {
-            rows: initialRows,
-            errors: [],
-            disableRow(event) {
-                const row = event.target.closest('tr');
-                if (!row) return;
-                row.querySelectorAll('input, select, textarea').forEach(el => {
-                    if (el.name) {
-                        el.disabled = true;
-                        if (el.type === 'text' || el.type === 'number') el.value = '';
-                    }
-                });
-                row.classList.add('opacity-50');
-                row.style.display = 'none';
-            },
-            validate() {
-                this.errors = [];
-                const rows = Array.from(document.querySelectorAll('tr[data-setting-row]'));
-                const seenKeys = new Set();
-                rows.forEach((row, index) => {
-                    const keyEl = row.querySelector('[data-field="key"]:not([disabled])');
-                    if (!keyEl) return;
-                    const key = (keyEl.value || '').trim();
-                    const typeEl = row.querySelector('[data-field="type"]:not([disabled])');
-                    const type = typeEl ? typeEl.value : 'TEXT';
-                    const minEl = row.querySelector('[data-field="min"]:not([disabled])');
-                    const maxEl = row.querySelector('[data-field="max"]:not([disabled])');
-                    const enumEl = row.querySelector('[data-field="enum"]:not([disabled])');
-                    const defaultEl = row.querySelector('[data-field="default"]:not([disabled])');
-                    const defaultValue = defaultEl ? String(defaultEl.value || '').trim() : '';
-                    const label = key ? `Setting "${key}"` : `Row ${index + 1}`;
-
-                    if (!key && (defaultValue || (enumEl && enumEl.value) || (minEl && minEl.value) || (maxEl && maxEl.value))) {
-                        this.errors.push(`${label}: key is required.`);
-                        return;
-                    }
-                    if (!key) return;
-                    if (seenKeys.has(key)) {
-                        this.errors.push(`${label}: duplicate key.`);
-                    } else {
-                        seenKeys.add(key);
-                    }
-
-                    if (!/^[a-zA-Z0-9_.-]+$/.test(key)) {
-                        this.errors.push(`${label}: key should be alphanumeric, ".", "-", or "_".`);
-                    }
-
-                    if (type === 'INT' || type === 'FLOAT') {
-                        if (minEl && minEl.value && isNaN(Number(minEl.value))) {
-                            this.errors.push(`${label}: min must be a number.`);
-                        }
-                        if (maxEl && maxEl.value && isNaN(Number(maxEl.value))) {
-                            this.errors.push(`${label}: max must be a number.`);
-                        }
-                        const minVal = minEl && minEl.value !== '' ? Number(minEl.value) : null;
-                        const maxVal = maxEl && maxEl.value !== '' ? Number(maxEl.value) : null;
-                        if (minVal !== null && maxVal !== null && minVal > maxVal) {
-                            this.errors.push(`${label}: min cannot be greater than max.`);
-                        }
-                        if (defaultValue) {
-                            const def = Number(defaultValue);
-                            if (isNaN(def)) {
-                                this.errors.push(`${label}: default must be numeric.`);
-                            } else {
-                                if (minVal !== null && def < minVal) this.errors.push(`${label}: default below min.`);
-                                if (maxVal !== null && def > maxVal) this.errors.push(`${label}: default above max.`);
-                            }
-                        }
-                    }
-
-                    if (type === 'ENUM') {
-                        const enumRaw = enumEl ? String(enumEl.value || '').trim() : '';
-                        const options = enumRaw.split(',').map(v => v.trim()).filter(Boolean);
-                        if (options.length === 0) {
-                            this.errors.push(`${label}: enum options required.`);
-                        }
-                        if (defaultValue && options.length > 0 && !options.includes(defaultValue)) {
-                            this.errors.push(`${label}: default must be one of the enum options.`);
-                        }
-                    }
-
-                    if (type === 'BOOLEAN' && defaultValue) {
-                        if (defaultValue !== 'true' && defaultValue !== 'false') {
-                            this.errors.push(`${label}: default must be true or false.`);
-                        }
-                    }
-                });
-
-                return this.errors.length === 0;
-            }
-        };
-    }
+function assetsForm(initialAssets){let assets=Array.isArray(initialAssets)?initialAssets:[];if(!Array.isArray(initialAssets)&&typeof initialAssets==='object'&&initialAssets!==null){assets=Object.entries(initialAssets).map(([key,url])=>({key,url}));}return{assets,addAsset(){this.assets.push({key:'',url:''});},removeAsset(index){this.assets.splice(index,1);},async uploadFile(event,index){const file=event.target.files[0];if(!file)return;const formData=new FormData();formData.append('file',file);formData.append('folder','game-assets');try{const csrfToken=document.querySelector('input[name="_csrf"]').value;const response=await fetch('/admin/media/upload',{method:'POST',headers:{'X-CSRF-Token':csrfToken},body:formData});if(!response.ok)throw new Error('Upload failed');const data=await response.json();this.assets[index].url=data.url;}catch(e){alert('Failed to upload asset: '+e.message);}}};}
+function validateJsonForm(form){let valid=true;form.querySelectorAll('textarea').forEach(ta=>{const errEl=ta.nextElementSibling;if(!ta.value.trim()){errEl.classList.add('hidden');return;}try{JSON.parse(ta.value);ta.classList.remove('border-red-500','focus:border-red-500','focus:ring-red-500');errEl.classList.add('hidden');}catch(e){valid=false;ta.classList.add('border-red-500','focus:border-red-500','focus:ring-red-500');errEl.textContent='Invalid JSON: '+e.message;errEl.classList.remove('hidden');}});return valid;}
+function matchConfigForm(initialRows){return{rows:initialRows,errors:[],disableRow(event){const row=event.target.closest('tr');if(!row)return;row.querySelectorAll('input, select, textarea').forEach(el=>{if(el.name){el.disabled=true;if(el.type==='text'||el.type==='number')el.value='';}});row.classList.add('opacity-50');row.style.display='none';},validate(){this.errors=[];const rows=Array.from(document.querySelectorAll('tr[data-setting-row]'));const seenKeys=new Set();rows.forEach((row,index)=>{const keyEl=row.querySelector('[data-field="key"]:not([disabled])');if(!keyEl)return;const key=(keyEl.value||'').trim();const typeEl=row.querySelector('[data-field="type"]:not([disabled])');const type=typeEl?typeEl.value:'TEXT';const minEl=row.querySelector('[data-field="min"]:not([disabled])');const maxEl=row.querySelector('[data-field="max"]:not([disabled])');const enumEl=row.querySelector('[data-field="enum"]:not([disabled])');const defaultEl=row.querySelector('[data-field="default"]:not([disabled])');const defaultValue=defaultEl?String(defaultEl.value||'').trim():'';const label=key?`Setting "${key}"`:`Row ${index+1}`;if(!key&&(defaultValue||(enumEl&&enumEl.value)||(minEl&&minEl.value)||(maxEl&&maxEl.value))){this.errors.push(`${label}: key is required.`);return;}if(!key)return;if(seenKeys.has(key)){this.errors.push(`${label}: duplicate key.`);}else{seenKeys.add(key);}if(!/^[a-zA-Z0-9_.-]+$/.test(key)){this.errors.push(`${label}: key should be alphanumeric, ".", "-", or "_".`);}if(type==='INT'||type==='FLOAT'){if(minEl&&minEl.value&&isNaN(Number(minEl.value))){this.errors.push(`${label}: min must be a number.`);}if(maxEl&&maxEl.value&&isNaN(Number(maxEl.value))){this.errors.push(`${label}: max must be a number.`);}const minVal=minEl&&minEl.value!==''?Number(minEl.value):null;const maxVal=maxEl&&maxEl.value!==''?Number(maxEl.value):null;if(minVal!==null&&maxVal!==null&&minVal>maxVal){this.errors.push(`${label}: min cannot be greater than max.`);}if(defaultValue){const def=Number(defaultValue);if(isNaN(def)){this.errors.push(`${label}: default must be numeric.`);}else{if(minVal!==null&&def<minVal)this.errors.push(`${label}: default below min.`);if(maxVal!==null&&def>maxVal)this.errors.push(`${label}: default above max.`);}}}if(type==='ENUM'){const enumRaw=enumEl?String(enumEl.value||'').trim():'';const options=enumRaw.split(',').map(v=>v.trim()).filter(Boolean);if(options.length===0){this.errors.push(`${label}: enum options required.`);}if(defaultValue&&options.length>0&&!options.includes(defaultValue)){this.errors.push(`${label}: default must be one of the enum options.`);}}if(type==='BOOLEAN'&&defaultValue&&defaultValue!=='true'&&defaultValue!=='false'){this.errors.push(`${label}: default must be true or false.`);}});return this.errors.length===0;}};}
 </script>

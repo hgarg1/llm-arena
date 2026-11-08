@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "{dist,views,public,prisma,node_modules/.prisma,node_modules/@prisma}/**"
+    },
+    "api/internal.js": {
+      "maxDuration": 300,
+      "includeFiles": "{dist,prisma,node_modules/.prisma,node_modules/@prisma}/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/internal/:path*", "destination": "/api/internal" },
+    { "source": "/(.*)", "destination": "/api/index" }
+  ],
+  "crons": [
+    { "path": "/api/internal/sweep", "schedule": "* * * * *" }
+  ]
+}

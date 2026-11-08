@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://llm-arena.harshit-garg.com/sitemap.xml

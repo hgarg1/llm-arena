@@ -10,7 +10,7 @@
             <p class="max-w-[42rem] leading-normal text-secondary sm:text-xl sm:leading-8">
                 Reproducible. Auditable. Comparable. We provide the infrastructure for deterministic, turn-based evaluation of AI agents.
             </p>
-            <div class="space-x-4">
+            <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
                 <a href="/benchmarks" class="btn btn-primary btn-lg">View Benchmarks</a>
                 <a href="/methodology" class="btn btn-secondary btn-lg">Read Methodology</a>
             </div>
@@ -20,7 +20,7 @@
     <section class="container space-y-6 bg-slate-50 py-8 dark:bg-transparent md:py-12 lg:py-24 rounded-lg border border-border">
         <div class="mx-auto grid justify-center gap-4 sm:grid-cols-2 md:max-w-[64rem] md:grid-cols-3">
             <div class="relative overflow-hidden rounded-lg border bg-surface p-2">
-                <div class="flex h-[180px] flex-col justify-between rounded-md p-6">
+                <div class="flex min-h-[8rem] flex-col sm:min-h-[180px] justify-between rounded-md p-6">
                     <div class="space-y-2">
                         <h3 class="font-bold">Reproducible</h3>
                         <p class="text-sm text-secondary">Every match is run with a deterministic seed and logged event-by-event.</p>
@@ -28,7 +28,7 @@
                 </div>
             </div>
             <div class="relative overflow-hidden rounded-lg border bg-surface p-2">
-                <div class="flex h-[180px] flex-col justify-between rounded-md p-6">
+                <div class="flex min-h-[8rem] flex-col sm:min-h-[180px] justify-between rounded-md p-6">
                     <div class="space-y-2">
                         <h3 class="font-bold">Auditable</h3>
                         <p class="text-sm text-secondary">Full replay capabilities allow you to inspect the reasoning chain of every move.</p>
@@ -36,7 +36,7 @@
                 </div>
             </div>
             <div class="relative overflow-hidden rounded-lg border bg-surface p-2">
-                <div class="flex h-[180px] flex-col justify-between rounded-md p-6">
+                <div class="flex min-h-[8rem] flex-col sm:min-h-[180px] justify-between rounded-md p-6">
                     <div class="space-y-2">
                         <h3 class="font-bold">Comparable</h3>
                         <p class="text-sm text-secondary">Standardized game environments ensure fair comparisons across model families.</p>
@@ -46,16 +46,34 @@
         </div>
     </section>
 
-    <section id="benchmarks" class="container py-8 md:py-12 lg:py-24">
-        <div class="mx-auto flex max-w-[58rem] flex-col items-center justify-center gap-4 text-center">
-            <h2 class="font-bold text-3xl leading-[1.1] sm:text-3xl md:text-6xl">Latest Benchmarks</h2>
-            <p class="leading-normal text-secondary sm:text-lg sm:leading-7">
+    <section id="benchmarks" class="container py-10 md:py-12 lg:py-24">
+        <div class="mx-auto flex max-w-[58rem] flex-col items-center justify-center gap-3 text-center md:gap-4">
+            <h2 class="font-bold text-[clamp(1.75rem,7vw,2rem)] leading-[1.1] md:text-5xl lg:text-6xl">Latest Benchmarks</h2>
+            <p class="max-w-[34rem] text-base leading-normal text-secondary sm:text-lg sm:leading-7">
                 Top performing models in the Iterated Negotiation task.
             </p>
         </div>
         
-        <div class="mx-auto mt-8 max-w-3xl">
-            <div class="rounded-md border border-border">
+        <div class="mx-auto mt-6 max-w-3xl md:mt-8">
+            <!-- Phones: a ranked list (rank badge, name that wraps, provider chip, score). -->
+            <ol class="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface md:hidden" data-testid="benchmarks-list">
+                <% models.forEach((model, index) => { %>
+                    <li>
+                        <a href="/models/<%= model.id %>" class="flex min-h-[4rem] items-center gap-3 px-4 py-3 transition-colors active:bg-slate-50">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 font-mono text-sm font-semibold text-secondary <%= index === 0 ? '!bg-yellow-100 !text-yellow-800' : '' %>"><%= index + 1 %></span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block break-words font-medium leading-snug text-primary"><%= model.name %></span>
+                                <span class="badge badge-neutral mt-1 max-w-full truncate"><%= model.api_provider %></span>
+                            </span>
+                            <span class="shrink-0 text-right">
+                                <span class="block font-mono text-base font-semibold text-primary">1<%= 500 - (index * 50) %></span>
+                                <span class="block text-[0.6875rem] uppercase tracking-wide text-secondary">Score (Mock)</span>
+                            </span>
+                        </a>
+                    </li>
+                <% }) %>
+            </ol>
+            <div class="hidden rounded-md border border-border md:block">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b bg-gray-50 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -77,8 +95,8 @@
                     </tbody>
                 </table>
             </div>
-             <div class="flex justify-center mt-6">
-                <a href="/benchmarks" class="btn btn-secondary">View Full Leaderboard</a>
+             <div class="mt-6 flex justify-center">
+                <a href="/benchmarks" class="btn btn-secondary w-full sm:w-auto">View Full Leaderboard</a>
             </div>
         </div>
     </section>

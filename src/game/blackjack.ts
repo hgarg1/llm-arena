@@ -37,7 +37,7 @@ export class BlackjackGame implements GameEngine {
   private allowInsurance = false;
   private allowSurrender = false;
   private blackjackPayout = 1.5;
-  private deckCount = 1;
+  private deckCount = 6;
   private allowSplit = false;
   private maxHands = 4;
   private allowResplitAces = false;
@@ -51,7 +51,7 @@ export class BlackjackGame implements GameEngine {
 
   private rand(): number {
     this.rngState = (this.rngState * 1664525 + 1013904223) % 4294967296;
-    return Math.abs(this.rngState);
+    return this.rngState;
   }
 
   private shuffleDeck() {
@@ -67,7 +67,7 @@ export class BlackjackGame implements GameEngine {
     }
     // Fisher-Yates
     for (let i = this.deck.length - 1; i > 0; i--) {
-      const j = this.rand() % (i + 1);
+      const j = (this.rand() >>> 8) % (i + 1);
       [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
     }
   }
@@ -118,7 +118,9 @@ export class BlackjackGame implements GameEngine {
   }
 
   initialize(seed: number, options?: { playerCount?: number; fixedBet?: number; startingStack?: number; dealerHitsSoft17?: boolean; allowDouble?: boolean; allowDoubleAny?: boolean; allowInsurance?: boolean; allowSurrender?: boolean; blackjackPayout?: number; deckCount?: number; allowSplit?: boolean; maxHands?: number; allowResplitAces?: boolean; allowDoubleAfterSplit?: boolean; dealerPeek?: boolean; noHoleCard?: boolean }): GameEvent[] {
-    this.rngState = seed;
+    this.rngState = seed >>> 0;
+    this.dealerHand = [];
+    this.dealerRevealed = false;
     this.deckCount = Math.max(1, Math.min(8, options?.deckCount || this.deckCount));
     this.shuffleDeck();
     this.playerCount = options?.playerCount || 1;
@@ -227,18 +229,47 @@ export class BlackjackGame implements GameEngine {
         const upRank = this.dealerHand[0]?.slice(0, -1);
         const upIsTen = ['T', 'J', 'Q', 'K'].includes(upRank || '');
         if (upRank === 'A' || upIsTen) {
-            const dealerVal = this.getHandValue(this.dealerHand);
-            if (dealerVal === 21) {
+            if (this.getHandValue(this.dealerHand) === 21) {
+                // Dealer has blackjack: hands are settled without any player decisions.
                 this.turnPhase = 'dealer';
+                return events;
             }
         }
     }
 
+    // Players dealt a natural 21 have no decision to make.
+    this.players.forEach((p, i) => {
+        const hand = p.hands[0];
+        if (this.getHandValue(hand.cards) === 21) {
+            hand.status = 'stand';
+            events.push({ turn: 0, actor: 'system', type: 'HAND_END', payload: { seat: i + 1, hand_index: 0, result: 'blackjack' } });
+        }
+    });
+    this.skipFinishedSeats(events, 0);
+
     return events;
   }
 
+  /** Advance past seats whose hands all need no further decisions. */
+  private skipFinishedSeats(events: GameEvent[], turnIndex: number) {
+      while (this.activeSeatIndex < this.playerCount) {
+          const p = this.players[this.activeSeatIndex];
+          const nextActive = p.hands.findIndex(h => h.status === 'active');
+          if (nextActive !== -1) {
+              this.activeHandIndex = nextActive;
+              return;
+          }
+          this.finishSeat(events, turnIndex, this.activeSeatIndex, 'stand');
+      }
+  }
+
+  getActiveRole(): string | null {
+      if (this.turnPhase !== 'players' || this.activeSeatIndex >= this.playerCount) return 'system';
+      return this.players[this.activeSeatIndex].id;
+  }
+
   getSystemPrompt(role: string): string {
-    return `You are playing Blackjack. Role: ${role}. Your goal is to beat the dealer without going over 21. Options: HIT, STAND, DOUBLE, SPLIT.`;
+    return `You are playing Blackjack. Role: ${role}. Your goal is to beat the dealer without going over 21. Reply with exactly one option: HIT, STAND, DOUBLE${this.allowSplit ? ', SPLIT' : ''}${this.allowSurrender ? ', SURRENDER' : ''}${this.allowInsurance ? ', INSURE' : ''}. Anything else is treated as STAND.`;
   }
 
   getRandomMove(gameState: GameEvent[], role: string): PlayerMove {
@@ -246,15 +277,12 @@ export class BlackjackGame implements GameEngine {
   }
 
   processMove(history: GameEvent[], move: PlayerMove): { events: GameEvent[]; result: GameResult | null; } {
-    const turnIndex = history.length; // Approximate logic
+    const turnIndex = (history[history.length - 1]?.turn ?? 0) + 1;
     const events: GameEvent[] = [];
     
-    if (this.turnPhase !== 'players') {
-        // Should be dealer phase or payout
-        // If worker calls this, it's a mistake, but we handle dealer logic here automatically?
-        // Worker calls processMove with 'dealer' actor? 
-        // No, worker loops players.
-        // We need to auto-resolve dealer if phase is dealer.
+    // Dealer phase (or every seat already finished): the engine plays the dealer itself.
+    if (this.turnPhase !== 'players' || this.activeSeatIndex >= this.playerCount) {
+        this.turnPhase = 'dealer';
         return this.resolveDealer(turnIndex);
     }
 
@@ -262,7 +290,8 @@ export class BlackjackGame implements GameEngine {
     const p = this.players[seatIdx];
     const hand = this.getActiveHand();
     if (!p || !hand) {
-        return { events, result: null };
+        this.turnPhase = 'dealer';
+        return this.resolveDealer(turnIndex);
     }
     
     // Parse Action
@@ -279,6 +308,7 @@ export class BlackjackGame implements GameEngine {
         p.insurance_bet = insurance;
         p.insurance_taken = true;
         events.push({ turn: turnIndex, actor: move.actor, type: 'PLAYER_ACTION', payload: { seat: seatIdx + 1, action: 'insurance', amount: insurance } });
+        hand.actions_taken += 1;
         return { events, result: null };
     }
 
@@ -289,7 +319,7 @@ export class BlackjackGame implements GameEngine {
         p.stack += refund;
         events.push({ turn: turnIndex, actor: move.actor, type: 'PLAYER_ACTION', payload: { seat: seatIdx + 1, action: 'surrender' } });
         this.handleHandEnd(events, turnIndex, seatIdx, 'surrendered');
-        return { events, result: null };
+        return this.afterAction(events, turnIndex);
     }
 
     if (action === 'SPLIT' && canSplit) {
@@ -330,7 +360,7 @@ export class BlackjackGame implements GameEngine {
                 this.finishSeat(events, turnIndex, seatIdx, 'stand');
             }
 
-            return { events, result: null };
+            return this.afterAction(events, turnIndex);
         }
     }
 
@@ -356,8 +386,8 @@ export class BlackjackGame implements GameEngine {
         hand.actions_taken += 1;
         this.handleHandEnd(events, turnIndex, seatIdx, 'stand');
     } else if (action === 'DOUBLE') {
-        if (canDouble && p.stack >= this.fixedBet) {
-            p.stack -= this.fixedBet;
+        if (canDouble && p.stack >= hand.bet) {
+            p.stack -= hand.bet;
             hand.bet *= 2;
             const c = this.drawCard();
             hand.cards.push(c);
@@ -377,15 +407,17 @@ export class BlackjackGame implements GameEngine {
         }
     }
 
-    // Check if all players done
+    return this.afterAction(events, turnIndex);
+  }
+
+  /** Hand off to the dealer as soon as the last seat is done, whichever action finished it. */
+  private afterAction(events: GameEvent[], turnIndex: number): { events: GameEvent[]; result: GameResult | null } {
     if (this.activeSeatIndex >= this.playerCount) {
         this.turnPhase = 'dealer';
-        // Immediately resolve dealer
-        const dealerRes = this.resolveDealer(turnIndex + events.length);
+        const dealerRes = this.resolveDealer(turnIndex);
         events.push(...dealerRes.events);
         return { events, result: dealerRes.result };
     }
-
     return { events, result: null };
   }
 
@@ -450,9 +482,13 @@ export class BlackjackGame implements GameEngine {
 
       this.players.forEach((p, i) => {
           let insuranceDelta = 0;
-          if (p.insurance_bet > 0 && dealerBJ) {
-              p.stack += p.insurance_bet * 3;
-              insuranceDelta = p.insurance_bet * 2;
+          if (p.insurance_bet > 0) {
+              if (dealerBJ) {
+                  p.stack += p.insurance_bet * 3;
+                  insuranceDelta = p.insurance_bet * 2;
+              } else {
+                  insuranceDelta = -p.insurance_bet;
+              }
           }
 
           p.hands.forEach((hand, handIdx) => {
@@ -490,7 +526,6 @@ export class BlackjackGame implements GameEngine {
               if (outcome !== 'loss' && outcome !== 'bust' && outcome !== 'surrender') {
                   p.stack += (hand.bet + delta); 
               }
-              if (outcome === 'push') p.stack += hand.bet;
 
               events.push({
                   turn: turnIndex,
@@ -503,11 +538,18 @@ export class BlackjackGame implements GameEngine {
           scores[p.id] = p.stack > this.startingStack ? 1 : (p.stack === this.startingStack ? 0.5 : 0);
       });
 
+      events.push({
+          turn: turnIndex,
+          actor: 'system',
+          type: 'RESULT',
+          payload: { outcome: 'hands_settled', reason: 'all hands settled', final_stacks: this.players.map(p => p.stack), starting_stack: this.startingStack }
+      });
+
       return {
           events,
           result: {
               isFinished: true,
-              scores, // ELO based on profitability?
+              scores,
               winnerId: undefined
           }
       };

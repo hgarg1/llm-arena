@@ -1,10 +1,20 @@
 <%- include('../partials/header_layout') %>
-    <div class="container py-12">
+    <div class="container py-8 md:py-12">
         <div class="mb-8">
-            <a href="/matches" class="text-sm text-secondary hover:text-primary mb-2 inline-block">&larr; Back to Matches</a>
+            <a href="/matches" class="mb-2 inline-flex min-h-[44px] items-center text-sm text-secondary hover:text-primary md:min-h-0 md:inline-block coarse:min-h-[44px] coarse:inline-flex">&larr; Back to Matches</a>
             <h1 class="text-3xl font-bold">Create New Match</h1>
             <p class="text-secondary">Configure a new evaluation run.</p>
         </div>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert"><%= error %></div>
+        <% } %>
+
+        <% if (!queueEnabled) { %>
+            <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                The hosted web deployment can create match records, but worker-backed execution is currently paused. New matches will remain pending until workers are restored.
+            </div>
+        <% } %>
         
         <div class="grid lg:grid-cols-3 gap-8" x-data="matchForm()" x-init="init()">
             <!-- Left: Configuration Form -->
@@ -32,7 +42,7 @@
                                     Single Player vs Environment. Dice rolls determine movement. First to 100 wins.
                                 </p>
                             <p class="text-xs text-secondary mt-1" x-show="game === 'texas_holdem'">
-                                No Limit Hold'em. Fixed stack (1000). Blind structure 5/10.
+                                No Limit Hold'em, one hand per match. Stack size and blinds are configurable below.
                             </p>
                             <p class="text-xs text-secondary mt-1" x-show="game === 'blackjack'">
                                 N-Player Blackjack against Dealer. Tune stack, bet size, dealer rules, and advanced options.
@@ -41,7 +51,7 @@
 
                         <!-- Player Count (Poker & Blackjack) -->
                         <div class="mb-6" x-show="game === 'texas_holdem' || game === 'blackjack'">
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid gap-4 min-[420px]:grid-cols-2">
                                 <div>
                                     <label class="input-label">Number of Players</label>
                                     <select name="playerCount" x-model.number="playerCount" class="input-field">
@@ -68,7 +78,7 @@
                         <!-- Game Configuration (Schema-driven) -->
                         <div class="mb-6" x-show="gameFields.length">
                             <div class="rounded border border-border p-4 bg-white">
-                                <div class="flex items-center justify-between mb-3">
+                                <div class="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                                     <h3 class="text-xs font-bold uppercase tracking-wider text-secondary">Game Configuration</h3>
                                     <div class="text-[11px] text-slate-400">Driven by game schema</div>
                                 </div>
@@ -80,8 +90,8 @@
                                                 <span class="text-[10px] uppercase tracking-widest text-slate-400" x-show="field.tierLabel" x-text="field.tierLabel"></span>
                                             </label>
                                             <template x-if="field.input === 'toggle'">
-                                                <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                                    <input type="checkbox" class="rounded border-gray-300" x-model="configValues[field.key]" :disabled="field.locked">
+                                                <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                                    <input type="checkbox" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="configValues[field.key]" :disabled="field.locked">
                                                     <span x-text="field.help"></span>
                                                 </label>
                                             </template>
@@ -120,15 +130,15 @@
                                 </div>
                                 <div>
                                     <label class="input-label">Dealer Soft 17</label>
-                                    <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                        <input type="checkbox" name="blackjack_dealer_hits_soft_17" class="rounded border-gray-300" x-model="blackjackDealerHitsSoft17">
+                                    <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                        <input type="checkbox" name="blackjack_dealer_hits_soft_17" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="blackjackDealerHitsSoft17">
                                         Dealer hits on soft 17
                                     </label>
                                 </div>
                                 <div>
                                     <label class="input-label">Double Down</label>
-                                    <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                        <input type="checkbox" name="blackjack_allow_double" class="rounded border-gray-300" checked x-model="blackjackAllowDouble">
+                                    <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                        <input type="checkbox" name="blackjack_allow_double" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" checked x-model="blackjackAllowDouble">
                                         Allow double on first action
                                     </label>
                                 </div>
@@ -138,7 +148,7 @@
                         <!-- Advanced Blackjack Settings -->
                         <div class="mb-6" x-show="game === 'blackjack'">
                             <div class="rounded border border-dashed border-border p-4 bg-slate-50">
-                                <div class="flex items-center justify-between mb-3">
+                                <div class="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                                     <h3 class="text-xs font-bold uppercase tracking-wider text-secondary">Advanced Blackjack Settings</h3>
                                     <% const isEnterprise = user && user.tier === 'ENTERPRISE'; %>
                                     <span class="text-[10px] font-semibold <%= isEnterprise ? 'text-emerald-600' : 'text-slate-400' %>">
@@ -166,29 +176,29 @@
                                     </div>
                                     <div>
                                         <label class="input-label">Insurance</label>
-                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                            <input type="checkbox" name="blackjack_allow_insurance" class="rounded border-gray-300" x-model="blackjackAllowInsurance" :disabled="!isEnterprise || blackjackNoHoleCard">
+                                        <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                            <input type="checkbox" name="blackjack_allow_insurance" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="blackjackAllowInsurance" :disabled="!isEnterprise || blackjackNoHoleCard">
                                             Offer insurance on dealer Ace
                                         </label>
                                     </div>
                                     <div>
                                         <label class="input-label">Surrender</label>
-                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                            <input type="checkbox" name="blackjack_allow_surrender" class="rounded border-gray-300" x-model="blackjackAllowSurrender" :disabled="!isEnterprise">
+                                        <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                            <input type="checkbox" name="blackjack_allow_surrender" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="blackjackAllowSurrender" :disabled="!isEnterprise">
                                             Allow late surrender
                                         </label>
                                     </div>
                                     <div>
                                         <label class="input-label">Double Down (Any Time)</label>
-                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                            <input type="checkbox" name="blackjack_allow_double_any" class="rounded border-gray-300" x-model="blackjackAllowDoubleAny" :disabled="!isEnterprise">
+                                        <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                            <input type="checkbox" name="blackjack_allow_double_any" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="blackjackAllowDoubleAny" :disabled="!isEnterprise">
                                             Allow double after hits
                                         </label>
                                     </div>
                                     <div>
                                         <label class="input-label">Splitting</label>
-                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                            <input type="checkbox" name="blackjack_allow_split" class="rounded border-gray-300" x-model="blackjackAllowSplit" :disabled="!isEnterprise">
+                                        <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                            <input type="checkbox" name="blackjack_allow_split" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="blackjackAllowSplit" :disabled="!isEnterprise">
                                             Allow split pairs
                                         </label>
                                     </div>
@@ -198,29 +208,29 @@
                                     </div>
                                     <div>
                                         <label class="input-label">Resplit Aces</label>
-                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                            <input type="checkbox" name="blackjack_allow_resplit_aces" class="rounded border-gray-300" x-model="blackjackAllowResplitAces" :disabled="!isEnterprise">
+                                        <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                            <input type="checkbox" name="blackjack_allow_resplit_aces" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="blackjackAllowResplitAces" :disabled="!isEnterprise">
                                             Allow resplitting aces
                                         </label>
                                     </div>
                                     <div>
                                         <label class="input-label">Double After Split</label>
-                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                            <input type="checkbox" name="blackjack_allow_double_after_split" class="rounded border-gray-300" x-model="blackjackAllowDoubleAfterSplit" :disabled="!isEnterprise">
+                                        <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                            <input type="checkbox" name="blackjack_allow_double_after_split" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="blackjackAllowDoubleAfterSplit" :disabled="!isEnterprise">
                                             Allow double after split
                                         </label>
                                     </div>
                                     <div>
                                         <label class="input-label">Dealer Peek</label>
-                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                            <input type="checkbox" name="blackjack_dealer_peek" class="rounded border-gray-300" x-model="blackjackDealerPeek" :disabled="!isEnterprise || blackjackNoHoleCard">
+                                        <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                            <input type="checkbox" name="blackjack_dealer_peek" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="blackjackDealerPeek" :disabled="!isEnterprise || blackjackNoHoleCard">
                                             Check for dealer blackjack
                                         </label>
                                     </div>
                                     <div>
                                         <label class="input-label">No Hole Card</label>
-                                        <label class="inline-flex items-center gap-2 text-sm text-secondary">
-                                            <input type="checkbox" name="blackjack_no_hole_card" class="rounded border-gray-300" x-model="blackjackNoHoleCard" :disabled="!isEnterprise || blackjackDealerPeek || blackjackAllowInsurance">
+                                        <label class="inline-flex min-h-[44px] items-center gap-2 text-sm text-secondary md:min-h-0">
+                                            <input type="checkbox" name="blackjack_no_hole_card" class="h-5 w-5 shrink-0 rounded border-gray-300 md:h-4 md:w-4" x-model="blackjackNoHoleCard" :disabled="!isEnterprise || blackjackDealerPeek || blackjackAllowInsurance">
                                             Dealer draws second card after players
                                         </label>
                                     </div>
@@ -232,16 +242,21 @@
                         </div>
 
                         <!-- Dynamic Player Inputs -->
-                        <template x-for="i in (game === 'texas_holdem' || game === 'blackjack' ? playerCount : (game === 'chutes_and_ladders' ? 1 : 2))" :key="i">
+                        <template x-for="i in resolvedPlayerCount()" :key="i">
                                 <div class="mt-4">
                                     <label class="input-label" x-text="getPlayerLabel(i)"></label>
                                     <input type="text" class="input-field mb-2" placeholder="Search models..." x-model="searchTerms[i-1]">
-                                    <select :name="`model${i}Id`" class="input-field" :disabled="loading" x-model="selectedModels[i-1]">
+                                    <select :name="`model${i}Id`" class="input-field" :disabled="loading" x-model="selectedModels[i-1]" :title="getModelLabel(selectedModels[i-1])">
                                         <option value="">Select a model...</option>
                                         <template x-for="model in filteredModels(i)" :key="model.id">
                                             <option :value="model.id" x-text="`${model.name} (${model.api_provider})`"></option>
                                         </template>
                                     </select>
+                                    <!-- A closed <select> cannot wrap, so a long model name is repeated in full underneath once chosen -->
+                                    <p class="mt-1.5 break-words text-xs leading-snug text-secondary" x-show="getModel(selectedModels[i-1])" x-cloak data-testid="selected-model">
+                                        <span class="font-medium text-primary" x-text="getModel(selectedModels[i-1])?.name"></span>
+                                        <span x-text="`· ${getModel(selectedModels[i-1])?.api_provider || ''}`"></span>
+                                    </p>
                                 </div>
                             </template>
 
@@ -272,7 +287,7 @@
 
             <!-- Right: Live Summary Panel -->
             <div class="lg:col-span-1">
-                <div class="card sticky top-24">
+                <div class="card lg:sticky lg:top-24">
                     <div class="card-header bg-slate-50">
                         <h3 class="font-bold text-sm text-secondary uppercase tracking-wider">Match Summary</h3>
                     </div>
@@ -289,10 +304,10 @@
                         <div>
                             <div class="text-xs text-secondary mb-2">Participants</div>
                             <div class="space-y-2">
-                                <template x-for="(modelId, index) in selectedModels.slice(0, (game === 'texas_holdem' || game === 'blackjack' ? playerCount : (game === 'chutes_and_ladders' ? 1 : 2)))" :key="index">
-                                    <div class="flex items-center gap-2 text-sm">
-                                        <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600" x-text="index + 1"></div>
-                                        <div class="truncate font-medium text-primary" x-text="getModelName(modelId) || 'Select Model...'"></div>
+                                <template x-for="(modelId, index) in selectedModels.slice(0, resolvedPlayerCount())" :key="index">
+                                    <div class="flex items-start gap-2 text-sm lg:items-center">
+                                        <div class="h-6 w-6 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600" x-text="index + 1"></div>
+                                        <div class="min-w-0 break-words font-medium text-primary lg:truncate" x-text="getModelName(modelId) || 'Select Model...'"></div>
                                     </div>
                                 </template>
                             </div>
@@ -300,71 +315,71 @@
                         <div x-show="game === 'blackjack'">
                             <div class="text-xs text-secondary mb-2">Blackjack Settings</div>
                             <div class="space-y-2 text-sm text-secondary">
-                                <div class="flex justify-between">
+                                <div class="flex justify-between gap-3">
                                     <span>Players</span>
-                                    <span class="font-mono text-primary" x-text="playerCount"></span>
+                                    <span class="min-w-0 break-words text-right font-mono text-primary" x-text="playerCount"></span>
                                 </div>
-                                <div class="flex justify-between">
+                                <div class="flex justify-between gap-3">
                                     <span>Starting Stack</span>
-                                    <span class="font-mono text-primary" x-text="blackjackStartingStack"></span>
+                                    <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackStartingStack"></span>
                                 </div>
-                                <div class="flex justify-between">
+                                <div class="flex justify-between gap-3">
                                     <span>Fixed Bet</span>
-                                    <span class="font-mono text-primary" x-text="blackjackFixedBet"></span>
+                                    <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackFixedBet"></span>
                                 </div>
-                                <div class="flex justify-between">
+                                <div class="flex justify-between gap-3">
                                     <span>Dealer Soft 17</span>
-                                    <span class="font-mono text-primary" x-text="blackjackDealerHitsSoft17 ? 'Hit' : 'Stand'"></span>
+                                    <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackDealerHitsSoft17 ? 'Hit' : 'Stand'"></span>
                                 </div>
-                                <div class="flex justify-between">
+                                <div class="flex justify-between gap-3">
                                     <span>Double Down</span>
-                                    <span class="font-mono text-primary" x-text="blackjackAllowDouble ? 'On' : 'Off'"></span>
+                                    <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackAllowDouble ? 'On' : 'Off'"></span>
                                 </div>
                                 <template x-if="isEnterprise">
                                     <div class="pt-2 border-t border-border">
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Preset</span>
-                                            <span class="font-mono text-primary" x-text="blackjackPresetLabel()"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackPresetLabel()"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Deck Count</span>
-                                            <span class="font-mono text-primary" x-text="blackjackDeckCount"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackDeckCount"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Blackjack Payout</span>
-                                            <span class="font-mono text-primary" x-text="blackjackPayout"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackPayout"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Insurance</span>
-                                            <span class="font-mono text-primary" x-text="blackjackAllowInsurance ? 'On' : 'Off'"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackAllowInsurance ? 'On' : 'Off'"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Surrender</span>
-                                            <span class="font-mono text-primary" x-text="blackjackAllowSurrender ? 'On' : 'Off'"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackAllowSurrender ? 'On' : 'Off'"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Split Pairs</span>
-                                            <span class="font-mono text-primary" x-text="blackjackAllowSplit ? 'On' : 'Off'"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackAllowSplit ? 'On' : 'Off'"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Max Hands</span>
-                                            <span class="font-mono text-primary" x-text="blackjackMaxHands"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackMaxHands"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Resplit Aces</span>
-                                            <span class="font-mono text-primary" x-text="blackjackAllowResplitAces ? 'On' : 'Off'"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackAllowResplitAces ? 'On' : 'Off'"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Double After Split</span>
-                                            <span class="font-mono text-primary" x-text="blackjackAllowDoubleAfterSplit ? 'On' : 'Off'"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackAllowDoubleAfterSplit ? 'On' : 'Off'"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>Dealer Peek</span>
-                                            <span class="font-mono text-primary" x-text="blackjackDealerPeek ? 'On' : 'Off'"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackDealerPeek ? 'On' : 'Off'"></span>
                                         </div>
-                                        <div class="flex justify-between">
+                                        <div class="flex justify-between gap-3">
                                             <span>No Hole Card</span>
-                                            <span class="font-mono text-primary" x-text="blackjackNoHoleCard ? 'On' : 'Off'"></span>
+                                            <span class="min-w-0 break-words text-right font-mono text-primary" x-text="blackjackNoHoleCard ? 'On' : 'Off'"></span>
                                         </div>
                                     </div>
                                 </template>
@@ -384,9 +399,9 @@
                             <div class="text-xs text-secondary mb-2">Game Settings</div>
                             <div class="space-y-2 text-sm text-secondary">
                                 <template x-for="field in gameFields" :key="field.key">
-                                    <div class="flex justify-between">
+                                    <div class="flex justify-between gap-3">
                                         <span x-text="field.label"></span>
-                                        <span class="font-mono text-primary" x-text="formatValue(configValues[field.key], field.input)"></span>
+                                        <span class="min-w-0 break-words text-right font-mono text-primary" x-text="formatValue(configValues[field.key], field.input)"></span>
                                     </div>
                                 </template>
                             </div>
@@ -394,11 +409,11 @@
 
                         <!-- Estimates -->
                         <div class="pt-4 border-t border-border">
-                            <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center justify-between gap-3 mb-2">
                                 <span class="text-xs text-secondary">Est. Duration</span>
                                 <span class="text-sm font-mono text-primary">~2m 30s</span>
                             </div>
-                            <div class="flex justify-between items-center">
+                            <div class="flex items-center justify-between gap-3">
                                 <span class="text-xs text-secondary">Cost Impact</span>
                                 <span class="badge badge-success">Low</span>
                             </div>
@@ -446,12 +461,48 @@
                 blackjackNoHoleCard: gameDefaults.blackjack?.settings?.no_hole_card ?? false,
                 blackjackPreset: 'custom',
                 applyingPreset: false,
+
+                currentGame() {
+                    return gameCatalog[this.game] || {};
+                },
+
+                resolvedPlayerCount() {
+                    if (this.game === 'texas_holdem' || this.game === 'blackjack') return this.playerCount;
+                    if (this.game === 'chutes_and_ladders') return 1;
+
+                    const game = this.currentGame();
+                    const roles = Array.isArray(game.roles) ? game.roles.filter(Boolean) : [];
+                    const maxPlayers = Number(game.max_players || 0);
+                    return Math.max(1, Math.min(6, roles.length || maxPlayers || 2));
+                },
+
+                modelCapability() {
+                    const capabilities = this.currentGame().capabilities;
+                    return Array.isArray(capabilities) && capabilities.length ? capabilities[0] : this.game;
+                },
+
+                formatRoleLabel(role) {
+                    return String(role || '')
+                        .replace(/[_-]/g, ' ')
+                        .replace(/\b\w/g, char => char.toUpperCase());
+                },
                 
                 getPlayerLabel(i) {
                     if (this.game === 'chess') return i === 1 ? 'White (Player 1)' : 'Black (Player 2)';
                     if (this.game === 'texas_holdem' || this.game === 'blackjack') return `Seat ${i}`;
                     if (this.game === 'chutes_and_ladders') return 'Player (Model)';
+                    const role = this.currentGame().roles?.[i - 1];
+                    if (role) return `${this.formatRoleLabel(role)} (Model)`;
                     return `Player ${i} (Model)`;
+                },
+
+                getModel(id) {
+                    return id ? (this.models.find(m => m.id === id) || null) : null;
+                },
+
+                getModelLabel(id) {
+                    const m = this.getModel(id);
+                    return m ? `${m.name} (${m.api_provider})` : '';
                 },
 
                 getModelName(id) {
@@ -607,6 +658,8 @@
                     if (gameKey === 'texas_holdem') {
                         const maxPlayers = defaults.max_players ?? 2;
                         this.playerCount = Math.min(6, Math.max(2, parseInt(maxPlayers, 10)));
+                    } else if (gameKey !== 'blackjack') {
+                        this.playerCount = this.resolvedPlayerCount();
                     }
                     if (gameKey === 'blackjack') {
                         this.playerCount = Math.min(6, Math.max(1, this.playerCount || 1));
@@ -633,7 +686,8 @@
                 async fetchModels() {
                     this.loading = true;
                     try {
-                        const res = await fetch(`/api/models?capability=${this.game}`);
+                        const capability = encodeURIComponent(this.modelCapability());
+                        const res = await fetch(`/api/models?capability=${capability}`);
                         this.models = await res.json();
                         // Reset selections when game changes? Or keep if possible?
                         // Reset is safer.

@@ -1,0 +1,125 @@
+/*
+ * Team chat.
+ *
+ * Desktop (>= 1024px): two panes side by side, as before.
+ * Phones/tablets (< 1024px): ONE pane at a time (master/detail). `/chat` shows the conversation list and
+ * `/chat/channels/:id` shows the thread with a back link, so the browser back gesture works with no extra history code.
+ * The page is an app shell: it never scrolls, so the composer is always on screen. Its height follows the *visual*
+ * viewport (public chat script sets --chat-top/--chat-h), so the on-screen keyboard never covers the input.
+ */
+
+.chat-shell {
+  display: flex;
+  background: #fff;
+  overflow: hidden;
+  height: calc(100vh - var(--nav-h, 64px));
+  height: calc(100dvh - var(--nav-h, 64px));
+}
+
+.chat-list { width: 18rem; flex-shrink: 0; }
+.chat-thread { min-width: 0; }
+
+/* ---------- Phones and tablets ---------- */
+@media (max-width: 1023.98px) {
+  /* The site nav adds bottom padding for its tab bar; an app shell never scrolls, so the tab bar never appears here. */
+  body:has(.chat-shell) { padding-bottom: 0; }
+
+  .chat-shell {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--chat-top, var(--nav-h, 56px));
+    height: var(--chat-h, calc(100dvh - var(--nav-h, 56px)));
+    z-index: 1;
+  }
+  .chat-list { width: 100%; border-right: 0; }
+  .chat-shell[data-view="list"] .chat-thread { display: none; }
+  .chat-shell[data-view="thread"] .chat-list { display: none; }
+}
+
+/* ---------- Touch targets (phones, tablets, and any touch screen) ---------- */
+.chat-hit { display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 1023.98px), (any-pointer: coarse) {
+  .chat-hit { min-width: 44px; min-height: 44px; }
+  .chat-list-item { min-height: 56px; }
+  .chat-modal-close { min-width: 44px; min-height: 44px; }
+}
+
+.chat-back { margin-left: -0.5rem; }
+@media (min-width: 1024px) { .chat-back { display: none; } }
+
+/* ---------- Header ---------- */
+.chat-title { min-width: 0; }
+.chat-title h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 639.98px) {
+  .chat-header { padding: 0.5rem 0.75rem !important; }
+  .chat-header h1 { font-size: 1rem; }
+}
+
+/* ---------- Messages ---------- */
+.chat-messages { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: auto; }
+@media (prefers-reduced-motion: no-preference) { .chat-messages.is-smooth { scroll-behavior: smooth; } }
+@media (max-width: 639.98px) {
+  .chat-messages { padding: 0.75rem !important; }
+  .chat-msg { gap: 0.625rem !important; }
+  .chat-avatar-col { width: 2rem !important; }
+  .chat-avatar-col img { height: 2rem !important; width: 2rem !important; }
+}
+
+/* Long words, URLs and code never widen the page. */
+.chat-msg-body, .markdown-body { overflow-wrap: anywhere; word-break: break-word; }
+.chat-messages img { max-width: 100%; height: auto; }
+.markdown-body pre { max-width: 100%; }
+.markdown-body table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.markdown-body th, .markdown-body td { border: 1px solid #e2e8f0; padding: 0.25rem 0.5rem; }
+.chat-attachment { max-width: 100%; }
+
+/* Edit/delete: appear on hover or keyboard focus on desktop; always visible (and big enough to tap) on touch screens. */
+.chat-actions:focus-within { opacity: 1; }
+@media (hover: none), (any-pointer: coarse) {
+  .chat-actions {
+    position: static !important;
+    opacity: 1 !important;
+    margin-top: 0.25rem;
+    display: inline-flex !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    gap: 0.25rem;
+  }
+  .chat-actions button { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.5rem; }
+  .chat-actions svg { width: 1.125rem; height: 1.125rem; }
+}
+
+/* ---------- Composer ---------- */
+.chat-composer { padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
+.chat-input { font-size: 1rem; line-height: 1.4; }   /* 16px: iOS Safari zooms the page on focus below this */
+.chat-send { min-height: 48px; min-width: 48px; }
+@media (max-width: 639.98px) {
+  .chat-composer { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .chat-send { padding-left: 0 !important; padding-right: 0 !important; width: 48px; }
+  .chat-send .chat-send-label { display: none; }
+}
+.chat-file-preview { max-width: calc(100vw - 1.5rem); }
+@media (max-width: 639.98px) { .chat-file-preview { left: 0; right: 0; } }
+
+.chat-jump {
+  position: absolute; right: 0.75rem; bottom: 0.75rem; z-index: 5; min-width: 44px; min-height: 44px; border-radius: 9999px;
+  background: #fff; border: 1px solid #cbd5e1; box-shadow: 0 6px 18px -6px rgba(15, 23, 42, 0.35); color: #334155;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.chat-jump[hidden] { display: none; }
+
+/* ---------- Modals: bottom sheets on phones ---------- */
+@media (max-width: 639.98px) {
+  .chat-modal { align-items: flex-end !important; padding: 0 !important; }
+  .chat-modal > div { max-width: none !important; width: 100%; border-radius: 1.25rem 1.25rem 0 0 !important; max-height: 92vh; max-height: 92dvh; overflow-y: auto; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .chat-modal form { padding: 1rem !important; }
+}
+.chat-modal input, .chat-modal select, .chat-modal textarea { font-size: 1rem; min-height: 44px; }
+
+/* ---------- Motion and print ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .chat-shell *, .chat-modal * { transition: none !important; animation: none !important; }
+}
+@media print { .chat-list, .chat-composer { display: none !important; } .chat-shell { position: static; height: auto; } }

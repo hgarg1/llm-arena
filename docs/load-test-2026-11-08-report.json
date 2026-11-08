@@ -1,0 +1,950 @@
+{
+  "base": "https://llm-arena.harshit-garg.com",
+  "startedAt": "2026-11-08T06:33:58.044Z",
+  "config": {
+    "BROWSERS": 40,
+    "SESSIONS": 5,
+    "WAVE1": {
+      "slowChess": 20,
+      "poker": 20,
+      "blackjack": 10,
+      "fastChess": 10,
+      "chutes": 10
+    },
+    "WAVE2": {
+      "slowChess": 10,
+      "poker": 10,
+      "blackjack": 5,
+      "fastChess": 5,
+      "chutes": 5
+    },
+    "WAVE2_DELAY_S": 120,
+    "BASELINE_S": 45
+  },
+  "aborted": false,
+  "durationSeconds": 529,
+  "loadPhaseSeconds": 473,
+  "creation": {
+    "total": 105,
+    "accepted": 105,
+    "p50ms": 2283,
+    "p95ms": 3677
+  },
+  "web": {
+    "baseline": {
+      "all": {
+        "requests": 843,
+        "errors": 0,
+        "errorRate": 0,
+        "p50": 113,
+        "p95": 307,
+        "p99": 421,
+        "max": 477
+      },
+      "routes": {
+        "/docs": {
+          "requests": 53,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 84,
+          "p95": 206,
+          "p99": 345,
+          "max": 345
+        },
+        "/benchmarks": {
+          "requests": 85,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 94,
+          "p95": 221,
+          "p99": 429,
+          "max": 429
+        },
+        "/about": {
+          "requests": 61,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 79,
+          "p95": 266,
+          "p99": 414,
+          "max": 414
+        },
+        "/matches": {
+          "requests": 119,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 143,
+          "p95": 286,
+          "p99": 376,
+          "max": 403
+        },
+        "/how-it-works": {
+          "requests": 38,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 73,
+          "p95": 198,
+          "p99": 218,
+          "max": 218
+        },
+        "/matches/:id": {
+          "requests": 102,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 122,
+          "p95": 320,
+          "p99": 347,
+          "max": 357
+        },
+        "/": {
+          "requests": 200,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 159,
+          "p95": 378,
+          "p99": 474,
+          "max": 477
+        },
+        "/matches/:id/events": {
+          "requests": 60,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 29,
+          "p95": 128,
+          "p99": 413,
+          "max": 413
+        },
+        "/matches/:id/events?after": {
+          "requests": 43,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 95,
+          "p95": 257,
+          "p99": 439,
+          "max": 439
+        },
+        "/methodology": {
+          "requests": 46,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 80,
+          "p95": 211,
+          "p99": 260,
+          "max": 260
+        },
+        "/auth/login": {
+          "requests": 36,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 83,
+          "p95": 166,
+          "p99": 172,
+          "max": 172
+        }
+      }
+    },
+    "underLoad": {
+      "all": {
+        "requests": 8181,
+        "errors": 0,
+        "errorRate": 0,
+        "p50": 85,
+        "p95": 313,
+        "p99": 754,
+        "max": 1526
+      },
+      "routes": {
+        "/": {
+          "requests": 2102,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 112,
+          "p95": 501,
+          "p99": 961,
+          "max": 1435
+        },
+        "/matches": {
+          "requests": 1220,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 104,
+          "p95": 423,
+          "p99": 708,
+          "max": 1106
+        },
+        "/matches/:id": {
+          "requests": 807,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 90,
+          "p95": 368,
+          "p99": 697,
+          "max": 917
+        },
+        "/matches/:id/events": {
+          "requests": 680,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 30,
+          "p95": 54,
+          "p99": 113,
+          "max": 496
+        },
+        "/matches/:id/events?after": {
+          "requests": 392,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 35,
+          "p95": 237,
+          "p99": 849,
+          "max": 1526
+        },
+        "/methodology": {
+          "requests": 384,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 67,
+          "p95": 230,
+          "p99": 426,
+          "max": 862
+        },
+        "/auth/login": {
+          "requests": 334,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 65,
+          "p95": 221,
+          "p99": 505,
+          "max": 694
+        },
+        "/benchmarks": {
+          "requests": 769,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 76,
+          "p95": 334,
+          "p99": 654,
+          "max": 1195
+        },
+        "/about": {
+          "requests": 671,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 63,
+          "p95": 234,
+          "p99": 494,
+          "max": 794
+        },
+        "/how-it-works": {
+          "requests": 399,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 64,
+          "p95": 204,
+          "p99": 480,
+          "max": 563
+        },
+        "/docs": {
+          "requests": 423,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 63,
+          "p95": 223,
+          "p99": 408,
+          "max": 553
+        }
+      }
+    },
+    "creates": {
+      "all": {
+        "requests": 105,
+        "errors": 0,
+        "errorRate": 0,
+        "p50": 2283,
+        "p95": 3677,
+        "p99": 3859,
+        "max": 3954
+      },
+      "routes": {
+        "POST /matches": {
+          "requests": 105,
+          "errors": 0,
+          "errorRate": 0,
+          "p50": 2283,
+          "p95": 3677,
+          "p99": 3859,
+          "max": 3954
+        }
+      }
+    }
+  },
+  "matches": {
+    "total": 107,
+    "byStatus": {
+      "COMPLETED": 107
+    },
+    "sliceCountDistribution": {
+      "1": 79,
+      "2": 28
+    },
+    "secondsToFinish": {
+      "chess": {
+        "n": 45,
+        "p50": 306,
+        "p95": 333,
+        "max": 336
+      },
+      "texas_holdem": {
+        "n": 31,
+        "p50": 43,
+        "p95": 56,
+        "max": 66
+      },
+      "blackjack": {
+        "n": 16,
+        "p50": 6,
+        "p95": 34,
+        "max": 34
+      },
+      "chutes_and_ladders": {
+        "n": 15,
+        "p50": 3,
+        "p95": 54,
+        "max": 54
+      }
+    },
+    "queueWaitSeconds": {
+      "p50": 0,
+      "p95": 27,
+      "max": 29
+    },
+    "rateLimitWaits": 0,
+    "moveFailures": 0
+  },
+  "system": {
+    "maxLeasedConcurrently": 52,
+    "maxOrphaned": 0,
+    "maxPgConnections": 11,
+    "samples": 87
+  },
+  "integrityProblems": [],
+  "timeline": [
+    {
+      "s": 61,
+      "RUNNING": 18,
+      "COMPLETED": 4,
+      "leased": 18,
+      "conns": 11
+    },
+    {
+      "s": 66,
+      "PENDING": 4,
+      "RUNNING": 37,
+      "COMPLETED": 7,
+      "leased": 37,
+      "conns": 11
+    },
+    {
+      "s": 71,
+      "COMPLETED": 12,
+      "PENDING": 3,
+      "RUNNING": 52,
+      "leased": 52,
+      "conns": 11
+    },
+    {
+      "s": 78,
+      "COMPLETED": 16,
+      "PENDING": 8,
+      "RUNNING": 48,
+      "leased": 48,
+      "conns": 11
+    },
+    {
+      "s": 83,
+      "COMPLETED": 19,
+      "PENDING": 8,
+      "RUNNING": 45,
+      "leased": 45,
+      "conns": 11
+    },
+    {
+      "s": 88,
+      "COMPLETED": 21,
+      "PENDING": 8,
+      "RUNNING": 43,
+      "leased": 43,
+      "conns": 11
+    },
+    {
+      "s": 93,
+      "COMPLETED": 24,
+      "RUNNING": 40,
+      "PENDING": 8,
+      "leased": 40,
+      "conns": 11
+    },
+    {
+      "s": 98,
+      "COMPLETED": 24,
+      "RUNNING": 41,
+      "PENDING": 7,
+      "leased": 41,
+      "conns": 11
+    },
+    {
+      "s": 103,
+      "COMPLETED": 28,
+      "RUNNING": 44,
+      "leased": 43,
+      "conns": 11
+    },
+    {
+      "s": 111,
+      "COMPLETED": 35,
+      "RUNNING": 37,
+      "leased": 37,
+      "conns": 11
+    },
+    {
+      "s": 116,
+      "COMPLETED": 39,
+      "RUNNING": 33,
+      "leased": 33,
+      "conns": 11
+    },
+    {
+      "s": 121,
+      "COMPLETED": 42,
+      "RUNNING": 30,
+      "leased": 30,
+      "conns": 11
+    },
+    {
+      "s": 126,
+      "COMPLETED": 44,
+      "RUNNING": 28,
+      "leased": 28,
+      "conns": 11
+    },
+    {
+      "s": 131,
+      "COMPLETED": 46,
+      "RUNNING": 26,
+      "leased": 26,
+      "conns": 11
+    },
+    {
+      "s": 136,
+      "COMPLETED": 47,
+      "RUNNING": 25,
+      "leased": 25,
+      "conns": 11
+    },
+    {
+      "s": 141,
+      "COMPLETED": 48,
+      "RUNNING": 24,
+      "leased": 24,
+      "conns": 10
+    },
+    {
+      "s": 148,
+      "COMPLETED": 52,
+      "RUNNING": 20,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 153,
+      "COMPLETED": 52,
+      "RUNNING": 20,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 158,
+      "COMPLETED": 52,
+      "RUNNING": 20,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 163,
+      "RUNNING": 20,
+      "COMPLETED": 52,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 168,
+      "RUNNING": 20,
+      "COMPLETED": 52,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 173,
+      "RUNNING": 20,
+      "COMPLETED": 52,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 181,
+      "RUNNING": 20,
+      "COMPLETED": 52,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 186,
+      "RUNNING": 20,
+      "COMPLETED": 52,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 191,
+      "RUNNING": 20,
+      "COMPLETED": 52,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 196,
+      "RUNNING": 20,
+      "COMPLETED": 52,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 201,
+      "RUNNING": 20,
+      "COMPLETED": 52,
+      "leased": 20,
+      "conns": 10
+    },
+    {
+      "s": 206,
+      "PENDING": 1,
+      "RUNNING": 24,
+      "COMPLETED": 53,
+      "leased": 24,
+      "conns": 10
+    },
+    {
+      "s": 211,
+      "PENDING": 1,
+      "RUNNING": 40,
+      "COMPLETED": 56,
+      "leased": 40,
+      "conns": 10
+    },
+    {
+      "s": 218,
+      "RUNNING": 48,
+      "COMPLETED": 59,
+      "leased": 48,
+      "conns": 10
+    },
+    {
+      "s": 223,
+      "RUNNING": 41,
+      "COMPLETED": 66,
+      "leased": 41,
+      "conns": 10
+    },
+    {
+      "s": 228,
+      "COMPLETED": 66,
+      "RUNNING": 41,
+      "leased": 41,
+      "conns": 10
+    },
+    {
+      "s": 233,
+      "COMPLETED": 68,
+      "RUNNING": 39,
+      "leased": 38,
+      "conns": 10
+    },
+    {
+      "s": 238,
+      "COMPLETED": 72,
+      "RUNNING": 35,
+      "leased": 35,
+      "conns": 10
+    },
+    {
+      "s": 243,
+      "COMPLETED": 74,
+      "RUNNING": 33,
+      "leased": 33,
+      "conns": 10
+    },
+    {
+      "s": 250,
+      "COMPLETED": 75,
+      "RUNNING": 32,
+      "leased": 32,
+      "conns": 10
+    },
+    {
+      "s": 255,
+      "COMPLETED": 75,
+      "RUNNING": 32,
+      "leased": 32,
+      "conns": 10
+    },
+    {
+      "s": 260,
+      "COMPLETED": 75,
+      "RUNNING": 32,
+      "leased": 32,
+      "conns": 10
+    },
+    {
+      "s": 265,
+      "COMPLETED": 77,
+      "RUNNING": 30,
+      "leased": 30,
+      "conns": 10
+    },
+    {
+      "s": 270,
+      "COMPLETED": 77,
+      "RUNNING": 30,
+      "leased": 30,
+      "conns": 10
+    },
+    {
+      "s": 275,
+      "COMPLETED": 77,
+      "RUNNING": 30,
+      "leased": 30,
+      "conns": 10
+    },
+    {
+      "s": 281,
+      "COMPLETED": 77,
+      "RUNNING": 30,
+      "leased": 30,
+      "conns": 10
+    },
+    {
+      "s": 288,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 293,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 298,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 303,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 308,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 313,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 321,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 326,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 331,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 336,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 341,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 346,
+      "COMPLETED": 78,
+      "RUNNING": 29,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 353,
+      "RUNNING": 29,
+      "COMPLETED": 78,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 358,
+      "RUNNING": 29,
+      "COMPLETED": 78,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 363,
+      "RUNNING": 29,
+      "COMPLETED": 78,
+      "leased": 29,
+      "conns": 10
+    },
+    {
+      "s": 368,
+      "RUNNING": 26,
+      "COMPLETED": 81,
+      "leased": 26,
+      "conns": 10
+    },
+    {
+      "s": 373,
+      "RUNNING": 24,
+      "COMPLETED": 83,
+      "leased": 24,
+      "conns": 10
+    },
+    {
+      "s": 378,
+      "RUNNING": 23,
+      "COMPLETED": 84,
+      "leased": 23,
+      "conns": 10
+    },
+    {
+      "s": 383,
+      "RUNNING": 23,
+      "COMPLETED": 84,
+      "leased": 23,
+      "conns": 10
+    },
+    {
+      "s": 391,
+      "RUNNING": 17,
+      "COMPLETED": 90,
+      "leased": 17,
+      "conns": 10
+    },
+    {
+      "s": 396,
+      "RUNNING": 14,
+      "COMPLETED": 93,
+      "leased": 14,
+      "conns": 10
+    },
+    {
+      "s": 401,
+      "RUNNING": 13,
+      "COMPLETED": 94,
+      "leased": 13,
+      "conns": 10
+    },
+    {
+      "s": 406,
+      "RUNNING": 11,
+      "COMPLETED": 96,
+      "leased": 11,
+      "conns": 10
+    },
+    {
+      "s": 411,
+      "RUNNING": 10,
+      "COMPLETED": 97,
+      "leased": 10,
+      "conns": 10
+    },
+    {
+      "s": 416,
+      "RUNNING": 10,
+      "COMPLETED": 97,
+      "leased": 10,
+      "conns": 10
+    },
+    {
+      "s": 423,
+      "RUNNING": 10,
+      "COMPLETED": 97,
+      "leased": 10,
+      "conns": 10
+    },
+    {
+      "s": 428,
+      "RUNNING": 10,
+      "COMPLETED": 97,
+      "leased": 10,
+      "conns": 10
+    },
+    {
+      "s": 434,
+      "RUNNING": 10,
+      "COMPLETED": 97,
+      "leased": 10,
+      "conns": 10
+    },
+    {
+      "s": 438,
+      "RUNNING": 10,
+      "COMPLETED": 97,
+      "leased": 10,
+      "conns": 10
+    },
+    {
+      "s": 444,
+      "RUNNING": 10,
+      "COMPLETED": 97,
+      "leased": 10,
+      "conns": 10
+    },
+    {
+      "s": 448,
+      "RUNNING": 10,
+      "COMPLETED": 97,
+      "leased": 10,
+      "conns": 10
+    },
+    {
+      "s": 453,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 461,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 466,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 471,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 476,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 481,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 486,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 494,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 499,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 504,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 509,
+      "RUNNING": 9,
+      "COMPLETED": 98,
+      "leased": 9,
+      "conns": 10
+    },
+    {
+      "s": 514,
+      "RUNNING": 8,
+      "COMPLETED": 99,
+      "leased": 8,
+      "conns": 10
+    },
+    {
+      "s": 519,
+      "RUNNING": 2,
+      "COMPLETED": 105,
+      "leased": 2,
+      "conns": 10
+    },
+    {
+      "s": 523,
+      "COMPLETED": 107,
+      "leased": 0,
+      "conns": 10
+    }
+  ]
+}

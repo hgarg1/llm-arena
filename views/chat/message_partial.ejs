@@ -24,8 +24,8 @@
     </div>
 <% } else { %>
     <!-- USER MESSAGE -->
-    <div class="flex gap-4 group relative <%= isContinuation ? 'mt-2' : 'mt-6' %>" id="msg-<%= msg.id %>">
-        <div class="flex-shrink-0 w-10">
+    <div class="chat-msg flex gap-4 group relative <%= isContinuation ? 'mt-2' : 'mt-6' %>" id="msg-<%= msg.id %>">
+        <div class="chat-avatar-col flex-shrink-0 w-10">
             <% if (!isContinuation) { %>
                 <img class="h-10 w-10 rounded-full bg-white shadow-sm object-cover ring-2 ring-white" src="<%= msg.sender && msg.sender.avatar_url ? msg.sender.avatar_url : `https://ui-avatars.com/api/?name=${msg.sender ? encodeURIComponent(msg.sender.name || 'User') : 'U'}&background=random` %>" alt="">
             <% } %>
@@ -41,7 +41,7 @@
             <% if (isDeleted) { %>
                 <div class="text-sm italic text-slate-400 border-l-2 border-slate-200 pl-3 py-1">Message deleted</div>
             <% } else { %>
-                <div class="text-sm text-slate-700 leading-relaxed markdown-body max-w-3xl" id="content-<%= msg.id %>" data-content="<%= encodeURIComponent(msg.content) %>">
+                <div class="chat-msg-body text-sm text-slate-700 leading-relaxed markdown-body max-w-3xl" id="content-<%= msg.id %>" data-content="<%= encodeURIComponent(msg.content) %>">
                     <!-- Content will be rendered by client-side JS -->
                     <%= msg.content %>
                 </div>
@@ -53,15 +53,15 @@
                 <% if (msg.attachments && msg.attachments.length > 0) { %>
                     <% msg.attachments.forEach(att => { %>
                         <% if (att.file_type.startsWith('image/')) { %>
-                            <img src="/<%= att.url %>" class="mt-2 rounded-lg max-h-64 border border-slate-200 bg-white" loading="lazy">
+                            <img src="/<%= att.url %>" class="chat-attachment mt-2 rounded-lg max-h-64 border border-slate-200 bg-white" loading="lazy" alt="<%= att.file_name %>">
                         <% } else { %>
-                             <div class="mt-2 p-3 bg-slate-100 rounded-lg flex items-center gap-3 border border-slate-200 max-w-sm">
+                             <div class="chat-attachment mt-2 p-3 bg-slate-100 rounded-lg flex items-center gap-3 border border-slate-200 max-w-sm">
                                 <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 2H7a2 2 0 00-2 2v15a2 2 0 002 2z"></path></svg>
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm font-medium text-slate-700 truncate"><%= att.file_name %></p>
                                     <p class="text-xs text-slate-500"><%= Math.round(att.file_size/1024) %> KB</p>
                                 </div>
-                                <a href="/<%= att.url %>" target="_blank" class="ml-auto text-indigo-600 hover:underline text-xs whitespace-nowrap">Download</a>
+                                <a href="/<%= att.url %>" target="_blank" rel="noopener" class="chat-hit ml-auto text-indigo-600 hover:underline text-xs whitespace-nowrap">Download</a>
                             </div>
                         <% } %>
                     <% }) %>
@@ -71,11 +71,11 @@
 
                 <!-- Actions -->
                 <% if (isMe) { %>
-                    <div class="absolute right-0 -top-3 opacity-0 group-hover/content:opacity-100 transition-opacity flex bg-white shadow-sm border border-slate-200 rounded p-0.5 z-10">
-                        <button onclick="editMessage('<%= msg.id %>')" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded" title="Edit">
+                    <div class="chat-actions absolute right-0 -top-3 opacity-0 group-hover/content:opacity-100 transition-opacity flex bg-white shadow-sm border border-slate-200 rounded p-0.5 z-10">
+                        <button onclick="editMessage('<%= msg.id %>')" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded" title="Edit" aria-label="Edit message">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         </button>
-                        <button onclick="deleteMessage('<%= msg.id %>')" class="p-1 text-slate-400 hover:text-red-600 hover:bg-slate-50 rounded" title="Delete">
+                        <button onclick="deleteMessage('<%= msg.id %>')" class="p-1 text-slate-400 hover:text-red-600 hover:bg-slate-50 rounded" title="Delete" aria-label="Delete message">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
                     </div>

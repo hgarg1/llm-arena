@@ -4,6 +4,7 @@ import * as mediaController from '../controllers/admin/media.controller';
 import * as contentController from '../controllers/admin/content.controller';
 import * as rbacController from '../controllers/admin/rbac.controller';
 import * as gamesController from '../controllers/admin/games.controller';
+import * as runnerController from '../controllers/admin/runner.controller';
 import * as entitlementsController from '../controllers/admin/entitlements.controller';
 import * as apiKeysController from '../controllers/admin/api-keys.controller';
 import * as plansController from '../controllers/admin/plans.controller';
@@ -45,6 +46,7 @@ router.post('/matches/:id/retry', requirePermission('admin.matches.retry'), admi
 
 // Queue Management
 router.get('/queue', requirePermission('admin.queue.view'), adminController.queueDashboard);
+router.get('/runner', requirePermission('admin.queue.view'), runnerController.runnerDashboard);
 router.post('/queue/clean', requirePermission('admin.queue.clean'), adminController.cleanQueue);
 router.post('/queue/:id/retry', requirePermission('admin.queue.retry'), adminController.retryJob);
 
@@ -94,7 +96,7 @@ router.get('/games/:id', requirePermission('admin.games.view'), gamesController.
 router.post('/games/:id/save', requirePermission('admin.games.edit'), gamesController.saveGameDraft);
 router.post('/games/:id/publish', requirePermission('admin.games.publish'), gamesController.publishGame);
 router.post('/games/:id/engine/generate', requirePermission('admin.games.edit'), gamesController.generateGameEngine);
-router.post('/games/:id/engine/publish', requirePermission('admin.games.edit'), gamesController.publishGameEngine);
+router.post('/games/:id/engine/publish', requirePermission('admin.games.publish'), gamesController.publishGameEngine);
 router.post('/games/:id/simulate', requirePermission('admin.games.edit'), gamesController.simulateGame);
 router.post('/games/:id/delete', requirePermission('admin.games.edit'), gamesController.deleteGame);
 

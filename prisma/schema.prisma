@@ -19,6 +19,7 @@ enum MatchStatus {
   RUNNING
   COMPLETED
   FAILED
+  CANCELLED
 }
 
 enum TournamentStatus {
@@ -125,6 +126,11 @@ enum GameEngineArtifactStatus {
   FAILED
 }
 
+enum GameEngineArtifactKind {
+  SANDBOXED
+  NATIVE
+}
+
 enum JobStatus {
   DRAFT
   PUBLISHED
@@ -171,14 +177,22 @@ enum JobInterviewStatus {
 }
 
 model GameDryRun {
-  id         String   @id @default(uuid())
-  game_id    String
-  seed       Int
-  events     Json
-  created_by String?
-  created_at DateTime @default(now())
+  id                 String   @id @default(uuid())
+  game_id            String
+  engine_artifact_id String?
+  seed               Int
+  success            Boolean  @default(false)
+  events             Json
+  error_message      String?  @db.Text
+  checks             Json?
+  created_by         String?
+  created_at         DateTime @default(now())
 
-  game       GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  game               GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  engine_artifact    GameEngineArtifact? @relation(fields: [engine_artifact_id], references: [id], onDelete: SetNull)
+
+  @@index([game_id, created_at])
+  @@index([engine_artifact_id])
 }
 
 model User {
@@ -191,6 +205,10 @@ model User {
   company       String?
   job_title     String?
   avatar_url    String?   // Profile Picture
+  avatar_data   Bytes?
+  avatar_content_type String?
+  avatar_file_name String?
+  avatar_updated_at DateTime?
   tier          SubscriptionTier @default(FREE)
   plan_id       String?
   plan          SubscriptionPlan? @relation(fields: [plan_id], references: [id], onDelete: SetNull)
@@ -401,12 +419,59 @@ model Match {
   status          MatchStatus @default(PENDING)
   seed            Int         // Deterministic seed
   ruleset_version String      @default("1.0.0")
+  options         Json?
+  engine_artifact_id String?
+  failure_reason  String?     @db.Text
+
+  /// Resumable execution: whoever holds the lease may play the next move; it expires if the holder dies.
+  lease_owner      String?
+  lease_expires_at DateTime?
+  slice_count      Int         @default(0)
+  /// Consecutive failed model calls for the move currently being played (reset when a move is recorded).
+  move_failures    Int         @default(0)
+  /// When the first slice started (queue wait excluded); the wall-time budget counts from here.
+  started_at       DateTime?
+  /// Estimated tokens sent to / received from models over the whole match (chars / 3.5).
+  input_tokens     Int         @default(0)
+  output_tokens    Int         @default(0)
+  /// How many times a provider rate limit (ours or theirs) made this match wait.
+  rate_limit_waits Int         @default(0)
   
   created_at      DateTime    @default(now())
   finished_at     DateTime?
   
   participants    MatchParticipant[]
   events          MatchEvent[]
+  moves           MatchMove[]
+
+  @@index([status, lease_expires_at])
+}
+
+/// The raw text each actor submitted, in order. Engines are deterministic, so seed + options + moves
+/// rebuild any match exactly; this is what lets a run continue in a different process.
+model MatchMove {
+  id         String   @id @default(uuid())
+  match_id   String
+  match      Match    @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  move_index Int
+  actor_role String
+  content    String   @db.Text
+  /// Provider and cost of the model call that produced this move (null for engine-driven moves).
+  provider      String?
+  latency_ms    Int?
+  input_tokens  Int?
+  output_tokens Int?
+  created_at DateTime @default(now())
+
+  @@unique([match_id, move_index])
+  @@index([provider, created_at])
+}
+
+/// Token buckets shared by every runner process, one per provider and unit (e.g. "openai:rpm").
+model ProviderRateLimit {
+  key        String   @id
+  tokens     Float
+  updated_at DateTime @db.Timestamptz(3)
 }
 
 model MatchParticipant {
@@ -417,7 +482,7 @@ model MatchParticipant {
   model     Model    @relation(fields: [model_id], references: [id])
   
   role      String?  // e.g. "player1", "white", "black"
-  score     Int?
+  score     Float?
   
   created_at DateTime @default(now())
 }
@@ -428,6 +493,7 @@ model MatchEvent {
   match       Match    @relation(fields: [match_id], references: [id])
   
   turn_index  Int
+  seq         Int      @default(0)
   actor_role  String?  // e.g., "player1", "player2", "system"
   type        String   // e.g., "proposal", "accept", "reject", "game_start", "game_end"
   payload     Json
@@ -435,6 +501,7 @@ model MatchEvent {
   created_at  DateTime @default(now())
 
   @@index([match_id, turn_index])
+  @@index([match_id, seq])
 }
 
 model ModelComposite {
@@ -654,6 +721,8 @@ model GameUISchema {
   create_form_layout Json?
   summary_template   Json?
   labels             Json?
+  /// Replay presentation: { renderer: 'generic' | 'chess' | 'chutes' | 'poker' | 'blackjack', board?: {...} }
+  replay_schema      Json?
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
 
@@ -686,18 +755,27 @@ model GameRevision {
 }
 
 model GameEngineArtifact {
-  id         String   @id @default(uuid())
-  game_id    String
-  status     GameEngineArtifactStatus @default(DRAFT)
-  spec       Json
-  code_ts    String   @db.Text
-  tests_ts   String?  @db.Text
-  notes      String?  @db.Text
-  created_by String?
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id              String   @id @default(uuid())
+  game_id         String
+  status          GameEngineArtifactStatus @default(DRAFT)
+  kind            GameEngineArtifactKind @default(SANDBOXED)
+  native_key      String?
+  contract_version Int @default(1)
+  spec            Json
+  code_ts         String   @db.Text
+  tests_ts        String?  @db.Text
+  notes           String?  @db.Text
+  generation_provider String?
+  used_fallback   Boolean  @default(false)
+  generation_error String? @db.Text
+  compile_error   String?  @db.Text
+  compiled_at     DateTime?
+  created_by      String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
-  game       GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  game            GameDefinition @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  dry_runs        GameDryRun[]
 }
 
 model JobPosting {
@@ -1174,4 +1252,14 @@ model AdminAiChatMessage {
   chat      AdminAiChat @relation(fields: [chat_id], references: [id], onDelete: Cascade)
 
   @@index([chat_id, created_at])
+}
+
+/// Server-side HTTP sessions (express-session). Used on serverless deployments, where an in-memory store cannot be
+/// shared between instances and a Redis session store would be an extra service to run.
+model HttpSession {
+  sid    String   @id
+  sess   Json
+  expire DateTime
+
+  @@index([expire])
 }

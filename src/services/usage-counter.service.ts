@@ -84,3 +84,39 @@ export const checkQuota = async (input: {
   return { allowed, remaining, resetAt };
 };
 
+
+/**
+ * Atomically takes one unit of quota. A single upsert increments the counter only while it is below
+ * the limit, so concurrent requests can never overshoot it (unlike check-then-increment).
+ */
+export const reserveUsage = async (input: {
+  entitlementKey: string;
+  scopeType: ScopeType;
+  scopeId: string;
+  limit: number;
+  window: Window;
+}): Promise<boolean> => {
+  const windowStart = getWindowStart(input.window);
+  const rows = await prisma.$queryRaw<Array<{ count: number }>>`
+    INSERT INTO "UsageCounter" (id, scope_type, scope_id, entitlement_key, window_start, count, created_at, updated_at)
+    VALUES (gen_random_uuid()::text, ${input.scopeType}::"UsageScopeType", ${input.scopeId}, ${input.entitlementKey}, ${windowStart}, 1, now(), now())
+    ON CONFLICT (scope_type, scope_id, entitlement_key, window_start)
+    DO UPDATE SET count = "UsageCounter".count + 1, updated_at = now()
+    WHERE "UsageCounter".count < ${input.limit}
+    RETURNING count`;
+  return rows.length > 0;
+};
+
+/** Gives back a unit taken by `reserveUsage` (e.g. the guarded action failed). */
+export const releaseUsage = async (input: {
+  entitlementKey: string;
+  scopeType: ScopeType;
+  scopeId: string;
+  window: Window;
+}) => {
+  const windowStart = getWindowStart(input.window);
+  await prisma.$executeRaw`
+    UPDATE "UsageCounter" SET count = GREATEST(count - 1, 0), updated_at = now()
+    WHERE scope_type = ${input.scopeType}::"UsageScopeType" AND scope_id = ${input.scopeId}
+      AND entitlement_key = ${input.entitlementKey} AND window_start = ${windowStart}`;
+};
