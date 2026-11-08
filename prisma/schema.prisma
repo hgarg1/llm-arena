@@ -507,6 +507,8 @@ model MatchEvent {
 
   @@index([match_id, turn_index])
   @@index([match_id, seq])
+  /// An event has at most one successor, so a hash chain can never fork. NULLs (unchained legacy events) never collide.
+  @@unique([match_id, prev_hash])
 }
 
 model ModelComposite {

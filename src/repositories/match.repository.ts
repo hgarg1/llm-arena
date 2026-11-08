@@ -1,6 +1,7 @@
 import { prisma } from '../config/db';
 import { Match, MatchStatus, Prisma } from '@prisma/client';
 import { isDatabaseConfigured } from '../config/runtime';
+import { chainAppend, ChainTail } from '../integrity/append';
 
 export interface MoveUsage {
   provider: string;
@@ -114,8 +115,11 @@ export class MatchRepository {
   ): Promise<void> {
     if (!isDatabaseConfigured()) return;
     try {
-      await prisma.$transaction([
-        prisma.matchMove.create({
+      // One interactive transaction: the move row goes first, so a runner that lost the race fails on the unique
+      // (match, move_index) key before it touches the event log. The hash chain is then extended from the tail that
+      // is really stored, and the unique (match, prev_hash) index rejects any second successor.
+      await prisma.$transaction(async tx => {
+        await tx.matchMove.create({
           data: {
             match_id: id,
             move_index: move.index,
@@ -126,20 +130,36 @@ export class MatchRepository {
             input_tokens: move.usage?.inputTokens ?? null,
             output_tokens: move.usage?.outputTokens ?? null
           }
-        }),
-        ...(events.length > 0 ? [prisma.matchEvent.createMany({ data: events.map(e => ({ match_id: id, ...e })) })] : []),
-        prisma.match.update({
+        });
+        if (events.length > 0) await this.appendEventsIn(tx, id, events);
+        await tx.match.update({
           where: { id },
           data: {
             move_failures: 0,
             ...(move.usage ? { input_tokens: { increment: move.usage.inputTokens }, output_tokens: { increment: move.usage.outputTokens } } : {})
           }
-        })
-      ]);
+        });
+      }, { timeout: 20_000, maxWait: 10_000 });
     } catch (err: any) {
       if (err?.code === 'P2002') throw new LeaseLostError();
       throw err;
     }
+  }
+
+  /** Appends events to a match's hash chain inside the caller's transaction (see src/integrity/append.ts). */
+  private async appendEventsIn(
+    tx: Prisma.TransactionClient,
+    matchId: string,
+    events: { turn_index: number; seq: number; type: string; actor_role: string | null; payload: any }[]
+  ) {
+    const last = await tx.matchEvent.findFirst({
+      where: { match_id: matchId },
+      orderBy: [{ seq: 'desc' }, { turn_index: 'desc' }, { created_at: 'desc' }],
+      select: { seq: true, hash: true }
+    });
+    const tail: ChainTail | null = last ? { seq: last.seq, hash: last.hash } : null;
+    const rows = chainAppend(matchId, tail, events);
+    return tx.matchEvent.createMany({ data: rows.map(e => ({ match_id: matchId, ...e, payload: e.payload as Prisma.InputJsonValue })) });
   }
 
   /** Counts a failed model call for the current move and returns the new consecutive-failure count. */
@@ -259,9 +279,12 @@ export class MatchRepository {
 
   async addEvents(matchId: string, events: { turn_index: number; seq: number; type: string; actor_role: string; payload: any }[]) {
     if (!isDatabaseConfigured() || events.length === 0) return null;
-    return prisma.matchEvent.createMany({
-      data: events.map(e => ({ match_id: matchId, ...e }))
-    });
+    try {
+      return await prisma.$transaction(tx => this.appendEventsIn(tx, matchId, events), { timeout: 20_000, maxWait: 10_000 });
+    } catch (err: any) {
+      if (err?.code === 'P2002') throw new LeaseLostError();
+      throw err;
+    }
   }
 
   async setParticipantScore(participantId: string, score: number) {
@@ -273,6 +296,15 @@ export class MatchRepository {
     if (!isDatabaseConfigured()) {
       return null;
     }
-    return prisma.matchEvent.create({ data });
+    const matchId = data.match?.connect?.id;
+    if (!matchId) return prisma.matchEvent.create({ data }); // no match to chain under
+    await this.addEvents(matchId, [{
+      turn_index: data.turn_index,
+      seq: data.seq ?? 0,
+      type: data.type,
+      actor_role: data.actor_role ?? 'system',
+      payload: data.payload
+    }]);
+    return null;
   }
 }

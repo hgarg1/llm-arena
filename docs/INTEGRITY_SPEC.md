@@ -96,11 +96,14 @@ The **head** of a log is the hash of its last event. The head of an empty log is
 
 Storing `hash` and `prev_hash` beside each event is allowed and recommended for convenience. They are never trusted: a verifier recomputes them.
 
-### 4.4 Appending (for implementers of the runner)
+### 4.4 Appending (implemented in `src/integrity/append.ts` and `MatchRepository`)
 
-- A move and the events it produced are written in one transaction (this is already how `recordMove` works). The hashes of those events MUST be computed and stored in the same transaction, starting from the stored hash of the highest existing `seq`.
-- The lease and the unique `(match_id, move_index)` key already prevent two runners from extending the same match. A writer that loses the race writes nothing, so the chain cannot fork.
+- The chain is extended inside the repository's append methods (`recordMove`, `addEvents`), in the same transaction that writes the rows, from the stored event with the highest `seq`. A move row is written first, so a runner that lost the race fails on the unique `(match_id, move_index)` key before it touches the event log.
+- Rows are ordered by `seq` first. The first new `seq` MUST be the stored tail's `seq + 1` (`0` for an empty log) and the rest MUST be consecutive; anything else is rejected with an integrity error and nothing is written. This also catches a replay that no longer agrees with the stored log.
+- The database enforces that a chain cannot fork: a unique index on `(match_id, prev_hash)` gives every event at most one successor. A second writer that read the same tail is rejected and its transaction rolls back, as a lost lease.
+- The payload is normalised to what storage will return (a JSON round trip) before it is hashed, and the normalised value is what is stored. An event that cannot be hashed (for example an integer above 2^53) is an error, never stored without a hash.
 - Resuming a match replays stored moves through the deterministic engine and appends from the next `seq`. Because the record depends only on event content, a resumed match produces the same chain as an uninterrupted one whenever the events themselves are identical.
+- A match whose stored events have no hashes (it began before chaining existed) stays unchained to the end: new events are stored with `NULL` hashes. Hashes are never started partway through a log. Such a match is `UNVERIFIED`.
 - If a match is restarted from nothing (the existing "clear stale events" step), the chain starts again at `genesis`.
 
 ## 5. Manifest
@@ -194,8 +197,7 @@ Regenerating after an intentional spec change: `UPDATE_INTEGRITY_VECTORS=1 npx j
 
 ## 10. Open items handed to later stories
 
-- m1-02: storage columns for `hash` and `prev_hash`.
-- m1-03: computing the chain inside `recordMove` and the events-only paths (`addEvents`, `addEvent`).
+- Done: storage columns (m1-02) and chaining on every append path with the no-fork index (m1-03).
 - m1-04: key generation, custody, rotation, and signing at match completion.
 - m1-06, m1-07, m1-08: the reserved manifest members.
 - m1-11: the key-set URL and the export bundle format.

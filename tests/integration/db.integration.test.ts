@@ -34,6 +34,8 @@ import ts from 'typescript';
 import { takeFromBucket, createDbRateLimiter } from '../../src/services/rate-limit.service';
 import { acceptSlice } from '../../src/services/runner/slice-handler';
 import { scriptedAdapter } from '../helpers/scripted-adapter';
+import * as integrity from '../helpers/integrity-reference';
+import { IntegrityError } from '../../src/integrity/append';
 import { resolveGameEngine, getGameEngine } from '../../src/game/registry';
 import { getModelAdapter } from '../../src/game/adapters';
 import { activateDueScheduledGames } from '../../src/services/game-release.service';
@@ -812,15 +814,15 @@ maybe('database integration', () => {
     const HASH = 'ab'.repeat(32);
     const PREV = '01'.repeat(32);
 
-    it('round-trips a hash pair and leaves it null on the existing runner write path', async () => {
+    it('round-trips a hash pair through the generated client, and the runner write path fills it in', async () => {
       const match = await createMatch('chess', ['white', 'black']);
-      // the runner's own write path (unchanged until story m1-03) stores no hashes
       await repo.addEvents(match.id, [{ turn_index: 0, seq: 0, type: 'START', actor_role: 'system', payload: {} }]);
       await prisma.matchEvent.create({ data: { match_id: match.id, turn_index: 1, seq: 1, type: 'STEP', actor_role: 'player1', payload: { n: 1 }, hash: HASH, prev_hash: PREV } });
 
       const rows = await repo.findEventsAfter(match.id, -1);
       expect(rows.map(r => r.seq)).toEqual([0, 1]);
-      expect(rows[0]).toMatchObject({ hash: null, prev_hash: null });
+      expect(rows[0].hash).toMatch(/^[0-9a-f]{64}$/); // chained by the repository (story m1-03)
+      expect(rows[0].prev_hash).toMatch(/^[0-9a-f]{64}$/);
       expect(rows[1]).toMatchObject({ hash: HASH, prev_hash: PREV });
     });
 
@@ -830,6 +832,134 @@ maybe('database integration', () => {
       await expect(prisma.matchEvent.create({ data: { ...data, hash: 'NOT-A-HASH', prev_hash: PREV } })).rejects.toThrow();
       await expect(prisma.matchEvent.create({ data: { ...data, hash: HASH } })).rejects.toThrow();
       expect(await prisma.matchEvent.count({ where: { match_id: match.id } })).toBe(0);
+    });
+  });
+  describe('hash chain written through Postgres (real SQL, real runner)', () => {
+    const asRunnerRepo = repo as unknown as RunnerRepo;
+    const mk = (extra: any = {}) => ({ repo: asRunnerRepo, getEngine: getGameEngine, getAdapter: () => scriptedAdapter(), maxTurns: 600, sleep: async () => undefined, metric: () => undefined, ...extra });
+    const SEED = Buffer.from(Array.from({ length: 32 }, (_, i) => i));
+    const KEYS = [{ key_id: integrity.keyId(integrity.publicKeyRawFromSeed(SEED)), alg: 'Ed25519' as const, public_key: integrity.publicKeyRawFromSeed(SEED).toString('base64url'), status: 'active' as const }];
+
+    const stored = (matchId: string) => prisma.matchEvent.findMany({ where: { match_id: matchId }, orderBy: { seq: 'asc' } });
+    const asRecords = (rows: Awaited<ReturnType<typeof stored>>) => rows.map(e => ({ seq: e.seq, turn_index: e.turn_index, type: e.type, actor_role: e.actor_role, payload: e.payload }));
+    /** Verifies the stored log with the independent reference: a manifest over its head, signed with a test key. */
+    const verifies = (matchId: string, rows: Awaited<ReturnType<typeof stored>>) => {
+      const records = asRecords(rows);
+      const envelope = integrity.signManifest({
+        spec: integrity.SPEC, key_id: KEYS[0].key_id, match_id: matchId, game_type: 'x', ruleset_version: '1', seed: 1, status: 'COMPLETED',
+        events: { count: records.length, head_hash: integrity.chain(matchId, records).head }, started_at: null, finished_at: null
+      }, SEED);
+      return integrity.verifyMatch(matchId, records, envelope, KEYS);
+    };
+    const chainIntact = (matchId: string, rows: Awaited<ReturnType<typeof stored>>) => {
+      expect(rows.map(r => r.hash)).toEqual(integrity.chain(matchId, asRecords(rows)).hashes);
+      expect(rows[0].prev_hash).toBe(integrity.genesisHash(matchId));
+      rows.slice(1).forEach((r, i) => expect(r.prev_hash).toBe(rows[i].hash));
+    };
+
+    it('a match played by the real runner is fully chained, and the independent verifier accepts it', async () => {
+      for (const [game, roles, options] of [['chess', ['white', 'black'], { maxPlies: 30 }], ['texas_holdem', ['seat1', 'seat2', 'seat3'], { playerCount: 3 }], ['blackjack', ['seat1', 'seat2'], { playerCount: 2 }]] as Array<[string, string[], any]>) {
+        const match = await createMatch(game, roles, { seed: 5 }, 'openai');
+        await runMatch(match.id, options, mk());
+        const rows = await stored(match.id);
+        expect(rows.length).toBeGreaterThan(1);
+        expect(rows.every(r => r.hash && r.prev_hash)).toBe(true);
+        chainIntact(match.id, rows);
+        expect(verifies(match.id, rows)).toEqual({ result: 'VERIFIED' });
+      }
+    });
+
+    it('a match resumed across many slices is one unbroken chain', async () => {
+      const match = await createMatch('chess', ['white', 'black'], { seed: 11 }, 'openai');
+      let clock = 0;
+      const timed = mk({
+        now: () => clock, moveTimeoutMs: 10_000,
+        getAdapter: () => { const inner = scriptedAdapter(); return { generateMove: async (...a: Parameters<typeof inner.generateMove>) => { clock += 10_000; return inner.generateMove(...a); } }; }
+      });
+      let result: SliceResult = { done: false, status: 'yielded' };
+      for (let i = 0; !result.done && i < 200; i++) result = await runMatchSlice(match.id, { maxPlies: 24 }, timed, { deadlineAt: clock + 20_000, owner: `runner-${i % 3}` });
+      expect(result.status).toBe('completed');
+      expect((await prisma.match.findUnique({ where: { id: match.id } }))!.slice_count).toBeGreaterThan(5);
+      const rows = await stored(match.id);
+      chainIntact(match.id, rows);
+      expect(verifies(match.id, rows)).toEqual({ result: 'VERIFIED' });
+    });
+
+    it('a runner that dies after persisting a move is replaced by another runner with no break in the chain', async () => {
+      const match = await createMatch('chess', ['white', 'black'], { seed: 12 }, 'openai');
+      const original = repo.recordMove.bind(repo);
+      let recorded = 0;
+      repo.recordMove = (async (...args: Parameters<typeof original>) => { await original(...args); if (++recorded === 5) throw new Error('runner killed'); }) as typeof original;
+      try {
+        await expect(runMatchSlice(match.id, { maxPlies: 20 }, mk(), { owner: 'A' })).rejects.toThrow(/runner killed/);
+      } finally { repo.recordMove = original; }
+      expect(await repo.countEvents(match.id)).toBeGreaterThan(5);
+
+      const resumed = await runMatchSlice(match.id, { maxPlies: 20 }, mk(), { owner: 'B', resumeFailed: true });
+      expect(resumed.status).toBe('completed');
+      const rows = await stored(match.id);
+      chainIntact(match.id, rows);
+      expect(verifies(match.id, rows)).toEqual({ result: 'VERIFIED' });
+    });
+
+    it('a writer that loses the race for a move leaves the chain exactly as it was', async () => {
+      const match = await createMatch('chess', ['white', 'black'], { status: 'RUNNING' });
+      const ev = (seq: number) => ({ turn_index: seq, seq, type: 'MOVE', actor_role: 'white', payload: { n: seq } });
+      await repo.recordMove(match.id, { index: 0, actor: 'white', content: 'e2e4' }, [ev(0), ev(1)]);
+      const before = await stored(match.id);
+      await expect(repo.recordMove(match.id, { index: 0, actor: 'white', content: 'd2d4' }, [ev(2)])).rejects.toBeInstanceOf(LeaseLostError);
+      const after = await stored(match.id);
+      expect(after.map(r => r.hash)).toEqual(before.map(r => r.hash));
+      chainIntact(match.id, after);
+    });
+
+    it('the database refuses a second successor of the same event, so a chain cannot fork', async () => {
+      const match = await createMatch('chess', ['white', 'black']);
+      await repo.addEvents(match.id, [0, 1].map(seq => ({ turn_index: seq, seq, type: 'E', actor_role: 'system', payload: {} })));
+      const [first, second] = await stored(match.id);
+      // an event that claims the same predecessor as `second` (that is, `first`)
+      await expect(prisma.matchEvent.create({ data: { match_id: match.id, turn_index: 9, seq: 2, type: 'FORK', actor_role: 'system', payload: {}, hash: 'f'.repeat(64), prev_hash: second.prev_hash! } })).rejects.toThrow();
+      expect(first.hash).toBe(second.prev_hash);
+      expect(await prisma.matchEvent.count({ where: { match_id: match.id } })).toBe(2);
+    });
+
+    it('two writers appending the same seq cannot both succeed', async () => {
+      const match = await createMatch('chess', ['white', 'black']);
+      const write = (n: number) => repo.addEvents(match.id, [{ turn_index: 0, seq: 0, type: 'START', actor_role: 'system', payload: { writer: n } }]);
+      const results = await Promise.allSettled([write(1), write(2), write(3)]);
+      expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+      for (const r of results) if (r.status === 'rejected') expect([LeaseLostError, IntegrityError].some(E => r.reason instanceof E)).toBe(true);
+      const rows = await stored(match.id);
+      expect(rows).toHaveLength(1);
+      chainIntact(match.id, rows);
+    });
+
+    it('rejects events that would leave a gap, and writes nothing', async () => {
+      const match = await createMatch('chess', ['white', 'black']);
+      await repo.addEvents(match.id, [{ turn_index: 0, seq: 0, type: 'START', actor_role: 'system', payload: {} }]);
+      await expect(repo.addEvents(match.id, [{ turn_index: 2, seq: 2, type: 'LATE', actor_role: 'system', payload: {} }])).rejects.toBeInstanceOf(IntegrityError);
+      await expect(repo.recordMove(match.id, { index: 0, actor: 'white', content: 'e2e4' }, [{ turn_index: 5, seq: 5, type: 'MOVE', actor_role: 'white', payload: {} }])).rejects.toBeInstanceOf(IntegrityError);
+      expect(await prisma.matchEvent.count({ where: { match_id: match.id } })).toBe(1);
+      expect(await repo.getMoves(match.id)).toEqual([]); // the move row was rolled back with its events
+    });
+
+    it('a match that began before chaining stays unchained: appended events get no hashes', async () => {
+      const match = await createMatch('chess', ['white', 'black'], { status: 'RUNNING' });
+      await prisma.matchEvent.createMany({ data: [0, 1].map(seq => ({ match_id: match.id, turn_index: seq, seq, type: 'OLD', actor_role: 'system', payload: {} })) });
+      await repo.addEvents(match.id, [{ turn_index: 2, seq: 2, type: 'NEW', actor_role: 'system', payload: {} }]);
+      await repo.recordMove(match.id, { index: 0, actor: 'white', content: 'e2e4' }, [{ turn_index: 3, seq: 3, type: 'MOVE', actor_role: 'white', payload: {} }]);
+      const rows = await stored(match.id);
+      expect(rows.map(r => r.seq)).toEqual([0, 1, 2, 3]);
+      expect(rows.every(r => r.hash === null && r.prev_hash === null)).toBe(true);
+    });
+
+    it('stores the payload exactly as it hashed it (JSON round trip)', async () => {
+      const match = await createMatch('chess', ['white', 'black']);
+      await repo.addEvents(match.id, [{ turn_index: 0, seq: 0, type: 'START', actor_role: 'system', payload: { keep: 1.0, gone: undefined, when: new Date('2026-11-08T12:00:00.000Z'), ratio: 0.1 } }]);
+      const rows = await stored(match.id);
+      expect(rows[0].payload).toEqual({ keep: 1, when: '2026-11-08T12:00:00.000Z', ratio: 0.1 });
+      chainIntact(match.id, rows);
+      expect(verifies(match.id, rows)).toEqual({ result: 'VERIFIED' });
     });
   });
 });

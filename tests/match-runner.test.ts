@@ -388,7 +388,7 @@ describe('slices', () => {
     });
     const repo = new MemoryRepo(mkMatch('flaky', ['player1']), MatchStatus.RUNNING);
     repo.moves = [{ move_index: 0, actor_role: 'player1', content: 'x' }, { move_index: 1, actor_role: 'player1', content: 'x' }];
-    repo.events = [0, 1, 2].map(seq => ({ turn_index: seq, seq, type: 'X', actor_role: 'system', payload: {} }));
+    repo.events = [0, 1, 2].map(seq => ({ turn_index: seq, seq, type: 'X', actor_role: 'system', payload: {}, hash: null, prev_hash: null }));
     await expect(runMatchSlice('m1', {}, deps(repo, { getEngine: engine }))).rejects.toThrow(/not deterministic/);
     expect(repo.status).toBe(MatchStatus.FAILED);
     expect(repo.events).toHaveLength(3); // nothing was written on top of the inconsistent state

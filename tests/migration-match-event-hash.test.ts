@@ -71,8 +71,8 @@ describe('migration: MatchEvent hash chain columns', () => {
     out = Object.fromEntries(checks.map((c, i) => [c.key, results[i]]));
   }, 150_000);
 
-  it('is the newest migration, so this replay is the order production applies', () => {
-    expect(migrations[migrations.length - 1]).toBe(NEW);
+  it('exists, and the replay applies it in migration order on top of everything older', () => {
+    expect(migrations).toContain(NEW);
   });
 
   it('applies cleanly on top of existing data and leaves existing events readable', () => {
