@@ -497,7 +497,12 @@ model MatchEvent {
   actor_role  String?  // e.g., "player1", "player2", "system"
   type        String   // e.g., "proposal", "accept", "reject", "game_start", "game_end"
   payload     Json
-  
+
+  /// Hash chain over the match's events (docs/INTEGRITY_SPEC.md). Null for events recorded before chaining existed;
+  /// those matches are shown as "Unverified". Lowercase hex SHA-256, enforced by CHECK constraints in the migration.
+  hash        String?  @db.VarChar(64)
+  prev_hash   String?  @db.VarChar(64)
+
   created_at  DateTime @default(now())
 
   @@index([match_id, turn_index])

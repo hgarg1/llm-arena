@@ -19,3 +19,4 @@
 /tsconfig.test.json
 /.eslintrc.cjs
 /scripts/test-with-pglite.mjs
+/scripts/pglite-replay.mjs

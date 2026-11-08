@@ -808,4 +808,28 @@ maybe('database integration', () => {
       } finally { server.close(); }
     });
   });
+  describe('event hash chain columns (real SQL, generated Prisma client)', () => {
+    const HASH = 'ab'.repeat(32);
+    const PREV = '01'.repeat(32);
+
+    it('round-trips a hash pair and leaves it null on the existing runner write path', async () => {
+      const match = await createMatch('chess', ['white', 'black']);
+      // the runner's own write path (unchanged until story m1-03) stores no hashes
+      await repo.addEvents(match.id, [{ turn_index: 0, seq: 0, type: 'START', actor_role: 'system', payload: {} }]);
+      await prisma.matchEvent.create({ data: { match_id: match.id, turn_index: 1, seq: 1, type: 'STEP', actor_role: 'player1', payload: { n: 1 }, hash: HASH, prev_hash: PREV } });
+
+      const rows = await repo.findEventsAfter(match.id, -1);
+      expect(rows.map(r => r.seq)).toEqual([0, 1]);
+      expect(rows[0]).toMatchObject({ hash: null, prev_hash: null });
+      expect(rows[1]).toMatchObject({ hash: HASH, prev_hash: PREV });
+    });
+
+    it('rejects a malformed or half-present pair', async () => {
+      const match = await createMatch('chess', ['white', 'black']);
+      const data = { match_id: match.id, turn_index: 0, seq: 0, type: 'STEP', actor_role: 'player1', payload: {} };
+      await expect(prisma.matchEvent.create({ data: { ...data, hash: 'NOT-A-HASH', prev_hash: PREV } })).rejects.toThrow();
+      await expect(prisma.matchEvent.create({ data: { ...data, hash: HASH } })).rejects.toThrow();
+      expect(await prisma.matchEvent.count({ where: { match_id: match.id } })).toBe(0);
+    });
+  });
 });
