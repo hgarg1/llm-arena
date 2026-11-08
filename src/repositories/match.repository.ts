@@ -2,6 +2,7 @@ import { prisma } from '../config/db';
 import { Match, MatchStatus, Prisma } from '@prisma/client';
 import { isDatabaseConfigured } from '../config/runtime';
 import { chainAppend, ChainTail } from '../integrity/append';
+import { sealIfFinal } from '../services/match-manifest.service';
 
 export interface MoveUsage {
   provider: string;
@@ -152,6 +153,10 @@ export class MatchRepository {
     matchId: string,
     events: { turn_index: number; seq: number; type: string; actor_role: string | null; payload: any }[]
   ) {
+    // A signed manifest seals the log: nothing may be appended until a retry deletes it (docs/INTEGRITY_SPEC.md 4.4).
+    if (await tx.matchManifest.findUnique({ where: { match_id: matchId }, select: { match_id: true } })) {
+      throw new LeaseLostError('The match is sealed (it has a signed manifest)');
+    }
     const last = await tx.matchEvent.findFirst({
       where: { match_id: matchId },
       orderBy: [{ seq: 'desc' }, { turn_index: 'desc' }, { created_at: 'desc' }],
@@ -239,6 +244,8 @@ export class MatchRepository {
     if (!isDatabaseConfigured()) {
       return null;
     }
+    // Leaving a final state (retry, resume) invalidates the old manifest; the next final state signs a new one.
+    if (status === MatchStatus.PENDING || status === MatchStatus.RUNNING) await prisma.matchManifest.deleteMany({ where: { match_id: id } });
     return prisma.match.update({
       where: { id },
       data: {
@@ -247,6 +254,12 @@ export class MatchRepository {
         ...(failureReason !== undefined ? { failure_reason: failureReason } : {})
       }
     });
+  }
+
+  /** Signs the match's manifest if it has just reached a final state (no-op otherwise, and when signing is not configured). */
+  async sealIfFinal(id: string): Promise<void> {
+    if (!isDatabaseConfigured()) return;
+    await sealIfFinal(id);
   }
 
   async getStatus(id: string): Promise<MatchStatus | null> {

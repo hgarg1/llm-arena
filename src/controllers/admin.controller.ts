@@ -11,6 +11,7 @@ import { logAdminAction } from '../services/audit.service';
 import { addDataRows, applyColumnSizing, createStyledSheet, createWorkbook } from '../services/excel-export.service';
 import { isQueueEnabled, isRunnerEnabled } from '../config/runtime';
 import { startMatch } from '../services/runner/backend';
+import { clearManifest, sealIfFinal } from '../services/match-manifest.service';
 
 const EMPTY_QUEUE_COUNTS = {
     active: 0,
@@ -801,6 +802,8 @@ export const cancelMatch = async (req: Request, res: Response) => {
     if (result.count === 0) {
         return res.redirect('/admin/matches?error=Only pending or running matches can be cancelled');
     }
+    // A pending match has no runner to do this; a running one is sealed by its runner when it stops (or by the sweeper).
+    await sealIfFinal(id).catch(() => undefined);
 
     if (queueEnabled) {
         try {
@@ -829,6 +832,7 @@ export const retryMatch = async (req: Request, res: Response) => {
     if (result.count === 0) {
         return res.redirect('/admin/matches?error=Only failed or cancelled matches can be retried');
     }
+    await clearManifest(id); // no longer final: the old manifest must not outlive the retry
     const match = await prisma.match.findUnique({ where: { id }, select: { options: true } });
     await startMatch(id, match?.options ?? undefined);
     await logAdminAction((req.session as any).userId, 'match.retry', id);

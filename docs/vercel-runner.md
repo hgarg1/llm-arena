@@ -101,3 +101,7 @@ VERCEL=1 INTEGRATION_DATABASE_URL=<pooled branch url> \
 ```
 
 Neon branches inherit the parent's role passwords, so a branch connection string is as sensitive as production's. `neonctl branches create` prints the connection string; run it with its output redirected.
+
+## Signing finished matches (milestone M1)
+
+When `INTEGRITY_SIGNING_KEY` is set, every finished match gets a signed manifest (see `docs/INTEGRITY_SPEC.md` and `docs/INTEGRITY_KEYS.md`). The runner seals a match at the end of its last slice; the per-minute sweeper also seals recent finished matches that were missed (`INTEGRITY_SEAL_LOOKBACK_HOURS`, default 72). Apply the `MatchManifest` migration before enabling it. Without the variable nothing is signed and nothing changes.

@@ -18,7 +18,7 @@ const server = new PGLiteSocketServer({ db, port, host: '127.0.0.1' });
 await server.start();
 console.log(`PGlite ready on :${port} with ${names.length} migrations applied`);
 
-const child = spawn('npx', ['jest', 'tests/integration', ...process.argv.slice(2)], {
+const child = spawn('npx', ['jest', 'tests/integration', '--runInBand', ...process.argv.slice(2)], {
   stdio: 'inherit',
   env: {
     ...process.env,

@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db';
+import { sealUnsealed } from '../match-manifest.service';
 import { getEnv } from '../../config/runtime';
 import { dispatchSlice } from './dispatch';
 
@@ -31,6 +32,9 @@ export const sweepMatches = async (now = new Date(), dispatch = dispatchSlice): 
     where: { status: 'PENDING', created_at: { lt: new Date(now.getTime() - maxAgeMs) } },
     data: { status: 'FAILED', finished_at: now, failure_reason: 'Expired before a runner picked it up. Retry it from the admin match list.' }
   });
+
+  // Repair pass: seal recent finished matches whose runner died (or was cancelled) before it could. No-op unless signing is on.
+  await sealUnsealed({ now }).catch(err => console.error(JSON.stringify({ at: 'integrity', level: 'error', message: 'seal repair pass failed', reason: String(err?.message || err) })));
 
   const leaseFree = [{ lease_expires_at: null }, { lease_expires_at: { lt: now } }];
   const active = await prisma.match.count({ where: { status: 'RUNNING', lease_expires_at: { gt: now } } });

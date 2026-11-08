@@ -443,6 +443,7 @@ model Match {
   participants    MatchParticipant[]
   events          MatchEvent[]
   moves           MatchMove[]
+  manifest        MatchManifest?
 
   @@index([status, lease_expires_at])
 }
@@ -485,6 +486,19 @@ model MatchParticipant {
   score     Float?
   
   created_at DateTime @default(now())
+}
+
+/// The signed manifest of a finished match (docs/INTEGRITY_SPEC.md). It exists only while the match is in a final
+/// state: retrying a match deletes it, and the next final state signs a new one. While it exists the event log is sealed.
+model MatchManifest {
+  match_id  String   @id
+  match     Match    @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  key_id    String   @db.VarChar(16)
+  /// The exact manifest object that was signed.
+  manifest  Json
+  /// base64url Ed25519 signature over DOMAIN_MANIFEST || canonical JSON of `manifest`.
+  signature String
+  signed_at DateTime @default(now())
 }
 
 model MatchEvent {

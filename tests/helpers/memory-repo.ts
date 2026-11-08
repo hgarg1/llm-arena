@@ -22,6 +22,8 @@ export class MemoryRepo implements RunnerRepo {
   outputTokens = 0;
   rateLimitWaits = 0;
   usage: MoveUsage[] = [];
+  /** Status at each point the runner asked for the match to be sealed. */
+  sealCalls: MatchStatus[] = [];
 
   constructor(public match: RunnerMatch, initial: MatchStatus = MatchStatus.PENDING, public clock: () => number = Date.now) {
     this.status = initial;
@@ -79,6 +81,7 @@ export class MemoryRepo implements RunnerRepo {
   }
   async recordMoveFailure() { return ++this.moveFailures; }
   async resetMoveFailures() { this.moveFailures = 0; }
+  async sealIfFinal() { this.sealCalls.push(this.status); }
   async setRulesetVersion(_id: string, version: string) { this.rulesetVersion = version; }
 
   // Test controls

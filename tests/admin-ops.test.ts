@@ -2,7 +2,7 @@ process.env.MATCH_QUEUE_ENABLED = 'true';
 process.env.REDIS_URL = 'redis://localhost:6379';
 process.env.DATABASE_URL = 'postgres://test';
 
-const prismaMock: any = { match: { updateMany: jest.fn(), findUnique: jest.fn() } };
+const prismaMock: any = { match: { updateMany: jest.fn(), findUnique: jest.fn() }, matchManifest: { deleteMany: jest.fn() } };
 const queue = { getJobs: jest.fn(), add: jest.fn() };
 jest.mock('../src/config/db', () => ({ prisma: prismaMock }));
 jest.mock('../src/services/queue', () => ({ matchQueue: queue }));
@@ -22,6 +22,7 @@ const call = async (fn: any, id: string) => {
 beforeEach(() => {
   prismaMock.match.updateMany.mockReset();
   prismaMock.match.findUnique.mockReset();
+  prismaMock.matchManifest.deleteMany.mockReset().mockResolvedValue({ count: 0 });
   queue.getJobs.mockReset().mockResolvedValue([]);
   queue.add.mockReset();
 });
@@ -60,6 +61,8 @@ describe('admin match retry', () => {
     expect(prismaMock.match.updateMany.mock.calls[0][0].where).toEqual({ id: 'm1', status: { in: ['FAILED', 'CANCELLED'] } });
     expect(queue.add).toHaveBeenCalledWith('run-match', { matchId: 'm1', options: { playerCount: 3 } }, { attempts: 2, backoff: { type: 'fixed', delay: 100 } });
     expect(res.redirected).toContain('Match retry queued');
+    // the match is no longer final, so its signed manifest must not outlive the retry
+    expect(prismaMock.matchManifest.deleteMany).toHaveBeenCalledWith({ where: { match_id: 'm1' } });
   });
 
   it('will not re-queue a running or completed match (it would be played twice)', async () => {
@@ -67,5 +70,6 @@ describe('admin match retry', () => {
     const res = await call(retryMatch, 'm1');
     expect(res.redirected).toMatch(/Only failed or cancelled matches/);
     expect(queue.add).not.toHaveBeenCalled();
+    expect(prismaMock.matchManifest.deleteMany).not.toHaveBeenCalled(); // a completed match keeps its manifest
   });
 });

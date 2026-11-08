@@ -58,6 +58,8 @@ export interface RunnerRepo {
   recordMoveFailure(id: string): Promise<number>;
   resetMoveFailures(id: string): Promise<unknown>;
   setRulesetVersion?(id: string, version: string): Promise<unknown>;
+  /** Signs the match's manifest once it is final and no runner is still writing (see match-manifest.service.ts). */
+  sealIfFinal?(id: string): Promise<unknown>;
   markStarted?(id: string): Promise<unknown>;
   addRateLimitWait?(id: string): Promise<unknown>;
 }
@@ -423,6 +425,9 @@ const runSliceInner = async (
     throw error;
   } finally {
     engine?.dispose?.();
+    // Every way a slice can end passes through here, after the lease was released: seal the match if it is final.
+    // Sealing is idempotent and never allowed to break the slice; a missed seal is repaired by the sweeper.
+    if (repo.sealIfFinal) await repo.sealIfFinal(matchId).catch(err => deps.log?.(`sealing ${matchId} failed: ${(err as Error)?.message || err}`));
   }
 };
 

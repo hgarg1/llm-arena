@@ -127,6 +127,8 @@ Reserved for later stories; when present they are covered by the signature: `eng
 
 Rules for extension: a verifier MUST ignore members it does not know; the signature covers all of them. Adding an optional member does not change the spec version. Changing the meaning of a required member, a hash input or the verification procedure does.
 
+The manifest is stored in `MatchManifest` (`src/services/match-manifest.service.ts`) and signed only when the match is final, no runner holds a live lease, and its stored chain re-verifies. While it exists the event log is sealed against further appends; retrying a match deletes it and the next final state signs a new one.
+
 Failed and cancelled matches get a manifest like any other, with the matching `status`, so a partial log is still verifiable and is never mistaken for a completed one.
 
 ## 6. Signature and keys
@@ -159,6 +161,8 @@ Public keys are published as a JSON document at a stable URL (the exact URL is s
 - `active`: used to sign new manifests.
 - `retired`: no longer signs; signatures made while it was active remain valid. This is the normal state after a rotation.
 - `revoked`: the key is believed compromised. Signatures by it MUST NOT be accepted.
+
+The key set is kept in the repository at `src/integrity/published-keys.json`; keys are never removed from it. At most one key is `active`. Operations (creating, rotating and revoking keys) are in [INTEGRITY_KEYS.md](INTEGRITY_KEYS.md).
 
 A bundle that carries its own key set is not a trust anchor. A verifier MUST obtain keys from a source it trusts (the published URL, or a key it was given directly).
 
@@ -198,6 +202,6 @@ Regenerating after an intentional spec change: `UPDATE_INTEGRITY_VECTORS=1 npx j
 ## 10. Open items handed to later stories
 
 - Done: storage columns (m1-02) and chaining on every append path with the no-fork index (m1-03).
-- m1-04: key generation, custody, rotation, and signing at match completion.
+- Done: signing at match completion with an environment-held key behind a `Signer` interface, rotation and revocation (m1-04). Still open: provisioning the production key and publishing it (docs/INTEGRITY_KEYS.md).
 - m1-06, m1-07, m1-08: the reserved manifest members.
 - m1-11: the key-set URL and the export bundle format.
