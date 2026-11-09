@@ -59,6 +59,9 @@ class SettingsService {
     // Uploads
     upload_max_mb: '5',
 
+    // Integrity
+    integrity_raw_retention_days: '90',
+
     // Communications
     comms_email_enabled: 'true',
     comms_email_test_address: '',

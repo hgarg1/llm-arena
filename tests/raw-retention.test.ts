@@ -1,23 +1,35 @@
 const prismaMock: any = { moveRawResponse: { findMany: jest.fn(), deleteMany: jest.fn() }, match: { deleteMany: jest.fn() }, matchMove: { deleteMany: jest.fn() }, matchManifest: { deleteMany: jest.fn() } };
 jest.mock('../src/config/db', () => ({ prisma: prismaMock }));
+const getAll = jest.fn();
+jest.mock('../src/services/settings.service', () => ({ settingsService: { getAll } }));
 
-import { purgeExpiredRawResponses, rawRetentionDays } from '../src/services/raw-retention.service';
+import { parseRetentionDays, purgeExpiredRawResponses, rawRetentionDays } from '../src/services/raw-retention.service';
 
-const saved = process.env.INTEGRITY_RAW_RETENTION_DAYS;
 const now = new Date('2026-11-09T12:00:00.000Z');
 beforeEach(() => {
-  delete process.env.INTEGRITY_RAW_RETENTION_DAYS;
+  getAll.mockReset().mockResolvedValue({});
   prismaMock.moveRawResponse.findMany.mockReset().mockResolvedValue([]);
   prismaMock.moveRawResponse.deleteMany.mockReset().mockResolvedValue({ count: 0 });
 });
-afterAll(() => { if (saved === undefined) delete process.env.INTEGRITY_RAW_RETENTION_DAYS; else process.env.INTEGRITY_RAW_RETENTION_DAYS = saved; });
 
 describe('raw response retention', () => {
-  it('keeps responses for 90 days by default, and the setting overrides it', () => {
-    expect(rawRetentionDays()).toBe(90);
-    process.env.INTEGRITY_RAW_RETENTION_DAYS = '30';
-    expect(rawRetentionDays()).toBe(30);
-    for (const bad of ['abc', '-5', 'NaN']) { process.env.INTEGRITY_RAW_RETENTION_DAYS = bad; expect(rawRetentionDays()).toBe(90); }
+  it('keeps responses for 90 days by default, and the admin setting overrides it', async () => {
+    expect(await rawRetentionDays()).toBe(90);
+    getAll.mockResolvedValue({ integrity_raw_retention_days: '30' });
+    expect(await rawRetentionDays()).toBe(30);
+    getAll.mockResolvedValue({ integrity_raw_retention_days: '0' });
+    expect(await rawRetentionDays()).toBe(0);
+  });
+
+  it('falls back to 90 for anything that is not a whole number of days', () => {
+    for (const bad of ['abc', '-5', 'NaN', '', ' ', '1.5', '1e3', '0x10', '123456', undefined, null, {}]) expect(parseRetentionDays(bad)).toBe(90);
+    for (const [good, days] of [['0', 0], ['1', 1], [' 45 ', 45], [7, 7], ['99999', 99999]] as const) expect(parseRetentionDays(good)).toBe(days);
+  });
+
+  it('uses the admin setting when no window is passed', async () => {
+    getAll.mockResolvedValue({ integrity_raw_retention_days: '10' });
+    await purgeExpiredRawResponses({ now });
+    expect((prismaMock.moveRawResponse.findMany.mock.calls[0][0].where.created_at.lt as Date).toISOString()).toBe('2026-10-30T12:00:00.000Z');
   });
 
   it('only deletes responses older than the window', async () => {
@@ -28,7 +40,7 @@ describe('raw response retention', () => {
 
   it('0 days means keep forever: nothing is read or deleted', async () => {
     expect(await purgeExpiredRawResponses({ now, days: 0 })).toEqual({ deleted: 0 });
-    process.env.INTEGRITY_RAW_RETENTION_DAYS = '0';
+    getAll.mockResolvedValue({ integrity_raw_retention_days: '0' });
     expect(await purgeExpiredRawResponses({ now })).toEqual({ deleted: 0 });
     expect(prismaMock.moveRawResponse.findMany).not.toHaveBeenCalled();
   });

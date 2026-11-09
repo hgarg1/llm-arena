@@ -24,7 +24,8 @@
         limit_admin_ai_chats: [{ required: true }, { custom: v => v >= 0 }],
         queue_retry_attempts: [{ required: true }, { custom: v => v >= 1 }],
         queue_retry_backoff_ms: [{ required: true }, { custom: v => v >= 0 }],
-        queue_concurrency: [{ required: true }, { custom: v => v >= 1 }]
+        queue_concurrency: [{ required: true }, { custom: v => v >= 1 }],
+        integrity_raw_retention_days: [{ required: true }, { custom: v => /^\d{1,5}$/.test(String(v).trim()), message: 'Whole days, 0 or more (0 keeps forever)' }]
     }, {
         global_alert: '<%= settings["global_alert"] || "" %>',
         auth_login_attempts: '<%= settings["auth_login_attempts"] || "10" %>',
@@ -38,7 +39,8 @@
         limit_admin_ai_chats: '<%= settings["limit_admin_ai_chats"] || "10" %>',
         queue_retry_attempts: '<%= settings["queue_retry_attempts"] || "3" %>',
         queue_retry_backoff_ms: '<%= settings["queue_retry_backoff_ms"] || "5000" %>',
-        queue_concurrency: '<%= settings["queue_concurrency"] || "2" %>'
+        queue_concurrency: '<%= settings["queue_concurrency"] || "2" %>',
+        integrity_raw_retention_days: '<%= settings["integrity_raw_retention_days"] || "90" %>'
     })" @submit="submit">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
@@ -314,6 +316,16 @@
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Upload max size (MB)</label>
                     <input type="number" min="1" name="upload_max_mb" value="<%= settings['upload_max_mb'] || '5' %>" class="w-full px-3 py-2 border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Raw model response retention (days)</label>
+                    <input type="number" min="0" step="1" name="integrity_raw_retention_days" value="<%= settings['integrity_raw_retention_days'] || '90' %>"
+                        x-model="fields.integrity_raw_retention_days.value"
+                        @blur="onBlur('integrity_raw_retention_days')"
+                        @input="onInput('integrity_raw_retention_days', $event.target.value)"
+                        :class="getInputClasses('integrity_raw_retention_days')">
+                    <p x-show="fields.integrity_raw_retention_days.error" x-text="fields.integrity_raw_retention_days.error" class="mt-1 text-[10px] text-red-600 font-medium"></p>
+                    <p class="mt-1 text-[10px] text-gray-500">0 keeps them forever. Older payloads are deleted by the sweeper; signed digests stay. Published at <a href="/data-retention" class="underline">/data-retention</a>.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Chat max upload count</label>

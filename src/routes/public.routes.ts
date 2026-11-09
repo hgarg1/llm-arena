@@ -16,6 +16,7 @@ router.get('/about', PublicController.about);
 router.get('/docs', PublicController.docs);
 router.get('/terms', PublicController.terms);
 router.get('/privacy', PublicController.privacy);
+router.get('/data-retention', PublicController.dataRetention);
 router.get('/sitemap.xml', PublicController.sitemap);
 router.get('/careers', careersController.careersIndex);
 router.get('/og/careers/:slug.png', careersController.ogImage);

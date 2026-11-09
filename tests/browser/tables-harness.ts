@@ -138,6 +138,7 @@ export const auditPages: Record<string, TablePage> = {
   docs: simple('public/docs.ejs', ['Documentation']),
   terms: simple('public/terms.ejs', ['Terms']),
   privacy: simple('public/privacy.ejs', ['Privacy']),
+  'data-retention': simple('public/data_retention.ejs', ['Data Retention', 'kept for 90 days'], { retentionDays: 90, maxRawKiB: 64 }),
   login: simple('auth/login.ejs', ['Sign in'], { user: null, next: '' }),
   signup: simple('auth/signup.ejs', ['Initialize Account'], { user: null }),
   'forgot-password': simple('auth/forgot-password.ejs', ['Account Recovery'], { user: null }),

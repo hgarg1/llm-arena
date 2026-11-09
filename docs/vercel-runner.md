@@ -110,8 +110,6 @@ When `INTEGRITY_SIGNING_KEY` is set, every finished match gets a signed manifest
 
 Every model move also stores the provider's raw response (scrubbed of credentials, at most 64 KiB, `MoveRawResponse` table), the token counts the provider reported, the measured latency and a computed cost. Apply the `MoveRawResponse` and `MatchMove.provenance` migrations before deploying. Settings:
 
-| Variable | Meaning |
-|---|---|
-| `INTEGRITY_RAW_RETENTION_DAYS` | days to keep raw responses (default 90, `0` = forever); the sweeper deletes older ones, and the signed digests are unaffected |
+Retention is an admin setting, not an environment variable: **Admin → Settings → Raw model response retention (days)** (`integrity_raw_retention_days`, default 90, `0` keeps them forever). The sweeper deletes older raw responses, the signed digests are unaffected, and the policy is published at `/data-retention`.
 
 Cost needs a price list: `src/config/model-pricing.json` ships empty, so every cost is recorded as `unknown` until it is filled in from the providers' own price lists (entries are `{ provider, model_prefix, input_per_mtok, output_per_mtok }`; set `version` and `as_of`, commit, deploy). The rates applied are stored with each move, so a later price change never rewrites old costs.

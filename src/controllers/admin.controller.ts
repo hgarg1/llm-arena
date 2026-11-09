@@ -1005,6 +1005,7 @@ export const updateSettings = async (req: Request, res: Response) => {
         'security_csp_connect_src',
         'security_csp_font_src',
         'upload_max_mb',
+        'integrity_raw_retention_days',
         'chat_max_upload_count',
         'comms_email_test_address',
         'comms_sms_test_number',

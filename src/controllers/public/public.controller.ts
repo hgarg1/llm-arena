@@ -13,6 +13,8 @@ import {
   buildWebsiteSchema
 } from '../../services/seo.service';
 import { renderOgImage } from '../../services/og-image.service';
+import { rawRetentionDays } from '../../services/raw-retention.service';
+import { MAX_RAW_BYTES } from '../../integrity/raw-response';
 
 const matchRepo = new MatchRepository();
 const modelRepo = new ModelRepository();
@@ -99,6 +101,17 @@ const STATIC_OG_CONFIG: Record<string, { eyebrow: string; theme: 'benchmarks' | 
     footerLeft: 'Service rules',
     footerRight: 'Canonical legal copy'
   },
+  'data-retention': {
+    eyebrow: 'Policy',
+    theme: 'docs',
+    title: 'How long raw model responses are kept',
+    description: 'Retention for raw provider responses, and what stays so signed match records still verify.',
+    chips: ['Retention', 'Integrity', 'Policy'],
+    metricLabel: 'Data policy',
+    metricValue: 'Digests are permanent',
+    footerLeft: 'Raw responses expire',
+    footerRight: 'Signed digests stay'
+  },
   privacy: {
     eyebrow: 'Policy',
     theme: 'docs',
@@ -176,6 +189,11 @@ const staticPageSeo = {
     description: 'Read the Terms of Service for using LLM Arena, including product usage rules, platform obligations, and legal terms.',
     canonicalPath: '/terms'
   },
+  dataRetention: {
+    title: 'Data Retention',
+    description: 'How long LLM Arena keeps raw model responses, what is removed, and what stays so that signed match records still verify.',
+    canonicalPath: '/data-retention'
+  },
   privacy: {
     title: 'Privacy Policy',
     description: 'Review how LLM Arena handles account information, application data, telemetry, and operational records.',
@@ -224,6 +242,7 @@ const buildStaticSitemapEntries = (): SitemapEntry[] => [
   { loc: buildAbsoluteUrl('/docs'), changefreq: 'weekly' },
   { loc: buildAbsoluteUrl('/terms'), changefreq: 'monthly' },
   { loc: buildAbsoluteUrl('/privacy'), changefreq: 'monthly' },
+  { loc: buildAbsoluteUrl('/data-retention'), changefreq: 'monthly' },
   { loc: buildAbsoluteUrl('/careers'), changefreq: 'weekly' },
   { loc: buildAbsoluteUrl('/models'), changefreq: 'daily' },
   { loc: buildAbsoluteUrl('/matches'), changefreq: 'daily' }
@@ -501,6 +520,17 @@ export class PublicController {
       title: config.title,
       seo: buildStaticSeo(config.title, config.description, config.canonicalPath),
       path: '/terms'
+    });
+  }
+
+  static async dataRetention(req: Request, res: Response) {
+    const config = staticPageSeo.dataRetention;
+    res.render('public/data_retention', {
+      title: config.title,
+      seo: buildStaticSeo(config.title, config.description, config.canonicalPath),
+      path: '/data-retention',
+      retentionDays: await rawRetentionDays(),
+      maxRawKiB: MAX_RAW_BYTES / 1024
     });
   }
 

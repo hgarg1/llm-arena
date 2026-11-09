@@ -21,7 +21,8 @@ import { createHash } from 'crypto';
 import { ensureDefaultGames, ensureNativeArtifacts } from '../../src/services/default-games.service';
 import { builtInEngineHash, sandboxedEngineHash } from '../../src/integrity/engine-identity';
 import { verifyMatch as verifyWithLibrary, verifyRawResponses, MoveRecord } from '../../src/integrity/verify';
-import { purgeExpiredRawResponses } from '../../src/services/raw-retention.service';
+import { purgeExpiredRawResponses, rawRetentionDays } from '../../src/services/raw-retention.service';
+import { settingsService } from '../../src/services/settings.service';
 import { verifyStoredMatch } from '../../src/services/match-verification.service';
 import { MAX_RAW_BYTES } from '../../src/integrity/raw-response';
 import { nodeProvider } from '../../src/integrity/verify-node';
@@ -581,6 +582,29 @@ maybe('sealing finished matches (real SQL, real runner)', () => {
       const before = (await rawRows(id)).length;
       expect(await purgeExpiredRawResponses({ days: 0, now: new Date(Date.now() + 3650 * 86_400_000) })).toEqual({ deleted: 0 });
       expect(await rawRows(id)).toHaveLength(before);
+    });
+
+    it('the admin setting drives the window the sweeper uses (no window passed), and 0 turns deletion off', async () => {
+      const id = await playWith(providerAdapter(), { maxPlies: 2 });
+      const before = (await rawRows(id)).length;
+      expect(before).toBeGreaterThan(0);
+      const later = new Date(Date.now() + 5 * 86_400_000);
+      try {
+        await settingsService.update('integrity_raw_retention_days', '0');
+        expect(await rawRetentionDays()).toBe(0);
+        expect(await purgeExpiredRawResponses({ now: later })).toEqual({ deleted: 0 });
+        expect(await rawRows(id)).toHaveLength(before);
+        await settingsService.update('integrity_raw_retention_days', '10');
+        expect((await purgeExpiredRawResponses({ now: later })).deleted).toBe(0); // 5 days old, 10-day window
+        await settingsService.update('integrity_raw_retention_days', '2');
+        expect((await purgeExpiredRawResponses({ now: later })).deleted).toBeGreaterThanOrEqual(before);
+        expect(await rawRows(id)).toHaveLength(0);
+        expect(await manifestOk(id)).toEqual({ result: 'VERIFIED' });
+      } finally {
+        await prisma.systemSetting.deleteMany({ where: { key: 'integrity_raw_retention_days' } });
+        await settingsService.update('integrity_raw_retention_days', '90');
+        await prisma.systemSetting.deleteMany({ where: { key: 'integrity_raw_retention_days' } });
+      }
     });
 
     it('deleting a match removes its raw responses with it', async () => {
