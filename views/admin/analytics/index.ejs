@@ -227,22 +227,23 @@
                     const template = document.getElementById(templateId);
                     if (template) {
                         // Clone content, ensure unique IDs for charts
-                        let content = template.outerHTML;
-                        
-                        // Replace IDs to avoid collisions
-                        // content = content.replace(/id="[^"]*"/g, `id="${node.id}-el"`); 
-                        // Actually Gridstack wraps content. We just need the canvas ID to be unique.
-                        // We'll handle canvas ID reassignment after widget add if possible, or string replace now.
-                        if (content.includes('<canvas')) {
-                            content = content.replace('<canvas id="', '<canvas id="chart-' + node.id + '" data-orig-id="'); 
-                            // Hacky regex replacement for chart ID
-                            content = content.replace(/canvas id="([^"]+)"/, `canvas id="chart-${node.id}"`);
+                        // DOM manipulation approach instead of string replacement
+                        const clone = template.cloneNode(true);
+
+                        // Handle canvas ID to avoid collisions
+                        const canvas = clone.querySelector('canvas');
+                        if (canvas) {
+                            // Preserve original ID in data attribute for reference
+                            if (canvas.id) {
+                                canvas.setAttribute('data-orig-id', canvas.id);
+                            }
+                            canvas.id = 'chart-' + node.id;
                         }
 
                         this.grid.addWidget({
                             id: node.id,
                             x: node.x, y: node.y, w: node.w, h: node.h,
-                            content: content
+                            content: clone.outerHTML
                         });
                     }
                 });

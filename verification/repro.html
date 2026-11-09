@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .markdown-body { border: 2px solid blue; padding: 10px; margin-bottom: 10px; min-height: 20px; }
+        .attachment { border: 2px solid red; padding: 10px; background: #fee; display: inline-block; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Verification of Fix</h1>
+
+    <h2>1. Buggy Behavior (Simulated)</h2>
+    <p>Expectation: Attachment (Red box) is MISSING because it gets overwritten.</p>
+    <div id="buggy-container"></div>
+
+    <h2>2. Fixed Behavior</h2>
+    <p>Expectation: Attachment (Red box) is PRESENT.</p>
+    <div id="fixed-container"></div>
+
+    <script>
+        const msg = {
+            id: '123',
+            content: '**Hello** world',
+            sender: { name: 'User' }
+        };
+        const attachmentHtml = '<div class="attachment">Attachment</div>';
+
+        // Buggy Implementation
+        {
+            const div = document.createElement('div');
+            // Logic mimicking the bug: attachment inside markdown-body
+            div.innerHTML = `
+                <div class="markdown-body" data-content="${encodeURIComponent(msg.content)}">
+                    ${DOMPurify.sanitize(marked.parse(msg.content))}
+                    ${attachmentHtml}
+                </div>
+            `;
+
+            // The code that overwrites it
+            const newContentEl = div.querySelector('.markdown-body');
+            if (newContentEl) {
+                const raw = decodeURIComponent(newContentEl.dataset.content || "");
+                // This overwrites the innerHTML, killing the attachment
+                newContentEl.innerHTML = DOMPurify.sanitize(marked.parse(raw));
+            }
+            document.getElementById('buggy-container').appendChild(div);
+        }
+
+        // Fixed Implementation
+        {
+            const div = document.createElement('div');
+            // Logic mimicking the fix: attachment outside markdown-body
+            div.innerHTML = `
+                <div class="markdown-body" data-content="${encodeURIComponent(msg.content)}">
+                    ${DOMPurify.sanitize(marked.parse(msg.content))}
+                </div>
+                ${attachmentHtml}
+            `;
+
+            // The code that overwrites it
+            const newContentEl = div.querySelector('.markdown-body');
+            if (newContentEl) {
+                const raw = decodeURIComponent(newContentEl.dataset.content || "");
+                // This overwrites the innerHTML, but attachment is safe outside
+                newContentEl.innerHTML = DOMPurify.sanitize(marked.parse(raw));
+            }
+            document.getElementById('fixed-container').appendChild(div);
+        }
+    </script>
+</body>
+</html>
