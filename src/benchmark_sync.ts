@@ -39,20 +39,20 @@ async function runBenchmark() {
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const simNetworkLatency = 1; // 1ms per query
 
-  let startN1 = Date.now();
+  const startN1 = Date.now();
   for (let i = 0; i < 50; i++) {
     const price = mockStripePrices[i];
     await delay(simNetworkLatency); // simulate query
     const existing = simulatedDB.get(price.id);
-    const nextStatus = existing?.status === StripePriceStatus.LEGACY ? StripePriceStatus.LEGACY : StripePriceStatus.ACTIVE;
+    void (existing?.status === StripePriceStatus.LEGACY ? StripePriceStatus.LEGACY : StripePriceStatus.ACTIVE);
   }
-  let endN1 = Date.now();
+  const endN1 = Date.now();
   // extrapolate to full dataset
   console.log(`N+1 approach took: ${(endN1 - startN1) * (numPrices / 50)}ms (extrapolated)`);
 
   // Optimized approach
   console.log("Starting optimized benchmark (simulated database latency)...");
-  let startOpt = Date.now();
+  const startOpt = Date.now();
   const priceIds = mockStripePrices.map(p => p.id);
   // simulate one large query taking slightly longer than one small query
   await delay(simNetworkLatency * 5);
@@ -65,9 +65,9 @@ async function runBenchmark() {
 
   for (const price of mockStripePrices) {
     const existing = existingMap.get(price.id);
-    const nextStatus = existing?.status === StripePriceStatus.LEGACY ? StripePriceStatus.LEGACY : StripePriceStatus.ACTIVE;
+    void (existing?.status === StripePriceStatus.LEGACY ? StripePriceStatus.LEGACY : StripePriceStatus.ACTIVE);
   }
-  let endOpt = Date.now();
+  const endOpt = Date.now();
   console.log(`Optimized approach took: ${endOpt - startOpt}ms`);
 }
 
