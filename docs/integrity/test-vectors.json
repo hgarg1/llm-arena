@@ -184,6 +184,165 @@
       "key_id": "2642177f804d1ab6"
     }
   ],
+  "moves_chains": [
+    {
+      "name": "empty: the head is the moves genesis hash",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "moves": [],
+      "hashes": [],
+      "head": "e27ecc4162d074b0ec4ce1c0e80c93f9fcd1fe381f4e9fff0b5d0aeaf0fb840d"
+    },
+    {
+      "name": "a model move, a model move whose adapter reported nothing, and an engine move",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "moves": [
+        {
+          "move_index": 0,
+          "actor_role": "player1",
+          "content": "propose 50/50",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 1,
+          "actor_role": "player2",
+          "content": "accept",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "unknown",
+            "prompt": {
+              "id": "iterated-negotiation/player2",
+              "version": "unknown",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "model": {
+              "provider": "openai",
+              "requested": "gpt-example",
+              "reported": "unknown"
+            },
+            "sampling": {
+              "temperature": "unknown",
+              "max_tokens": "unknown",
+              "top_p": "unknown"
+            }
+          }
+        },
+        {
+          "move_index": 2,
+          "actor_role": "system",
+          "content": "RESOLVE",
+          "provenance": {
+            "v": 1,
+            "source": "engine",
+            "prompt": null,
+            "model": null,
+            "sampling": null,
+            "adapter": null
+          }
+        }
+      ],
+      "hashes": [
+        "a2c18ab1e829ce361fe98c62b26c36464af772462f13134017cf8dc2720b0031",
+        "841f05e4f811be448dd00a06222473501913573b3e3239f29c1056f1b7a5fd39",
+        "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+      ],
+      "head": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+    },
+    {
+      "name": "the same moves under another match id give a different chain",
+      "match_id": "99999999-8888-4777-8666-555555555555",
+      "moves": [
+        {
+          "move_index": 0,
+          "actor_role": "player1",
+          "content": "propose 50/50",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 1,
+          "actor_role": "player2",
+          "content": "accept",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "unknown",
+            "prompt": {
+              "id": "iterated-negotiation/player2",
+              "version": "unknown",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "model": {
+              "provider": "openai",
+              "requested": "gpt-example",
+              "reported": "unknown"
+            },
+            "sampling": {
+              "temperature": "unknown",
+              "max_tokens": "unknown",
+              "top_p": "unknown"
+            }
+          }
+        },
+        {
+          "move_index": 2,
+          "actor_role": "system",
+          "content": "RESOLVE",
+          "provenance": {
+            "v": 1,
+            "source": "engine",
+            "prompt": null,
+            "model": null,
+            "sampling": null,
+            "adapter": null
+          }
+        }
+      ],
+      "hashes": [
+        "d792ddcc2bdbbc84367471d7482e712b92f8dd3551c38e0374b28e417ac85434",
+        "3ed446b4e5312c8c7aa7750542a35543f43fc79571f0d7ea3471067e72b21587",
+        "dbdacdabcdef81b503ee4a36c9587900e2ac872a9c16deac00f1b29702ae406c"
+      ],
+      "head": "dbdacdabcdef81b503ee4a36c9587900e2ac872a9c16deac00f1b29702ae406c"
+    }
+  ],
   "verification": [
     {
       "name": "untouched match verifies",
@@ -1468,6 +1627,1216 @@
           "alg": "Ed25519",
           "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
           "status": "active"
+        }
+      ],
+      "expect": {
+        "result": "VERIFIED"
+      }
+    },
+    {
+      "name": "a manifest that commits to the moves verifies when the moves and their provenance are supplied",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "provenance": {
+            "v": 1,
+            "moves": {
+              "count": 3,
+              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+            }
+          }
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "moves": [
+        {
+          "move_index": 0,
+          "actor_role": "player1",
+          "content": "propose 50/50",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 1,
+          "actor_role": "player2",
+          "content": "accept",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "unknown",
+            "prompt": {
+              "id": "iterated-negotiation/player2",
+              "version": "unknown",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "model": {
+              "provider": "openai",
+              "requested": "gpt-example",
+              "reported": "unknown"
+            },
+            "sampling": {
+              "temperature": "unknown",
+              "max_tokens": "unknown",
+              "top_p": "unknown"
+            }
+          }
+        },
+        {
+          "move_index": 2,
+          "actor_role": "system",
+          "content": "RESOLVE",
+          "provenance": {
+            "v": 1,
+            "source": "engine",
+            "prompt": null,
+            "model": null,
+            "sampling": null,
+            "adapter": null
+          }
+        }
+      ],
+      "expect": {
+        "result": "VERIFIED"
+      }
+    },
+    {
+      "name": "the same manifest verifies without the moves (they are then reported as unchecked)",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "provenance": {
+            "v": 1,
+            "moves": {
+              "count": 3,
+              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+            }
+          }
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "result": "VERIFIED"
+      }
+    },
+    {
+      "name": "a changed sampling setting in a move's provenance breaks the moves digest",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "provenance": {
+            "v": 1,
+            "moves": {
+              "count": 3,
+              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+            }
+          }
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "moves": [
+        {
+          "move_index": 0,
+          "actor_role": "player1",
+          "content": "propose 50/50",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0.7,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 1,
+          "actor_role": "player2",
+          "content": "accept",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "unknown",
+            "prompt": {
+              "id": "iterated-negotiation/player2",
+              "version": "unknown",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "model": {
+              "provider": "openai",
+              "requested": "gpt-example",
+              "reported": "unknown"
+            },
+            "sampling": {
+              "temperature": "unknown",
+              "max_tokens": "unknown",
+              "top_p": "unknown"
+            }
+          }
+        },
+        {
+          "move_index": 2,
+          "actor_role": "system",
+          "content": "RESOLVE",
+          "provenance": {
+            "v": 1,
+            "source": "engine",
+            "prompt": null,
+            "model": null,
+            "sampling": null,
+            "adapter": null
+          }
+        }
+      ],
+      "expect": {
+        "result": "FAILED",
+        "code": "MOVES_MISMATCH"
+      }
+    },
+    {
+      "name": "a changed move text breaks the moves digest",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "provenance": {
+            "v": 1,
+            "moves": {
+              "count": 3,
+              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+            }
+          }
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "moves": [
+        {
+          "move_index": 0,
+          "actor_role": "player1",
+          "content": "propose 60/40",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 1,
+          "actor_role": "player2",
+          "content": "accept",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "unknown",
+            "prompt": {
+              "id": "iterated-negotiation/player2",
+              "version": "unknown",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "model": {
+              "provider": "openai",
+              "requested": "gpt-example",
+              "reported": "unknown"
+            },
+            "sampling": {
+              "temperature": "unknown",
+              "max_tokens": "unknown",
+              "top_p": "unknown"
+            }
+          }
+        },
+        {
+          "move_index": 2,
+          "actor_role": "system",
+          "content": "RESOLVE",
+          "provenance": {
+            "v": 1,
+            "source": "engine",
+            "prompt": null,
+            "model": null,
+            "sampling": null,
+            "adapter": null
+          }
+        }
+      ],
+      "expect": {
+        "result": "FAILED",
+        "code": "MOVES_MISMATCH"
+      }
+    },
+    {
+      "name": "an explicit unknown is not the same as a blank: replacing it with null breaks the digest",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "provenance": {
+            "v": 1,
+            "moves": {
+              "count": 3,
+              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+            }
+          }
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "moves": [
+        {
+          "move_index": 0,
+          "actor_role": "player1",
+          "content": "propose 50/50",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 1,
+          "actor_role": "player2",
+          "content": "accept",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "unknown",
+            "prompt": {
+              "id": "iterated-negotiation/player2",
+              "version": "unknown",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "model": {
+              "provider": "openai",
+              "requested": "gpt-example",
+              "reported": null
+            },
+            "sampling": {
+              "temperature": "unknown",
+              "max_tokens": "unknown",
+              "top_p": "unknown"
+            }
+          }
+        },
+        {
+          "move_index": 2,
+          "actor_role": "system",
+          "content": "RESOLVE",
+          "provenance": {
+            "v": 1,
+            "source": "engine",
+            "prompt": null,
+            "model": null,
+            "sampling": null,
+            "adapter": null
+          }
+        }
+      ],
+      "expect": {
+        "result": "FAILED",
+        "code": "MOVES_MISMATCH"
+      }
+    },
+    {
+      "name": "a removed last move changes the count",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "provenance": {
+            "v": 1,
+            "moves": {
+              "count": 3,
+              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+            }
+          }
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "moves": [
+        {
+          "move_index": 0,
+          "actor_role": "player1",
+          "content": "propose 50/50",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 1,
+          "actor_role": "player2",
+          "content": "accept",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "unknown",
+            "prompt": {
+              "id": "iterated-negotiation/player2",
+              "version": "unknown",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "model": {
+              "provider": "openai",
+              "requested": "gpt-example",
+              "reported": "unknown"
+            },
+            "sampling": {
+              "temperature": "unknown",
+              "max_tokens": "unknown",
+              "top_p": "unknown"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": "FAILED",
+        "code": "MOVES_MISMATCH"
+      }
+    },
+    {
+      "name": "a removed middle move leaves a gap in move_index",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "provenance": {
+            "v": 1,
+            "moves": {
+              "count": 3,
+              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+            }
+          }
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "moves": [
+        {
+          "move_index": 0,
+          "actor_role": "player1",
+          "content": "propose 50/50",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 2,
+          "actor_role": "system",
+          "content": "RESOLVE",
+          "provenance": {
+            "v": 1,
+            "source": "engine",
+            "prompt": null,
+            "model": null,
+            "sampling": null,
+            "adapter": null
+          }
+        }
+      ],
+      "expect": {
+        "result": "FAILED",
+        "code": "MOVES_MISMATCH"
+      }
+    },
+    {
+      "name": "two moves exchanging their positions break the digest",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "provenance": {
+            "v": 1,
+            "moves": {
+              "count": 3,
+              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+            }
+          }
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "moves": [
+        {
+          "move_index": 1,
+          "actor_role": "player1",
+          "content": "propose 50/50",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 0,
+          "actor_role": "player2",
+          "content": "accept",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "unknown",
+            "prompt": {
+              "id": "iterated-negotiation/player2",
+              "version": "unknown",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "model": {
+              "provider": "openai",
+              "requested": "gpt-example",
+              "reported": "unknown"
+            },
+            "sampling": {
+              "temperature": "unknown",
+              "max_tokens": "unknown",
+              "top_p": "unknown"
+            }
+          }
+        },
+        {
+          "move_index": 2,
+          "actor_role": "system",
+          "content": "RESOLVE",
+          "provenance": {
+            "v": 1,
+            "source": "engine",
+            "prompt": null,
+            "model": null,
+            "sampling": null,
+            "adapter": null
+          }
+        }
+      ],
+      "expect": {
+        "result": "FAILED",
+        "code": "MOVES_MISMATCH"
+      }
+    },
+    {
+      "name": "moves supplied to a manifest that does not commit to them are ignored",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z"
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "w7E02ZfBVp5ecqhCav0y63EL2kBE8NB2JOoy2hZ8mx1bYdBYBhUb9k_1yg6Rap_k_kmXt6BRPQ5DLGEQl0eZAg"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "moves": [
+        {
+          "move_index": 0,
+          "actor_role": "player1",
+          "content": "propose 50/50",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "anthropic",
+            "prompt": {
+              "id": "iterated-negotiation/player1",
+              "version": "1.0.0",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "model": {
+              "provider": "anthropic",
+              "requested": "claude-example",
+              "reported": "claude-example-20260101"
+            },
+            "sampling": {
+              "temperature": 0,
+              "max_tokens": 1024,
+              "top_p": "provider-default"
+            }
+          }
+        },
+        {
+          "move_index": 1,
+          "actor_role": "player2",
+          "content": "accept",
+          "provenance": {
+            "v": 1,
+            "source": "model",
+            "adapter": "unknown",
+            "prompt": {
+              "id": "iterated-negotiation/player2",
+              "version": "unknown",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+            },
+            "model": {
+              "provider": "openai",
+              "requested": "gpt-example",
+              "reported": "unknown"
+            },
+            "sampling": {
+              "temperature": "unknown",
+              "max_tokens": "unknown",
+              "top_p": "unknown"
+            }
+          }
+        },
+        {
+          "move_index": 2,
+          "actor_role": "system",
+          "content": "RESOLVE",
+          "provenance": {
+            "v": 1,
+            "source": "engine",
+            "prompt": null,
+            "model": null,
+            "sampling": null,
+            "adapter": null
+          }
         }
       ],
       "expect": {

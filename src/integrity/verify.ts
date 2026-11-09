@@ -11,7 +11,7 @@
  *  - ERROR       the environment could not run a check (for example no Ed25519 support). Never read as pass or fail.
  */
 import { CanonicalizationError, canonicalize } from './canonical';
-import { DOMAIN_EVENT, DOMAIN_GENESIS, DOMAIN_MANIFEST, HEX64, SPEC } from './spec';
+import { DOMAIN_EVENT, DOMAIN_GENESIS, DOMAIN_MANIFEST, DOMAIN_MOVE, DOMAIN_MOVES_GENESIS, HEX64, SPEC } from './spec';
 
 export interface CryptoProvider {
   sha256(data: Uint8Array): Uint8Array | Promise<Uint8Array>;
@@ -43,10 +43,10 @@ export interface PublishedKey {
 
 export type FailureCode =
   | 'SPEC_UNSUPPORTED' | 'MALFORMED' | 'MATCH_ID_MISMATCH' | 'EVENT_GAP' | 'EVENT_COUNT_MISMATCH'
-  | 'HEAD_MISMATCH' | 'KEY_UNKNOWN' | 'KEY_REVOKED' | 'SIGNATURE_INVALID';
+  | 'HEAD_MISMATCH' | 'KEY_UNKNOWN' | 'KEY_REVOKED' | 'SIGNATURE_INVALID' | 'MOVES_MISMATCH';
 
 export type Outcome =
-  | { result: 'VERIFIED' }
+  | { result: 'VERIFIED'; /** parts of the manifest this call did not check (the moves, when they were not supplied) */ unchecked?: string[] }
   | { result: 'UNVERIFIED' }
   | { result: 'FAILED'; code: FailureCode; detail?: Record<string, unknown> }
   | { result: 'ERROR'; code: 'UNSUPPORTED_ENVIRONMENT' | 'INTERNAL'; detail?: string };
@@ -103,6 +103,38 @@ export const chainHashes = async (crypto: CryptoProvider, matchId: string, event
   return { hashes, head: prev };
 };
 
+// ---- the moves digest (provenance) ----------------------------------------------------------------------------------
+
+/** One stored move. `provenance` is the per-move record (null when the move predates provenance). `content` is the raw text. */
+export interface MoveRecord {
+  move_index: number;
+  actor_role: string;
+  content: string;
+  provenance: unknown;
+}
+
+export const movesGenesisHash = async (crypto: CryptoProvider, matchId: string): Promise<string> =>
+  toHex(await crypto.sha256(concat(utf8(DOMAIN_MOVES_GENESIS), utf8(matchId))));
+
+export const moveHash = async (crypto: CryptoProvider, matchId: string, prevHash: string, move: MoveRecord): Promise<string> => {
+  const record = {
+    v: 1, match_id: matchId, move_index: move.move_index, actor_role: move.actor_role,
+    content_sha256: toHex(await crypto.sha256(utf8(move.content))), provenance: move.provenance ?? null
+  };
+  return toHex(await crypto.sha256(concat(utf8(DOMAIN_MOVE), fromHex(prevHash), utf8(canonicalize(record)))));
+};
+
+/** Hash chain over the moves in order (spec section 4.5). Moves must already be sorted by move_index. */
+export const moveChainHashes = async (crypto: CryptoProvider, matchId: string, moves: MoveRecord[]) => {
+  const hashes: string[] = [];
+  let prev = await movesGenesisHash(crypto, matchId);
+  for (const move of moves) {
+    prev = await moveHash(crypto, matchId, prev, move);
+    hashes.push(prev);
+  }
+  return { hashes, head: prev };
+};
+
 // ---- verification ---------------------------------------------------------------------------------------------------
 
 const isInt = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n);
@@ -115,7 +147,8 @@ const wellFormedEvent = (e: any): boolean =>
  * `envelope` is null/undefined when the match has no manifest. `keys` must come from a source the caller trusts.
  */
 export const verifyMatch = async (
-  crypto: CryptoProvider, matchId: string, events: EventRecord[], envelope: Envelope | null | undefined, keys: PublishedKey[]
+  crypto: CryptoProvider, matchId: string, events: EventRecord[], envelope: Envelope | null | undefined, keys: PublishedKey[],
+  extra: { moves?: MoveRecord[] } = {}
 ): Promise<Outcome> => {
   const fail = (code: FailureCode, detail?: Record<string, unknown>): Outcome => ({ result: 'FAILED', code, ...(detail ? { detail } : {}) });
   try {
@@ -161,7 +194,23 @@ export const verifyMatch = async (
     if (!publicKey || publicKey.length !== 32 || key.alg !== 'Ed25519') return fail('MALFORMED', { reason: 'key set' });
     if (toHex(await crypto.sha256(publicKey)).slice(0, 16) !== key.key_id) return fail('MALFORMED', { reason: 'key set', message: 'key id does not match the public key' });
     if (!sig || sig.length !== 64) return fail('SIGNATURE_INVALID');
-    return (await crypto.ed25519Verify(publicKey, signed, sig)) ? { result: 'VERIFIED' } : fail('SIGNATURE_INVALID');
+    if (!(await crypto.ed25519Verify(publicKey, signed, sig))) return fail('SIGNATURE_INVALID');
+    // 11 (only when the signed manifest commits to the moves): the stored moves and their provenance still match the digest
+    const committed = manifest.provenance?.moves;
+    if (committed) {
+      if (!extra.moves) return { result: 'VERIFIED', unchecked: ['moves'] };
+      if (!extra.moves.every(m => m && isInt(m.move_index) && m.move_index >= 0 && typeof m.actor_role === 'string' && typeof m.content === 'string')) return fail('MALFORMED', { reason: 'moves' });
+      const moves = [...extra.moves].sort((a, b) => a.move_index - b.move_index);
+      for (let i = 0; i < moves.length; i++) if (moves[i].move_index !== i) return fail('MOVES_MISMATCH', { reason: 'gap', expectedIndex: i, foundIndex: moves[i].move_index });
+      if (committed.count !== moves.length) return fail('MOVES_MISMATCH', { reason: 'count', manifest: committed.count, moves: moves.length });
+      let movesHead: string;
+      try { movesHead = (await moveChainHashes(crypto, matchId, moves)).head; } catch (err) {
+        if (err instanceof CanonicalizationError) return fail('MALFORMED', { reason: 'moves', message: err.message });
+        throw err;
+      }
+      if (committed.head_hash !== movesHead) return fail('MOVES_MISMATCH', { reason: 'head' });
+    }
+    return { result: 'VERIFIED' };
   } catch (err) {
     const name = (err as Error)?.name;
     const message = String((err as Error)?.message || err);

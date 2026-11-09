@@ -1,4 +1,6 @@
-import { ModelAdapter, GameEvent, MoveRequestOptions } from './types';
+import { ModelAdapter, GameEvent, MoveRequestOptions, MoveCall, CallMeta, PROVIDER_DEFAULT, UNKNOWN } from './types';
+
+const reported = (value: unknown): string => (typeof value === 'string' && value.trim() ? value : UNKNOWN);
 import axios from 'axios';
 import { prisma } from '../config/db';
 
@@ -77,6 +79,10 @@ export class MockModelAdapter implements ModelAdapter {
         return `Turn ${turn}: I accept your proposal.`;
     }
   }
+
+  async generateMoveWithMeta(systemPrompt: string, history: GameEvent[]): Promise<MoveCall> {
+    return { text: await this.generateMove(systemPrompt, history), meta: { adapter: 'mock', model_reported: 'mock', sampling: { temperature: UNKNOWN, max_tokens: UNKNOWN, top_p: UNKNOWN } } };
+  }
 }
 
 export class OpenAICompatibleAdapter implements ModelAdapter {
@@ -88,6 +94,10 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
   ) {}
 
   async generateMove(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<string> {
+    return (await this.generateMoveWithMeta(systemPrompt, history, role, options)).text;
+  }
+
+  async generateMoveWithMeta(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<MoveCall> {
     if (!this.apiKey) throw new ModelUnavailableError(`No API key configured for ${this.baseUrl}`);
     try {
         const messages = [
@@ -125,7 +135,10 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
 
         const text = res.data?.choices?.[0]?.message?.content;
         if (typeof text !== 'string') throw new Error('Empty completion');
-        return text;
+        return {
+          text,
+          meta: { adapter: 'openai-compatible', model_reported: reported(res.data?.model), sampling: { temperature: fixedTemperature ? PROVIDER_DEFAULT : 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT } }
+        };
     } catch (error: any) {
         if (error instanceof ModelUnavailableError) throw error;
         throw failure('openai-compatible', this.modelId, error);
@@ -137,6 +150,10 @@ export class AnthropicAdapter implements ModelAdapter {
     constructor(private apiKey: string, private modelId: string) {}
   
     async generateMove(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<string> {
+      return (await this.generateMoveWithMeta(systemPrompt, history, role, options)).text;
+    }
+
+    async generateMoveWithMeta(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<MoveCall> {
       if (!this.apiKey) throw new ModelUnavailableError('No API key configured for Anthropic');
       try {
           const res = await axios.post('https://api.anthropic.com/v1/messages', {
@@ -156,7 +173,7 @@ export class AnthropicAdapter implements ModelAdapter {
 
           const text = (res.data?.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
           if (!text) throw new Error('Empty completion');
-          return text;
+          return { text, meta: { adapter: 'anthropic', model_reported: reported(res.data?.model), sampling: { temperature: 0, max_tokens: 1024, top_p: PROVIDER_DEFAULT } } };
       } catch (error: any) {
           if (error instanceof ModelUnavailableError) throw error;
           throw failure('anthropic', this.modelId, error);
@@ -168,6 +185,10 @@ export class GoogleAdapter implements ModelAdapter {
     constructor(private apiKey: string, private modelId: string) {}
   
     async generateMove(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<string> {
+      return (await this.generateMoveWithMeta(systemPrompt, history, role, options)).text;
+    }
+
+    async generateMoveWithMeta(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<MoveCall> {
       if (!this.apiKey) throw new ModelUnavailableError('No API key configured for Google');
       try {
           const contents = buildChatMessages(history, role).map(m => ({
@@ -186,7 +207,7 @@ export class GoogleAdapter implements ModelAdapter {
 
           const text = res.data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('');
           if (!text) throw new Error('Empty completion');
-          return text;
+          return { text, meta: { adapter: 'google', model_reported: reported(res.data?.modelVersion), sampling: { temperature: 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT } } };
       } catch (error: any) {
           if (error instanceof ModelUnavailableError) throw error;
           throw failure('google', this.modelId, error);
@@ -196,8 +217,8 @@ export class GoogleAdapter implements ModelAdapter {
 
 export class CompositeAdapter implements ModelAdapter {
   private initialized = false;
-  private adapters: { adapter: ModelAdapter; weight: number }[] = [];
-  private pipeline: { adapter: ModelAdapter; promptTemplate?: string }[] = [];
+  private adapters: { adapter: ModelAdapter; weight: number; provider: string; modelId: string }[] = [];
+  private pipeline: { adapter: ModelAdapter; promptTemplate?: string; provider: string; modelId: string }[] = [];
   private strategy: 'ROUND_ROBIN' | 'RANDOM' | 'FALLBACK' | 'PIPELINE' = 'ROUND_ROBIN';
   private pointer = 0;
 
@@ -228,7 +249,9 @@ export class CompositeAdapter implements ModelAdapter {
       .filter(m => m.member.api_provider !== 'composite')
       .map(m => ({
         adapter: getModelAdapter(m.member.api_provider, m.member.api_model_id),
-        weight: Math.max(1, m.weight || 1)
+        weight: Math.max(1, m.weight || 1),
+        provider: m.member.api_provider,
+        modelId: m.member.api_model_id
       }));
 
     if (this.adapters.length === 0) {
@@ -240,7 +263,9 @@ export class CompositeAdapter implements ModelAdapter {
         .filter(step => step.member.api_provider !== 'composite')
         .map(step => ({
           adapter: getModelAdapter(step.member.api_provider, step.member.api_model_id),
-          promptTemplate: step.prompt_template || undefined
+          promptTemplate: step.prompt_template || undefined,
+          provider: step.member.api_provider,
+          modelId: step.member.api_model_id
         }));
 
       if (this.pipeline.length < 2) {
@@ -262,23 +287,39 @@ export class CompositeAdapter implements ModelAdapter {
   }
 
   async generateMove(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<string> {
+    return (await this.generateMoveWithMeta(systemPrompt, history, role, options)).text;
+  }
+
+  /** Calls a member and keeps what it reports; a member that reports nothing is recorded as UNKNOWN, never as blank. */
+  private async call(member: { adapter: ModelAdapter }, prompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<MoveCall> {
+    if (member.adapter.generateMoveWithMeta) return member.adapter.generateMoveWithMeta(prompt, history, role, options);
+    return { text: await member.adapter.generateMove(prompt, history, role, options), meta: { adapter: UNKNOWN, model_reported: UNKNOWN, sampling: { temperature: UNKNOWN, max_tokens: UNKNOWN, top_p: UNKNOWN } } };
+  }
+
+  async generateMoveWithMeta(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<MoveCall> {
     await this.ensureLoaded();
 
     if (this.strategy === 'PIPELINE') {
       let input = '';
+      let last: MoveCall | null = null;
+      const steps: NonNullable<CallMeta['steps']> = [];
       for (const step of this.pipeline) {
         const prompt = renderPipelinePrompt(step.promptTemplate, systemPrompt, history, input);
-        input = await step.adapter.generateMove(prompt, history, role, options);
+        last = await this.call(step, prompt, history, role, options);
+        input = last.text;
+        steps.push({ provider: step.provider, requested: step.modelId, reported: last.meta.model_reported });
       }
-      if (!input) throw new ModelUnavailableError('Pipeline produced no output');
-      return input;
+      if (!input || !last) throw new ModelUnavailableError('Pipeline produced no output');
+      const final = this.pipeline[this.pipeline.length - 1];
+      return { text: input, meta: { ...last.meta, member: { provider: final.provider, requested: final.modelId }, steps } };
     }
 
     if (this.strategy === 'FALLBACK') {
       let lastError: unknown = new ModelUnavailableError('Composite fallback has no members');
-      for (const adapter of this.adapters) {
+      for (const member of this.adapters) {
         try {
-          return await adapter.adapter.generateMove(systemPrompt, history, role, options);
+          const result = await this.call(member, systemPrompt, history, role, options);
+          return { text: result.text, meta: { ...result.meta, member: { provider: member.provider, requested: member.modelId } } };
         } catch (err) {
           lastError = err;
         }
@@ -290,7 +331,8 @@ export class CompositeAdapter implements ModelAdapter {
       ? this.pickWeighted()
       : this.adapters[this.pointer++ % this.adapters.length];
 
-    return choice.adapter.generateMove(systemPrompt, history, role, options);
+    const result = await this.call(choice, systemPrompt, history, role, options);
+    return { text: result.text, meta: { ...result.meta, member: { provider: choice.provider, requested: choice.modelId } } };
   }
 }
 

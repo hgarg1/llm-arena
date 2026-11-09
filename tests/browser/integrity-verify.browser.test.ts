@@ -89,15 +89,20 @@ maybe('the verification library in a real browser', () => {
         const r = await verify.chainHashes(web.webProvider, c.match_id, c.events);
         if (JSON.stringify(r.hashes) !== JSON.stringify(c.hashes) || r.head !== c.head) failures.push('chain ' + c.name);
       }
+      for (const m of vectors.moves_chains) {
+        checked++;
+        const r = await verify.moveChainHashes(web.webProvider, m.match_id, m.moves);
+        if (JSON.stringify(r.hashes) !== JSON.stringify(m.hashes) || r.head !== m.head) failures.push('moves chain ' + m.name);
+      }
       for (const v of vectors.verification) {
         checked++;
-        const out = await verify.verifyMatch(web.webProvider, v.match_id, v.events, v.envelope, v.keys);
+        const out = await verify.verifyMatch(web.webProvider, v.match_id, v.events, v.envelope, v.keys, { moves: v.moves });
         if (out.result !== v.expect.result || out.code !== v.expect.code) failures.push(`${v.name}: got ${out.result} ${out.code}`);
       }
       return { checked, failures };
     });
     expect(report.failures).toEqual([]);
-    expect(report.checked).toBeGreaterThanOrEqual(19);
+    expect(report.checked).toBeGreaterThanOrEqual(30);
     expect(errors).toEqual([]);
   });
 

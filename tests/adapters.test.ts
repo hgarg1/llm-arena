@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { AnthropicAdapter, GoogleAdapter, OpenAICompatibleAdapter, CompositeAdapter, ModelUnavailableError, buildChatMessages } from '../src/game/adapters';
-import { GameEvent } from '../src/game/types';
+import { GameEvent, ModelAdapter, PROVIDER_DEFAULT, UNKNOWN } from '../src/game/types';
 
 jest.mock('axios');
 const post = axios.post as jest.Mock;
@@ -158,5 +158,100 @@ describe('rate limit errors', () => {
     post.mockReset().mockResolvedValue({ data: { choices: [{ message: { content: 'x' } }] } });
     await new OpenAICompatibleAdapter('k', 'm').generateMove('s', history, 'white', { timeoutMs: 12_345 });
     expect(post.mock.calls[0][2].timeout).toBe(12_345);
+  });
+});
+
+describe('what adapters report about a call (provenance)', () => {
+  it('OpenAI-compatible: the model the provider echoed and the sampling it was sent', async () => {
+    post.mockResolvedValue({ data: { model: 'gpt-4o-2026-01-01', choices: [{ message: { content: 'e2e4' } }] } });
+    const call = await new OpenAICompatibleAdapter('key', 'gpt-4o').generateMoveWithMeta('sys', history, 'white');
+    expect(call.text).toBe('e2e4');
+    expect(call.meta).toEqual({ adapter: 'openai-compatible', model_reported: 'gpt-4o-2026-01-01', sampling: { temperature: 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT } });
+  });
+
+  it('OpenAI-compatible: a reasoning model gets the provider default temperature, and says so', async () => {
+    post.mockResolvedValue({ data: { model: 'o3-mini', choices: [{ message: { content: 'ok' } }] } });
+    const { meta } = await new OpenAICompatibleAdapter('key', 'o3-mini').generateMoveWithMeta('s', history, 'white');
+    expect(meta.sampling.temperature).toBe(PROVIDER_DEFAULT);
+  });
+
+  it('a provider that does not echo the model is recorded as `unknown`, never blank', async () => {
+    for (const body of [{}, { model: '' }, { model: null }, { model: 5 }]) {
+      post.mockResolvedValue({ data: { ...body, choices: [{ message: { content: 'x' } }] } });
+      expect((await new OpenAICompatibleAdapter('key', 'm').generateMoveWithMeta('s', history, 'white')).meta.model_reported).toBe(UNKNOWN);
+    }
+  });
+
+  it('Anthropic: reports the model and the exact sampling it sent', async () => {
+    post.mockResolvedValue({ data: { model: 'claude-x-20260101', content: [{ type: 'text', text: 'e2e4' }] } });
+    const { meta } = await new AnthropicAdapter('key', 'claude-x').generateMoveWithMeta('sys', history, 'white');
+    expect(meta).toEqual({ adapter: 'anthropic', model_reported: 'claude-x-20260101', sampling: { temperature: 0, max_tokens: 1024, top_p: PROVIDER_DEFAULT } });
+    expect(post.mock.calls[0][1]).toMatchObject({ temperature: 0, max_tokens: 1024 }); // what is recorded is what was sent
+  });
+
+  it('Google: reports modelVersion, or unknown when absent', async () => {
+    post.mockResolvedValue({ data: { modelVersion: 'gemini-x-002', candidates: [{ content: { parts: [{ text: 'e2e4' }] } }] } });
+    expect((await new GoogleAdapter('key', 'gemini-x').generateMoveWithMeta('sys', history, 'white')).meta).toEqual({ adapter: 'google', model_reported: 'gemini-x-002', sampling: { temperature: 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT } });
+    post.mockResolvedValue({ data: { candidates: [{ content: { parts: [{ text: 'e2e4' }] } }] } });
+    expect((await new GoogleAdapter('key', 'gemini-x').generateMoveWithMeta('sys', history, 'white')).meta.model_reported).toBe(UNKNOWN);
+  });
+
+  it('generateMove still returns just the text, for every adapter', async () => {
+    post.mockResolvedValue({ data: { model: 'm', choices: [{ message: { content: 'abc' } }] } });
+    await expect(new OpenAICompatibleAdapter('key', 'm').generateMove('s', history, 'white')).resolves.toBe('abc');
+  });
+
+  it('a failing call still throws (provenance never turns an outage into a move)', async () => {
+    post.mockRejectedValue({ response: { status: 500, data: { error: { message: 'boom' } } } });
+    await expect(new OpenAICompatibleAdapter('key', 'm').generateMoveWithMeta('s', history, 'white')).rejects.toBeInstanceOf(ModelUnavailableError);
+  });
+
+  describe('composite models say which member answered', () => {
+    type Member = { adapter: ModelAdapter; provider: string; modelId: string };
+    const build = (strategy: string, members: Member[]) => {
+      const c = new CompositeAdapter('comp-1');
+      (c as any).initialized = true;
+      (c as any).strategy = strategy;
+      (c as any).adapters = members.map(m => ({ ...m, weight: 1 }));
+      (c as any).pipeline = members.map(m => ({ ...m }));
+      return c;
+    };
+    const openai = (id: string): Member => ({ adapter: new OpenAICompatibleAdapter('key', id), provider: 'openai', modelId: id });
+    const anthropic = (id: string): Member => ({ adapter: new AnthropicAdapter('key', id), provider: 'anthropic', modelId: id });
+
+    it('round robin: the member that answered, with its own report', async () => {
+      post.mockResolvedValue({ data: { model: 'gpt-x-1', choices: [{ message: { content: 'move' } }] } });
+      const { text, meta } = await build('ROUND_ROBIN', [openai('gpt-x')]).generateMoveWithMeta('sys', history, 'white');
+      expect(text).toBe('move');
+      expect(meta).toMatchObject({ adapter: 'openai-compatible', model_reported: 'gpt-x-1', member: { provider: 'openai', requested: 'gpt-x' } });
+    });
+
+    it('fallback: the member that finally answered, not the ones that failed', async () => {
+      post.mockRejectedValueOnce({ response: { status: 500 } }).mockResolvedValueOnce({ data: { model: 'claude-y-1', content: [{ type: 'text', text: 'ok' }] } });
+      const { meta } = await build('FALLBACK', [openai('gpt-x'), anthropic('claude-y')]).generateMoveWithMeta('sys', history, 'white');
+      expect(meta.member).toEqual({ provider: 'anthropic', requested: 'claude-y' });
+      expect(meta.model_reported).toBe('claude-y-1');
+    });
+
+    it('pipeline: every step is listed in order, and the last one answered', async () => {
+      post.mockResolvedValueOnce({ data: { model: 'step-1', choices: [{ message: { content: 'draft' } }] } })
+        .mockResolvedValueOnce({ data: { model: 'claude-final', content: [{ type: 'text', text: 'final' }] } });
+      const { text, meta } = await build('PIPELINE', [openai('a'), anthropic('b')]).generateMoveWithMeta('sys', history, 'white');
+      expect(text).toBe('final');
+      expect(meta.steps).toEqual([{ provider: 'openai', requested: 'a', reported: 'step-1' }, { provider: 'anthropic', requested: 'b', reported: 'claude-final' }]);
+      expect(meta.member).toEqual({ provider: 'anthropic', requested: 'b' });
+    });
+
+    it('a member that cannot report is recorded as unknown markers, never blank', async () => {
+      const plain: Member = { adapter: { generateMove: async () => 'text' }, provider: 'custom', modelId: 'x' };
+      const { text, meta } = await build('ROUND_ROBIN', [plain]).generateMoveWithMeta('sys', history, 'white');
+      expect(text).toBe('text');
+      expect(meta).toMatchObject({ adapter: UNKNOWN, model_reported: UNKNOWN, sampling: { temperature: UNKNOWN, max_tokens: UNKNOWN, top_p: UNKNOWN }, member: { provider: 'custom', requested: 'x' } });
+    });
+
+    it('generateMove on a composite still returns just the text', async () => {
+      post.mockResolvedValue({ data: { model: 'm', choices: [{ message: { content: 'abc' } }] } });
+      await expect(build('ROUND_ROBIN', [openai('m')]).generateMove('sys', history, 'white')).resolves.toBe('abc');
+    });
   });
 });

@@ -2,6 +2,7 @@ import { MatchStatus } from '@prisma/client';
 import { LeaseLostError, MoveUsage } from '../../src/repositories/match.repository';
 import { RunnerEventRow, RunnerMatch, RunnerRepo, StoredMove } from '../../src/services/match-runner.service';
 import { chainAppend, ChainTail } from '../../src/integrity/append';
+import { MoveProvenance } from '../../src/integrity/provenance';
 
 export type StoredEvent = RunnerEventRow & { hash: string | null; prev_hash: string | null };
 
@@ -72,9 +73,9 @@ export class MemoryRepo implements RunnerRepo {
   }
   async getMoves() { return [...this.moves]; }
   async countEvents() { return this.events.length; }
-  async recordMove(_id: string, move: { index: number; actor: string; content: string; usage?: MoveUsage }, events: RunnerEventRow[]) {
+  async recordMove(_id: string, move: { index: number; actor: string; content: string; usage?: MoveUsage; provenance?: MoveProvenance }, events: RunnerEventRow[]) {
     if (this.moves.some(m => m.move_index === move.index)) throw new LeaseLostError();
-    this.moves.push({ move_index: move.index, actor_role: move.actor, content: move.content });
+    this.moves.push({ move_index: move.index, actor_role: move.actor, content: move.content, provenance: move.provenance ?? null });
     if (move.usage) { this.usage.push(move.usage); this.inputTokens += move.usage.inputTokens; this.outputTokens += move.usage.outputTokens; }
     this.events.push(...chainAppend(this.match.id, this.tail(), events) as StoredEvent[]);
     this.moveFailures = 0;

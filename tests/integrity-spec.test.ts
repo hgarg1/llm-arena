@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import {
   CanonicalizationError, Envelope, EventRecord, FailureCode, PublicKeyEntry, SPEC, canonicalize, chain, genesisHash,
-  keyId, publicKeyRawFromSeed, signManifest, verifyMatch
+  keyId, moveChain, movesGenesis, publicKeyRawFromSeed, signManifest, verifyMatch
 } from './helpers/integrity-reference';
 
 const FILE = path.join(__dirname, '..', 'docs', 'integrity', 'test-vectors.json');
@@ -21,6 +21,18 @@ const EVENTS: EventRecord[] = [
   { seq: 0, turn_index: 0, type: 'MATCH_START', actor_role: 'system', payload: { seed: 42, game: 'iterated-negotiation', ruleset_version: '1.0.0' } },
   { seq: 1, turn_index: 1, type: 'ACTION', actor_role: 'player1', payload: { action: 'propose', amount: 50, note: 'split 50/50 é😀' } },
   { seq: 2, turn_index: 2, type: 'GAME_END', actor_role: null, payload: { winner: 'player1', scores: { player1: 50, player2: 50 } } }
+];
+
+const MODEL_PROVENANCE = {
+  v: 1, source: 'model', adapter: 'anthropic',
+  prompt: { id: 'iterated-negotiation/player1', version: '1.0.0', sha256: '1'.repeat(64) },
+  model: { provider: 'anthropic', requested: 'claude-example', reported: 'claude-example-20260101' },
+  sampling: { temperature: 0, max_tokens: 1024, top_p: 'provider-default' }
+};
+const MOVES = [
+  { move_index: 0, actor_role: 'player1', content: 'propose 50/50', provenance: MODEL_PROVENANCE },
+  { move_index: 1, actor_role: 'player2', content: 'accept', provenance: { ...MODEL_PROVENANCE, adapter: 'unknown', model: { provider: 'openai', requested: 'gpt-example', reported: 'unknown' }, sampling: { temperature: 'unknown', max_tokens: 'unknown', top_p: 'unknown' }, prompt: { id: 'iterated-negotiation/player2', version: 'unknown', sha256: '2'.repeat(64) } } },
+  { move_index: 2, actor_role: 'system', content: 'RESOLVE', provenance: { v: 1, source: 'engine', prompt: null, model: null, sampling: null, adapter: null } }
 ];
 
 const keyEntry = (seed: Buffer, status: PublicKeyEntry['status'] = 'active'): PublicKeyEntry => {
@@ -59,7 +71,9 @@ const canonicalInvalid: { name: string; input_json: string }[] = [
   { name: 'large integral number (1e21)', input_json: '1e21' }
 ];
 
-const verification = (): { name: string; match_id: string; events: EventRecord[]; envelope: Envelope; keys: PublicKeyEntry[]; expect: { result: 'VERIFIED' } | { result: 'FAILED'; code: FailureCode } }[] => {
+const movesProvenance = (moves = MOVES) => ({ provenance: { v: 1, moves: { count: moves.length, head_hash: moveChain(MATCH_ID, moves).head } } });
+
+const verification = (): { name: string; match_id: string; events: EventRecord[]; envelope: Envelope; keys: PublicKeyEntry[]; moves?: typeof MOVES; expect: { result: 'VERIFIED' } | { result: 'FAILED'; code: FailureCode } }[] => {
   const good = signManifest(manifestFor(EVENTS, SEED_A), SEED_A);
   const keysA = [keyEntry(SEED_A)];
   const tamperedPayload = clone(EVENTS); (tamperedPayload[1].payload as any).amount = 51;
@@ -91,6 +105,24 @@ const verification = (): { name: string; match_id: string; events: EventRecord[]
         { name: 'members a verifier does not know are ignored by it but still signed', match_id: MATCH_ID, events: EVENTS, envelope: signManifest(manifestFor(EVENTS, SEED_A, { future_member: { anything: [1, 2, 3] } }), SEED_A), keys: keysA, expect: { result: 'VERIFIED' } as const }
       ];
     })(),
+    ...(() => {
+      const withMoves = signManifest(manifestFor(EVENTS, SEED_A, movesProvenance()), SEED_A);
+      const swapped = clone(MOVES); swapped[0].move_index = 1; swapped[1].move_index = 0;
+      const nullInsteadOfUnknown = clone(MOVES); (nullInsteadOfUnknown[1].provenance as any).model.reported = null;
+      const editedProvenance = clone(MOVES); (editedProvenance[0].provenance as any).sampling.temperature = 0.7;
+      const editedText = clone(MOVES); editedText[0].content = 'propose 60/40';
+      return [
+        { name: 'a manifest that commits to the moves verifies when the moves and their provenance are supplied', match_id: MATCH_ID, events: EVENTS, envelope: withMoves, keys: keysA, moves: MOVES, expect: { result: 'VERIFIED' } as const },
+        { name: 'the same manifest verifies without the moves (they are then reported as unchecked)', match_id: MATCH_ID, events: EVENTS, envelope: withMoves, keys: keysA, expect: { result: 'VERIFIED' } as const },
+        { name: 'a changed sampling setting in a move\'s provenance breaks the moves digest', match_id: MATCH_ID, events: EVENTS, envelope: withMoves, keys: keysA, moves: editedProvenance, expect: { result: 'FAILED', code: 'MOVES_MISMATCH' } as const },
+        { name: 'a changed move text breaks the moves digest', match_id: MATCH_ID, events: EVENTS, envelope: withMoves, keys: keysA, moves: editedText, expect: { result: 'FAILED', code: 'MOVES_MISMATCH' } as const },
+        { name: 'an explicit unknown is not the same as a blank: replacing it with null breaks the digest', match_id: MATCH_ID, events: EVENTS, envelope: withMoves, keys: keysA, moves: nullInsteadOfUnknown, expect: { result: 'FAILED', code: 'MOVES_MISMATCH' } as const },
+        { name: 'a removed last move changes the count', match_id: MATCH_ID, events: EVENTS, envelope: withMoves, keys: keysA, moves: MOVES.slice(0, 2), expect: { result: 'FAILED', code: 'MOVES_MISMATCH' } as const },
+        { name: 'a removed middle move leaves a gap in move_index', match_id: MATCH_ID, events: EVENTS, envelope: withMoves, keys: keysA, moves: [MOVES[0], MOVES[2]], expect: { result: 'FAILED', code: 'MOVES_MISMATCH' } as const },
+        { name: 'two moves exchanging their positions break the digest', match_id: MATCH_ID, events: EVENTS, envelope: withMoves, keys: keysA, moves: swapped, expect: { result: 'FAILED', code: 'MOVES_MISMATCH' } as const },
+        { name: 'moves supplied to a manifest that does not commit to them are ignored', match_id: MATCH_ID, events: EVENTS, envelope: good, keys: keysA, moves: MOVES, expect: { result: 'VERIFIED' } as const }
+      ];
+    })(),
     { name: 'a manifest for another match is rejected', match_id: OTHER_MATCH_ID, events: EVENTS, envelope: good, keys: keysA, expect: { result: 'FAILED', code: 'MATCH_ID_MISMATCH' } }
   ];
 };
@@ -111,6 +143,11 @@ const buildVectors = () => ({
   test_keys: [
     { name: 'A', seed_hex: SEED_A.toString('hex'), public_key: publicKeyRawFromSeed(SEED_A).toString('base64url'), key_id: keyId(publicKeyRawFromSeed(SEED_A)) },
     { name: 'B', seed_hex: SEED_B.toString('hex'), public_key: publicKeyRawFromSeed(SEED_B).toString('base64url'), key_id: keyId(publicKeyRawFromSeed(SEED_B)) }
+  ],
+  moves_chains: [
+    { name: 'empty: the head is the moves genesis hash', match_id: MATCH_ID, moves: [], hashes: [], head: movesGenesis(MATCH_ID) },
+    { name: 'a model move, a model move whose adapter reported nothing, and an engine move', match_id: MATCH_ID, moves: MOVES, ...moveChain(MATCH_ID, MOVES) },
+    { name: 'the same moves under another match id give a different chain', match_id: OTHER_MATCH_ID, moves: MOVES, ...moveChain(OTHER_MATCH_ID, MOVES) }
   ],
   verification: verification()
 });
@@ -175,9 +212,17 @@ describe('integrity spec: test vectors', () => {
     });
   });
 
+  describe('moves digest', () => {
+    it.each<any>(published.moves_chains)('$name', (v: any) => {
+      const { hashes, head } = moveChain(v.match_id, v.moves);
+      expect(hashes).toEqual(v.hashes);
+      expect(head).toBe(v.head);
+    });
+  });
+
   describe('verification', () => {
     it.each<any>(published.verification)('$name', (v: any) => {
-      expect(verifyMatch(v.match_id, v.events, v.envelope, v.keys)).toEqual(v.expect);
+      expect(verifyMatch(v.match_id, v.events, v.envelope, v.keys, v.moves)).toEqual(v.expect);
     });
   });
 

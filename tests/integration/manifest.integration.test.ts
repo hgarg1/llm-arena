@@ -8,7 +8,7 @@ if (url) {
   delete process.env.MATCH_QUEUE_ENABLED;
 }
 
-import { MatchStatus } from '@prisma/client';
+import { MatchStatus, Prisma } from '@prisma/client';
 import { prisma } from '../../src/config/db';
 import { LeaseLostError, MatchRepository } from '../../src/repositories/match.repository';
 import { RunnerRepo, runMatch, runMatchSlice } from '../../src/services/match-runner.service';
@@ -18,9 +18,9 @@ import { getGameEngine } from '../../src/game/registry';
 import { scriptedAdapter } from '../helpers/scripted-adapter';
 import * as integrity from '../helpers/integrity-reference';
 import { createHash } from 'crypto';
-import { ensureNativeArtifacts } from '../../src/services/default-games.service';
+import { ensureDefaultGames, ensureNativeArtifacts } from '../../src/services/default-games.service';
 import { builtInEngineHash, sandboxedEngineHash } from '../../src/integrity/engine-identity';
-import { verifyMatch as verifyWithLibrary } from '../../src/integrity/verify';
+import { verifyMatch as verifyWithLibrary, MoveRecord } from '../../src/integrity/verify';
 import { nodeProvider } from '../../src/integrity/verify-node';
 
 const maybe = url ? describe : describe.skip;
@@ -77,7 +77,8 @@ const verify = async (matchId: string, keys: ReturnType<typeof entry>[]) => {
 maybe('sealing finished matches (real SQL, real runner)', () => {
   const keysA = [entry(SEED_A)];
   beforeEach(() => configureIntegrityForTests({ signer: signerA(), keys: { keys: keysA } }));
-  afterAll(() => configureIntegrityForTests(null));
+  // the harness database serves one connection: let go of it so the next test file can use it, whatever order they run in
+  afterAll(async () => { configureIntegrityForTests(null); await prisma.$disconnect(); });
 
   describe('a match that ends in each final state is sealed by the runner and verifies independently', () => {
     it('COMPLETED', async () => {
@@ -284,7 +285,8 @@ maybe('sealing finished matches (real SQL, real runner)', () => {
       expect(await verify(id, keysA)).toEqual({ result: 'VERIFIED' });
       const row = (await manifestOf(id))!;
       const events = (await prisma.matchEvent.findMany({ where: { match_id: id }, orderBy: { seq: 'asc' } })).map(e => ({ seq: e.seq, turn_index: e.turn_index, type: e.type, actor_role: e.actor_role, payload: e.payload }));
-      expect(await verifyWithLibrary(nodeProvider, id, events, { manifest: row.manifest as any, signature: { alg: 'Ed25519', key_id: row.key_id, sig: row.signature } }, keysA)).toEqual({ result: 'VERIFIED' });
+      const moves = (await prisma.matchMove.findMany({ where: { match_id: id }, orderBy: { move_index: 'asc' } })).map(m => ({ move_index: m.move_index, actor_role: m.actor_role, content: m.content, provenance: m.provenance }));
+      expect(await verifyWithLibrary(nodeProvider, id, events, { manifest: row.manifest as any, signature: { alg: 'Ed25519', key_id: row.key_id, sig: row.signature } }, keysA, { moves })).toEqual({ result: 'VERIFIED' });
     };
 
     it('a built-in game records its engine hash, the resolved settings, their hash and the seed', async () => {
@@ -299,6 +301,7 @@ maybe('sealing finished matches (real SQL, real runner)', () => {
     });
 
     it('a match pinned to a native artifact is NATIVE and names the engine it points to', async () => {
+      await ensureDefaultGames();
       await ensureNativeArtifacts();
       const artifact = await prisma.gameEngineArtifact.findFirst({ where: { kind: 'NATIVE', game: { key: 'chess' } } });
       const id = await play({ engine_artifact_id: artifact!.id });
@@ -350,6 +353,102 @@ maybe('sealing finished matches (real SQL, real runner)', () => {
       warn.mockRestore();
       expect((await manifestMembers(match.id)).engine).toBeUndefined();
       await bothVerify(match.id);
+    });
+  });
+  describe('moves and their provenance in the manifest', () => {
+    const REPORT = { adapter: 'anthropic', model_reported: 'model-x-20260101', sampling: { temperature: 0, max_tokens: 1024, top_p: 'provider-default' } };
+    const reportingAdapter = () => { const inner = scriptedAdapter(); return { generateMove: inner.generateMove, generateMoveWithMeta: async (...a: Parameters<typeof inner.generateMove>) => ({ text: await inner.generateMove(...a), meta: REPORT }) }; };
+    const movesOf = async (id: string): Promise<MoveRecord[]> =>
+      (await prisma.matchMove.findMany({ where: { match_id: id }, orderBy: { move_index: 'asc' } })).map(m => ({ move_index: m.move_index, actor_role: m.actor_role, content: m.content, provenance: m.provenance }));
+    const eventsOf = async (id: string) => (await prisma.matchEvent.findMany({ where: { match_id: id }, orderBy: { seq: 'asc' } })).map(e => ({ seq: e.seq, turn_index: e.turn_index, type: e.type, actor_role: e.actor_role, payload: e.payload }));
+    const check = async (id: string, moves?: MoveRecord[]) => {
+      const row = (await manifestOf(id))!;
+      return verifyWithLibrary(nodeProvider, id, await eventsOf(id), { manifest: row.manifest as any, signature: { alg: 'Ed25519', key_id: row.key_id, sig: row.signature } }, keysA, moves ? { moves } : {});
+    };
+    const playReporting = async () => {
+      const match = await createMatch({ options: { maxPlies: 8 } });
+      await runMatch(match.id, { maxPlies: 8 }, mk({ getAdapter: () => reportingAdapter() }));
+      return match.id;
+    };
+
+    it('the runner stores provenance with every move, and the manifest commits to all of it', async () => {
+      const id = await playReporting();
+      const moves = await movesOf(id);
+      expect(moves.length).toBeGreaterThanOrEqual(8);
+      expect(moves.every(m => m.provenance && (m.provenance as any).v === 1)).toBe(true);
+      expect((moves[0].provenance as any).model).toEqual({ provider: 'openai', requested: 'x', reported: 'model-x-20260101' });
+      expect((moves[0].provenance as any).prompt).toMatchObject({ id: 'chess/white', version: '1.1.0' });
+
+      const committed = ((await manifestOf(id))!.manifest as any).provenance;
+      expect(committed).toEqual({ v: 1, moves: { count: moves.length, head_hash: integrity.moveChain(id, moves).head } });
+      expect(await check(id, moves)).toEqual({ result: 'VERIFIED' });
+      expect(integrity.verifyMatch(id, await eventsOf(id), { manifest: (await manifestOf(id))!.manifest as any, signature: { alg: 'Ed25519', key_id: (await manifestOf(id))!.key_id, sig: (await manifestOf(id))!.signature } }, keysA, moves)).toEqual({ result: 'VERIFIED' });
+    });
+
+    it('without the moves the library says they were not checked, instead of passing silently', async () => {
+      const id = await playReporting();
+      expect(await check(id)).toEqual({ result: 'VERIFIED', unchecked: ['moves'] });
+    });
+
+    it('editing a stored move\'s provenance afterwards is detected, and the events and signature are untouched', async () => {
+      const id = await playReporting();
+      const target = await prisma.matchMove.findFirst({ where: { match_id: id, move_index: 2 } });
+      await prisma.matchMove.update({ where: { id: target!.id }, data: { provenance: { ...(target!.provenance as any), sampling: { temperature: 0.9, max_tokens: 1024, top_p: 'provider-default' } } } });
+      expect(await check(id, await movesOf(id))).toMatchObject({ result: 'FAILED', code: 'MOVES_MISMATCH', detail: { reason: 'head' } });
+      expect(await verify(id, keysA)).toEqual({ result: 'VERIFIED' }); // the event chain and the signature itself are still fine
+    });
+
+    it('editing a stored move\'s text, or deleting a move, is detected', async () => {
+      const id = await playReporting();
+      const all = await prisma.matchMove.findMany({ where: { match_id: id }, orderBy: { move_index: 'asc' } });
+      await prisma.matchMove.update({ where: { id: all[1].id }, data: { content: 'a1a2' } });
+      expect(await check(id, await movesOf(id))).toMatchObject({ code: 'MOVES_MISMATCH', detail: { reason: 'head' } });
+      await prisma.matchMove.delete({ where: { id: all[all.length - 1].id } });
+      expect(await check(id, await movesOf(id))).toMatchObject({ code: 'MOVES_MISMATCH', detail: { reason: 'count' } });
+    });
+
+    it('moves recorded before provenance existed (NULL) are committed to as "not recorded", and still verify', async () => {
+      configureIntegrityForTests({ signer: null, keys: { keys: keysA } });
+      const id = await playReporting();
+      await prisma.matchMove.updateMany({ where: { match_id: id }, data: { provenance: Prisma.DbNull } });
+      configureIntegrityForTests({ signer: signerA(), keys: { keys: keysA } });
+      expect(await sealIfFinal(id)).toMatchObject({ status: 'signed' });
+      const moves = await movesOf(id);
+      expect(moves.every(m => m.provenance === null)).toBe(true);
+      expect(await check(id, moves)).toEqual({ result: 'VERIFIED' });
+    });
+
+    it('a match with no moves has no moves digest', async () => {
+      const match = await createMatch({ status: 'CANCELLED', finished_at: new Date() });
+      await sealIfFinal(match.id);
+      expect(((await manifestOf(match.id))!.manifest as any).provenance).toBeUndefined();
+      expect(await check(match.id)).toEqual({ result: 'VERIFIED' });
+    });
+
+    it('refuses to sign moves that are not numbered 0..n-1', async () => {
+      configureIntegrityForTests({ signer: null, keys: { keys: keysA } });
+      const id = await playReporting();
+      const second = await prisma.matchMove.findFirst({ where: { match_id: id, move_index: 1 } });
+      await prisma.matchMove.delete({ where: { id: second!.id } });
+      configureIntegrityForTests({ signer: signerA(), keys: { keys: keysA } });
+      const errors = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      expect(await sealIfFinal(id)).toMatchObject({ status: 'skipped', code: 'MOVES_BROKEN' });
+      errors.mockRestore();
+      expect(await manifestOf(id)).toBeNull();
+    });
+
+    it('a retried match is sealed again with a digest over all of its moves', async () => {
+      const id = await playReporting();
+      const first = ((await manifestOf(id))!.manifest as any).provenance.moves;
+      await repo.updateStatus(id, MatchStatus.RUNNING, undefined, null);
+      const count = first.count;
+      await repo.recordMove(id, { index: count, actor: 'white', content: 'extra', provenance: { v: 1, source: 'engine', prompt: null, model: null, sampling: null, adapter: null } }, [{ turn_index: 99, seq: await repo.countEvents(id), type: 'EXTRA', actor_role: 'white', payload: {} }]);
+      await prisma.match.update({ where: { id }, data: { status: 'COMPLETED', finished_at: new Date() } });
+      expect(await sealIfFinal(id)).toMatchObject({ status: 'signed' });
+      const second = ((await manifestOf(id))!.manifest as any).provenance.moves;
+      expect(second.count).toBe(count + 1);
+      expect(second.head_hash).not.toBe(first.head_hash);
+      expect(await check(id, await movesOf(id))).toEqual({ result: 'VERIFIED' });
     });
   });
 });

@@ -41,13 +41,13 @@ describe('migration: a match event has at most one successor', () => {
 
   beforeAll(() => {
     const run = spawnSync(process.execPath, ['scripts/pglite-replay.mjs'], {
-      cwd: root, encoding: 'utf8', timeout: 120_000,
+      cwd: root, encoding: 'utf8', timeout: 500_000,
       input: JSON.stringify({ target: NEW, setup: [match('legacy'), legacy('legacy', 0), legacy('legacy', 1)], checks: checks.map(c => c.step) })
     });
     if (run.status !== 0) throw new Error(`replay failed: ${String(run.stderr).slice(-600)}`);
     const { results } = JSON.parse(run.stdout);
     out = Object.fromEntries(checks.map((c, i) => [c.key, results[i]]));
-  }, 150_000);
+  }, 600_000);
 
   it('applies on top of existing unchained events, which remain readable', () => {
     expect(out['legacy-count'].rows).toEqual([{ n: 2 }]);

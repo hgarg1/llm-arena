@@ -1,6 +1,6 @@
 {
   "iterated-negotiation": {
-    "sha256": "1fe1d891182e675a0fe9d54a452e357f7e29e3b141e658c14c9e5af6b6f1866c",
+    "sha256": "03b8e67c2e7ffc29142e64d608c6cb4c3670c03b4447179b7d219875ea0e30c2",
     "files": [
       {
         "path": "src/game/negotiation.ts",
@@ -8,13 +8,13 @@
       },
       {
         "path": "src/game/types.ts",
-        "sha256": "57748c46bfae2dc2dfddac92554b25c0d60e73542d7225b218a467edaff77802"
+        "sha256": "91df73787e16608593aa5be29ae4802dcdfae28b4793c2bb1c6d3e39c6065cd4"
       }
     ],
     "deps": {}
   },
   "chess": {
-    "sha256": "24f11d1edf9518a0597c2870a7bc09eb969b8455444f201c6065c7fd90cb7931",
+    "sha256": "fa5eb0bf7971b8f7b3da07ea34cf3e8a9ab19cdbdecb9544ee25f66b35956ef9",
     "files": [
       {
         "path": "src/game/chess.ts",
@@ -22,7 +22,7 @@
       },
       {
         "path": "src/game/types.ts",
-        "sha256": "57748c46bfae2dc2dfddac92554b25c0d60e73542d7225b218a467edaff77802"
+        "sha256": "91df73787e16608593aa5be29ae4802dcdfae28b4793c2bb1c6d3e39c6065cd4"
       }
     ],
     "deps": {
@@ -30,7 +30,7 @@
     }
   },
   "chutes_and_ladders": {
-    "sha256": "c00aa19d4fb319f82bb54b4d16561626f769b6e6fa9945dc68166ac6434bc24a",
+    "sha256": "666bc98f4c022f1ee04503b689563dae7e6261e79e4b8c6ed2547a050ccd4281",
     "files": [
       {
         "path": "src/game/chutes_ladders.ts",
@@ -38,13 +38,13 @@
       },
       {
         "path": "src/game/types.ts",
-        "sha256": "57748c46bfae2dc2dfddac92554b25c0d60e73542d7225b218a467edaff77802"
+        "sha256": "91df73787e16608593aa5be29ae4802dcdfae28b4793c2bb1c6d3e39c6065cd4"
       }
     ],
     "deps": {}
   },
   "texas_holdem": {
-    "sha256": "071202a6a2bb336ccd8580f9cd906405cadf7389638a66f91a6e3d437664e289",
+    "sha256": "b153e6b34d51cc595e461abf3b2aea3370c43a4b4001856cee9743f5e9d98dca",
     "files": [
       {
         "path": "src/game/poker.ts",
@@ -52,7 +52,7 @@
       },
       {
         "path": "src/game/types.ts",
-        "sha256": "57748c46bfae2dc2dfddac92554b25c0d60e73542d7225b218a467edaff77802"
+        "sha256": "91df73787e16608593aa5be29ae4802dcdfae28b4793c2bb1c6d3e39c6065cd4"
       }
     ],
     "deps": {
@@ -60,7 +60,7 @@
     }
   },
   "blackjack": {
-    "sha256": "b158d97c6b742ee08ed544c0bf28a94f90fa6c6b9e543726c546756c249ebb25",
+    "sha256": "05db64df5199d52e1fb128d8827d083835d9c868058975a0ec4ab83c33d6179f",
     "files": [
       {
         "path": "src/game/blackjack.ts",
@@ -68,7 +68,7 @@
       },
       {
         "path": "src/game/types.ts",
-        "sha256": "57748c46bfae2dc2dfddac92554b25c0d60e73542d7225b218a467edaff77802"
+        "sha256": "91df73787e16608593aa5be29ae4802dcdfae28b4793c2bb1c6d3e39c6065cd4"
       }
     ],
     "deps": {}

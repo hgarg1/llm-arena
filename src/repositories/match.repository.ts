@@ -3,6 +3,7 @@ import { Match, MatchStatus, Prisma } from '@prisma/client';
 import { isDatabaseConfigured } from '../config/runtime';
 import { chainAppend, ChainTail } from '../integrity/append';
 import { sealIfFinal } from '../services/match-manifest.service';
+import { MoveProvenance } from '../integrity/provenance';
 
 export interface MoveUsage {
   provider: string;
@@ -111,7 +112,7 @@ export class MatchRepository {
    */
   async recordMove(
     id: string,
-    move: { index: number; actor: string; content: string; usage?: MoveUsage },
+    move: { index: number; actor: string; content: string; usage?: MoveUsage; provenance?: MoveProvenance },
     events: { turn_index: number; seq: number; type: string; actor_role: string; payload: any }[]
   ): Promise<void> {
     if (!isDatabaseConfigured()) return;
@@ -129,7 +130,8 @@ export class MatchRepository {
             provider: move.usage?.provider ?? null,
             latency_ms: move.usage?.latencyMs ?? null,
             input_tokens: move.usage?.inputTokens ?? null,
-            output_tokens: move.usage?.outputTokens ?? null
+            output_tokens: move.usage?.outputTokens ?? null,
+            provenance: move.provenance ? (move.provenance as unknown as Prisma.InputJsonValue) : undefined
           }
         });
         if (events.length > 0) await this.appendEventsIn(tx, id, events);

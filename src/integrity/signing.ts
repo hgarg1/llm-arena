@@ -34,13 +34,15 @@ export interface ManifestInput {
   /** The settings the match was created with (already validated and clamped by the create action), and their hash. */
   options?: unknown;
   optionsSha256?: string;
+  /** Digest of the match's moves and their provenance (spec section 4.5); omitted when the match has no moves recorded. */
+  moves?: { count: number; headHash: string };
 }
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null); // always YYYY-MM-DDTHH:mm:ss.sssZ
 
 /**
- * The manifest object of spec section 5: the required members, plus the optional `engine`, `options` and `options_sha256`
- * when they are known. Optional members are covered by the signature like every other member.
+ * The manifest object of spec section 5: the required members, plus the optional `engine`, `options`, `options_sha256` and
+ * `provenance` when they are known. Optional members are covered by the signature like every other member.
  */
 export const buildManifest = (input: ManifestInput) => ({
   spec: SPEC,
@@ -55,7 +57,8 @@ export const buildManifest = (input: ManifestInput) => ({
   finished_at: iso(input.finishedAt),
   ...(input.engine ? { engine: input.engine } : {}),
   ...(input.options !== undefined ? { options: input.options } : {}),
-  ...(input.optionsSha256 ? { options_sha256: input.optionsSha256 } : {})
+  ...(input.optionsSha256 ? { options_sha256: input.optionsSha256 } : {}),
+  ...(input.moves ? { provenance: { v: 1, moves: { count: input.moves.count, head_hash: input.moves.headHash } } } : {})
 });
 
 export type Manifest = ReturnType<typeof buildManifest>;

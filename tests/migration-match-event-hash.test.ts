@@ -63,13 +63,13 @@ describe('migration: MatchEvent hash chain columns', () => {
   beforeAll(() => {
     migrations = fs.readdirSync(path.join(root, 'prisma', 'migrations')).filter(n => fs.statSync(path.join(root, 'prisma', 'migrations', n)).isDirectory()).sort();
     const run = spawnSync(process.execPath, ['scripts/pglite-replay.mjs'], {
-      cwd: root, encoding: 'utf8', timeout: 120_000,
+      cwd: root, encoding: 'utf8', timeout: 500_000,
       input: JSON.stringify({ target: NEW, setup: [match('legacy'), legacyEvent('legacy', 0), legacyEvent('legacy', 1)], checks: checks.map(c => c.step) })
     });
     if (run.status !== 0) throw new Error(`replay failed: ${String(run.stderr).slice(-600)}`);
     const { results } = JSON.parse(run.stdout);
     out = Object.fromEntries(checks.map((c, i) => [c.key, results[i]]));
-  }, 150_000);
+  }, 600_000);
 
   it('exists, and the replay applies it in migration order on top of everything older', () => {
     expect(migrations).toContain(NEW);

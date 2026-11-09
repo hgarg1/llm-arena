@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { MatchStatus } from '@prisma/client';
-import { GameEngine, GameEvent, GameResult, ModelAdapter } from '../game/types';
+import { CallMeta, GameEngine, GameEvent, GameResult, ModelAdapter } from '../game/types';
+import { MoveProvenance, engineProvenance, modelProvenance, promptIdentity, randomProvenance } from '../integrity/provenance';
 import { ModelUnavailableError } from '../game/adapters';
 import { LeaseLostError, MoveUsage } from '../repositories/match.repository';
 import { RateLimiter } from './rate-limit.service';
@@ -31,6 +32,7 @@ export interface StoredMove {
   move_index: number;
   actor_role: string;
   content: string;
+  provenance?: MoveProvenance | null;
 }
 
 export interface RunnerEventRow {
@@ -54,7 +56,7 @@ export interface RunnerRepo {
   releaseLease(id: string, owner: string): Promise<void>;
   getMoves(id: string): Promise<StoredMove[]>;
   countEvents(id: string): Promise<number>;
-  recordMove(id: string, move: { index: number; actor: string; content: string; usage?: MoveUsage }, events: RunnerEventRow[]): Promise<void>;
+  recordMove(id: string, move: { index: number; actor: string; content: string; usage?: MoveUsage; provenance?: MoveProvenance }, events: RunnerEventRow[]): Promise<void>;
   recordMoveFailure(id: string): Promise<number>;
   resetMoveFailures(id: string): Promise<unknown>;
   setRulesetVersion?(id: string, version: string): Promise<unknown>;
@@ -246,7 +248,7 @@ const runSliceInner = async (
       role: string,
       systemPrompt: string,
       history: GameEvent[]
-    ): Promise<{ content: string; usage: MoveUsage } | null> => {
+    ): Promise<{ content: string; usage: MoveUsage; meta: CallMeta | null } | null> => {
       const estimatedInput = estimateTokens(systemPrompt + JSON.stringify(history));
       let throttled = 0;
       for (;;) {
@@ -266,11 +268,15 @@ const runSliceInner = async (
 
         const callStarted = now();
         try {
-          const raw = await adapter.generateMove(systemPrompt, history, role, { timeoutMs: moveTimeoutMs });
+          // An adapter that can report what it did (model version, sampling) does; one that cannot is recorded as unknown.
+          const call = adapter.generateMoveWithMeta
+            ? await adapter.generateMoveWithMeta(systemPrompt, history, role, { timeoutMs: moveTimeoutMs })
+            : { text: await adapter.generateMove(systemPrompt, history, role, { timeoutMs: moveTimeoutMs }), meta: null };
+          const raw = call.text;
           const content = raw.length > maxMoveChars ? raw.slice(0, maxMoveChars) : raw;
           const usage = { provider, latencyMs: now() - callStarted, inputTokens: estimatedInput, outputTokens: estimateTokens(content) };
           metric('provider.call', { provider, ok: true, latencyMs: usage.latencyMs, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens });
-          return { content, usage };
+          return { content, usage, meta: call.meta };
         } catch (err) {
           if (err instanceof ModelUnavailableError && err.rateLimited) {
             throttled++;
@@ -328,6 +334,7 @@ const runSliceInner = async (
 
       let usage: MoveUsage | undefined;
       let content: string;
+      let provenance: MoveProvenance = engineProvenance();
       if (activeRole === 'system') {
         content = 'RESOLVE';
       } else {
@@ -348,22 +355,30 @@ const runSliceInner = async (
             stats.modelCalls++;
           }
           content = engine.getRandomMove(state, activeRole).content;
+          provenance = randomProvenance(player.participant.model.api_provider, player.participant.model.api_model_id);
         } else {
           const observation = engine.getObservation ? engine.getObservation(state, activeRole) : state;
-          const generated = await generate(player.adapter, player.participant.model.api_provider, activeRole, engine.getSystemPrompt(activeRole), observation);
+          const systemPrompt = engine.getSystemPrompt(activeRole);
+          const generated = await generate(player.adapter, player.participant.model.api_provider, activeRole, systemPrompt, observation);
           if (generated === null) {
             yielded = true;
             break;
           }
           content = generated.content;
           usage = generated.usage;
+          provenance = modelProvenance({
+            provider: player.participant.model.api_provider,
+            requested: player.participant.model.api_model_id,
+            prompt: promptIdentity(match.game_type, activeRole, systemPrompt, state[0]?.payload?.ruleset_version),
+            meta: generated.meta
+          });
           stats.modelCalls++;
         }
       }
 
       const step = engine.processMove(state, { actor: activeRole, content });
       try {
-        await repo.recordMove(matchId, { index: moveIndex, actor: activeRole, content, usage }, rows(step.events, nextSeq));
+        await repo.recordMove(matchId, { index: moveIndex, actor: activeRole, content, usage, provenance }, rows(step.events, nextSeq));
       } catch (err) {
         if (err instanceof LeaseLostError) {
           lost = true;

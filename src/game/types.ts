@@ -59,4 +59,31 @@ export interface ModelAdapter {
    * is never a legal-or-illegal move and must not be scored as one.
    */
   generateMove(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<string>;
+  /**
+   * Same call, plus what the adapter can say about it (reported model version, sampling settings). Optional: the runner
+   * records every field as UNKNOWN for an adapter that does not implement it.
+   */
+  generateMoveWithMeta?(systemPrompt: string, history: GameEvent[], role?: string, options?: MoveRequestOptions): Promise<MoveCall>;
+}
+
+/** Provenance markers: a field that is not a real value says why instead of being blank. */
+export const UNKNOWN = 'unknown' as const;                  // the adapter cannot tell
+export const PROVIDER_DEFAULT = 'provider-default' as const; // we did not send it, so the provider's own default applied
+export type Marker = typeof UNKNOWN | typeof PROVIDER_DEFAULT;
+
+/** What an adapter reports about one model call (docs/INTEGRITY_SPEC.md, `provenance`). Every field is a value or a marker. */
+export interface CallMeta {
+  adapter: string;
+  /** The model id or version string the provider echoed back, or UNKNOWN when it did not say. */
+  model_reported: string;
+  sampling: { temperature: number | Marker; max_tokens: number | Marker; top_p: number | Marker };
+  /** A composite model delegates to a member: who actually answered. */
+  member?: { provider: string; requested: string };
+  /** Pipeline composites: every step that contributed, in order. */
+  steps?: Array<{ provider: string; requested: string; reported: string }>;
+}
+
+export interface MoveCall {
+  text: string;
+  meta: CallMeta;
 }

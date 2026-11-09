@@ -16,6 +16,8 @@ import { createHash } from 'crypto';
 import { canonicalize } from '../integrity/canonical';
 import { engineIdentity } from '../integrity/engine-identity';
 import { chain, genesisHash } from '../integrity/hash-chain';
+import { moveChainHashes } from '../integrity/verify';
+import { nodeProvider } from '../integrity/verify-node';
 import { IntegrityConfigError, KeySet, PUBLISHED_KEYS } from '../integrity/keys';
 import { FinalStatus, Signer, assertSignerPublished, buildManifest, signManifest, signerFromSeed } from '../integrity/signing';
 
@@ -26,7 +28,7 @@ const MAX_OPTIONS_CHARS = 16_384;
 
 export type SealResult =
   | { status: 'signed'; keyId: string }
-  | { status: 'skipped'; reason: string; code: 'NO_KEY' | 'NOT_FOUND' | 'NOT_FINAL' | 'LEASE_ACTIVE' | 'ALREADY_SEALED' | 'UNCHAINED' | 'CHAIN_BROKEN' | 'KEY_NOT_PUBLISHED' };
+  | { status: 'skipped'; reason: string; code: 'NO_KEY' | 'NOT_FOUND' | 'NOT_FINAL' | 'LEASE_ACTIVE' | 'ALREADY_SEALED' | 'UNCHAINED' | 'CHAIN_BROKEN' | 'MOVES_BROKEN' | 'KEY_NOT_PUBLISHED' };
 
 interface TestConfig { signer?: Signer | null; keys?: KeySet }
 let override: TestConfig | null = null;
@@ -100,6 +102,16 @@ export const sealIfFinal = async (matchId: string, options: { now?: Date } = {})
       return skipped('CHAIN_BROKEN', 'the stored hash chain does not verify');
     }
 
+    // The moves and their provenance: one digest in the manifest, so editing a stored move or its provenance later is detectable.
+    const moveRows = await tx.matchMove.findMany({ where: { match_id: matchId }, orderBy: { move_index: 'asc' }, select: { move_index: true, actor_role: true, content: true, provenance: true } });
+    if (!moveRows.every((m, i) => m.move_index === i)) {
+      log('error', 'stored moves have a gap; refusing to sign', { matchId });
+      return skipped('MOVES_BROKEN', 'the stored moves are not numbered 0..n-1');
+    }
+    const movesDigest = moveRows.length > 0
+      ? { count: moveRows.length, headHash: (await moveChainHashes(nodeProvider, matchId, moveRows.map(m => ({ move_index: m.move_index, actor_role: m.actor_role, content: m.content, provenance: m.provenance })))).head }
+      : undefined;
+
     // Which code ran, and with which settings (spec section 5). Missing information is left out, never guessed.
     const artifact = match.engine_artifact_id
       ? await tx.gameEngineArtifact.findUnique({ where: { id: match.engine_artifact_id }, select: { id: true, kind: true, native_key: true, code_ts: true, contract_version: true } })
@@ -117,7 +129,7 @@ export const sealIfFinal = async (matchId: string, options: { now?: Date } = {})
     const manifest = buildManifest({
       matchId, keyId: signer!.keyId, gameType: match.game_type, rulesetVersion: match.ruleset_version, seed: match.seed,
       status: match.status as FinalStatus, eventCount: rows.length, headHash: recomputed.head,
-      startedAt: match.started_at, finishedAt: match.finished_at, engine, ...optionsMembers
+      startedAt: match.started_at, finishedAt: match.finished_at, engine, moves: movesDigest, ...optionsMembers
     });
     const envelope = await signManifest(manifest, signer!);
     await tx.matchManifest.create({

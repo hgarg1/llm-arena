@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { chain as productionChain } from '../src/integrity/hash-chain';
 import { signManifest, signerFromSeed, buildManifest } from '../src/integrity/signing';
-import { CryptoProvider, EventRecord, Envelope, PublishedKey, chainHashes, fromBase64Url, fromHex, genesisHash, toHex, verifyMatch } from '../src/integrity/verify';
+import { CryptoProvider, EventRecord, Envelope, PublishedKey, chainHashes, fromBase64Url, fromHex, genesisHash, moveChainHashes, toHex, verifyMatch } from '../src/integrity/verify';
 import { nodeProvider } from '../src/integrity/verify-node';
 import { webProvider } from '../src/integrity/verify-web';
 import * as reference from './helpers/integrity-reference';
@@ -34,8 +34,14 @@ describe.each(PROVIDERS)('verification library with %s', (_name, provider) => {
     expect(head).toBe(v.head);
   });
 
+  it.each<any>(vectors.moves_chains)('moves chain: $name', async v => {
+    const { hashes, head } = await moveChainHashes(provider, v.match_id, v.moves);
+    expect(hashes).toEqual(v.hashes);
+    expect(head).toBe(v.head);
+  });
+
   it.each<any>(vectors.verification)('verification vector: $name', async v => {
-    const outcome = await verifyMatch(provider, v.match_id, v.events, v.envelope, v.keys);
+    const outcome = await verifyMatch(provider, v.match_id, v.events, v.envelope, v.keys, { moves: v.moves });
     expect(outcome.result).toBe(v.expect.result);
     expect((outcome as any).code).toBe(v.expect.code);
   });
@@ -178,6 +184,54 @@ describe('tamper matrix', () => {
       const manifest = { ...good.manifest, key_id: entry(SEED_B).key_id };
       expect(await verify(EVENTS, { manifest, signature: good.signature }, [entry(SEED_A), entry(SEED_B)])).toEqual(failed('SIGNATURE_INVALID'));
     });
+  });
+});
+
+describe('moves and their provenance', () => {
+  const withMoves = vectors.verification.find((v: any) => v.name.startsWith('a manifest that commits to the moves'));
+  const run = (moves?: any[]) => verifyMatch(nodeProvider, withMoves.match_id, withMoves.events, withMoves.envelope, withMoves.keys, moves ? { moves } : {});
+
+  it('are checked against the signed digest when supplied', async () => {
+    expect(await run(withMoves.moves)).toEqual({ result: 'VERIFIED' });
+  });
+
+  it('are reported as unchecked, not silently passed, when they are not supplied', async () => {
+    expect(await run()).toEqual({ result: 'VERIFIED', unchecked: ['moves'] });
+  });
+
+  it('a manifest that does not commit to moves reports nothing unchecked', async () => {
+    const plain = vectors.verification[0];
+    expect(await verifyMatch(nodeProvider, plain.match_id, plain.events, plain.envelope, plain.keys)).toEqual({ result: 'VERIFIED' });
+  });
+
+  it.each<[string, (moves: any[]) => any[], string]>([
+    ['a provenance field edited', m => { m[0].provenance.model.reported = 'other-model'; return m; }, 'head'],
+    ['a provenance field added', m => { m[0].provenance.extra = true; return m; }, 'head'],
+    ['a provenance record removed (null)', m => { m[1].provenance = null; return m; }, 'head'],
+    ['the move text edited', m => { m[2].content = 'RESOLVE '; return m; }, 'head'],
+    ['the actor changed', m => { m[0].actor_role = 'player2'; return m; }, 'head'],
+    ['a move removed from the end', m => m.slice(0, 2), 'count'],
+    ['a move appended', m => [...m, { move_index: 3, actor_role: 'player1', content: 'x', provenance: null }], 'count'],
+    ['a gap in the numbering', m => [m[0], m[2]], 'gap'],
+    ['a duplicate index', m => [m[0], m[0], m[1]], 'gap']
+  ])('%s is detected', async (_label, mutate, reason) => {
+    const moves = mutate(JSON.parse(JSON.stringify(withMoves.moves)));
+    expect(await run(moves)).toMatchObject({ result: 'FAILED', code: 'MOVES_MISMATCH', detail: { reason } });
+  });
+
+  it('moves in any order give the same verdict', async () => {
+    expect(await run([...withMoves.moves].reverse())).toEqual({ result: 'VERIFIED' });
+  });
+
+  it('a move that cannot be canonicalized is MALFORMED, not a pass', async () => {
+    const moves = JSON.parse(JSON.stringify(withMoves.moves)); moves[0].provenance = { big: 2 ** 60 };
+    expect(await run(moves)).toMatchObject({ result: 'FAILED', code: 'MALFORMED' });
+    expect(await run([{ move_index: 'x' }] as any)).toMatchObject({ result: 'FAILED', code: 'MALFORMED' });
+  });
+
+  it('forging the digest in the manifest breaks the signature before the moves are even compared', async () => {
+    const forged = JSON.parse(JSON.stringify(withMoves.envelope)); forged.manifest.provenance.moves.count = 2;
+    expect(await verifyMatch(nodeProvider, withMoves.match_id, withMoves.events, forged, withMoves.keys, { moves: withMoves.moves.slice(0, 2) })).toMatchObject({ result: 'FAILED', code: 'SIGNATURE_INVALID' });
   });
 });
 

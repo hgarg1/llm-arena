@@ -462,6 +462,9 @@ model MatchMove {
   latency_ms    Int?
   input_tokens  Int?
   output_tokens Int?
+  /// Where the move came from and which prompt, model and sampling settings produced it (src/integrity/provenance.ts).
+  /// NULL for moves recorded before provenance existed.
+  provenance Json?
   created_at DateTime @default(now())
 
   @@unique([match_id, move_index])

@@ -9,6 +9,8 @@ export const SPEC = 'arena-integrity/1';
 const DOMAIN_GENESIS = `${SPEC}/genesis\n`;
 const DOMAIN_EVENT = `${SPEC}/event\0`;
 const DOMAIN_MANIFEST = `${SPEC}/manifest\0`;
+const DOMAIN_MOVES_GENESIS = `${SPEC}/moves-genesis\n`;
+const DOMAIN_MOVE = `${SPEC}/move\0`;
 
 export class CanonicalizationError extends Error {}
 
@@ -73,6 +75,19 @@ export const eventHash = (matchId: string, prevHash: string, event: EventRecord)
   return sha256(utf8(DOMAIN_EVENT), Buffer.from(prevHash, 'hex'), utf8(canonicalize(hashedRecord(matchId, event)))).toString('hex');
 };
 
+export interface MoveRecord { move_index: number; actor_role: string; content: string; provenance: unknown }
+export const movesGenesis = (matchId: string): string => sha256(utf8(DOMAIN_MOVES_GENESIS), utf8(matchId)).toString('hex');
+export const moveChain = (matchId: string, moves: MoveRecord[]): { hashes: string[]; head: string } => {
+  const hashes: string[] = [];
+  let prev = movesGenesis(matchId);
+  for (const m of moves) {
+    const record = { v: 1, match_id: matchId, move_index: m.move_index, actor_role: m.actor_role, content_sha256: sha256(utf8(m.content)).toString('hex'), provenance: m.provenance ?? null };
+    prev = sha256(utf8(DOMAIN_MOVE), Buffer.from(prev, 'hex'), utf8(canonicalize(record))).toString('hex');
+    hashes.push(prev);
+  }
+  return { hashes, head: prev };
+};
+
 export const chain = (matchId: string, events: EventRecord[]): { hashes: string[]; head: string } => {
   const hashes: string[] = [];
   let prev = genesisHash(matchId);
@@ -85,7 +100,7 @@ export const chain = (matchId: string, events: EventRecord[]): { hashes: string[
 
 export type FailureCode =
   | 'SPEC_UNSUPPORTED' | 'MALFORMED' | 'MATCH_ID_MISMATCH' | 'EVENT_GAP' | 'EVENT_COUNT_MISMATCH'
-  | 'HEAD_MISMATCH' | 'KEY_UNKNOWN' | 'KEY_REVOKED' | 'SIGNATURE_INVALID';
+  | 'HEAD_MISMATCH' | 'KEY_UNKNOWN' | 'KEY_REVOKED' | 'SIGNATURE_INVALID' | 'MOVES_MISMATCH';
 
 export interface PublicKeyEntry { key_id: string; alg: 'Ed25519'; public_key: string; status: 'active' | 'retired' | 'revoked' }
 export interface Envelope {
@@ -115,7 +130,7 @@ export const signManifest = (manifest: Record<string, any>, seed: Buffer): Envel
 export type Outcome = { result: 'VERIFIED' } | { result: 'FAILED'; code: FailureCode };
 
 /** Verification procedure from spec section 7. Events are the full stored log for the match, in any order. */
-export const verifyMatch = (matchId: string, events: EventRecord[], envelope: Envelope, keys: PublicKeyEntry[]): Outcome => {
+export const verifyMatch = (matchId: string, events: EventRecord[], envelope: Envelope, keys: PublicKeyEntry[], moves?: MoveRecord[]): Outcome => {
   const fail = (code: FailureCode): Outcome => ({ result: 'FAILED', code });
   const { manifest, signature } = envelope || ({} as Envelope);
   if (!manifest || typeof manifest !== 'object' || !signature) return fail('MALFORMED');
@@ -137,5 +152,13 @@ export const verifyMatch = (matchId: string, events: EventRecord[], envelope: En
   if (manifest.key_id !== signature.key_id) return fail('SIGNATURE_INVALID');
   const publicKey = createPublicKey({ key: Buffer.concat([SPKI_PREFIX, Buffer.from(key.public_key, 'base64url')]), format: 'der', type: 'spki' });
   const ok = verify(null, data, publicKey, Buffer.from(signature.sig, 'base64url'));
-  return ok ? { result: 'VERIFIED' } : fail('SIGNATURE_INVALID');
+  if (!ok) return fail('SIGNATURE_INVALID');
+  const committed = manifest.provenance?.moves;
+  if (committed && moves) {
+    const ordered = [...moves].sort((a, b) => a.move_index - b.move_index);
+    for (let i = 0; i < ordered.length; i++) if (ordered[i].move_index !== i) return fail('MOVES_MISMATCH');
+    if (committed.count !== ordered.length) return fail('MOVES_MISMATCH');
+    if (committed.head_hash !== moveChain(matchId, ordered).head) return fail('MOVES_MISMATCH');
+  }
+  return { result: 'VERIFIED' };
 };

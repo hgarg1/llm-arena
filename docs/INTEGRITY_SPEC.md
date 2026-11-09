@@ -16,7 +16,7 @@ The key words MUST, MUST NOT and SHOULD are used as in RFC 2119.
 - The manifest was signed by a key we published, and that key was not revoked.
 
 **Does not prove**
-- That the models answered the way the log says. The log records what the runner stored. Raw provider responses and usage numbers are added by later stories (m1-07, m1-08) and are covered by the manifest once they are.
+- That the models answered the way the log says. The log records what the runner stored, together with which prompt, model and sampling settings the runner says it used (section 4.5). Raw provider responses and usage numbers are added by story m1-08.
 - That re-running the match would give the same moves. Model output is not deterministic. Verification checks the record, not a re-execution.
 - Anything about the order in which events were written in time. Row timestamps (`created_at`) are not part of the record (section 4.2).
 - Protection against someone who holds the private signing key. Key custody is a separate control (story m1-04).
@@ -106,6 +106,21 @@ Storing `hash` and `prev_hash` beside each event is allowed and recommended for 
 - A match whose stored events have no hashes (it began before chaining existed) stays unchained to the end: new events are stored with `NULL` hashes. Hashes are never started partway through a log. Such a match is `UNVERIFIED`.
 - If a match is restarted from nothing (the existing "clear stale events" step), the chain starts again at `genesis`.
 
+### 4.5 The moves digest
+
+Each model decision is also stored as a **move** (`MatchMove`): who moved, the raw move text, and a provenance record (section 5.1). The manifest commits to all moves with a second hash chain, so a stored move or its provenance cannot be edited later without detection.
+
+```
+moves_genesis = SHA-256( DOMAIN_MOVES_GENESIS || UTF8(match_id) )
+move_hash(i)  = SHA-256( DOMAIN_MOVE || bytes(previous) || UTF8(canonical(record(i))) )      previous = moves_genesis for the first move
+record(i)     = { "v": 1, "match_id": <id>, "move_index": i, "actor_role": <role>,
+                  "content_sha256": <SHA-256 of the UTF-8 move text, hex>, "provenance": <the provenance record, or null> }
+```
+
+with `DOMAIN_MOVES_GENESIS = "arena-integrity/1/moves-genesis\n"` and `DOMAIN_MOVE = "arena-integrity/1/move"` followed by one `0x00` byte. `move_index` MUST be `0, 1, 2, …` with no gaps. The **moves head** is the last `move_hash`; for no moves it is `moves_genesis`. `provenance: null` means the move was recorded before provenance existed ("not recorded"), which is different from a record that says `unknown`.
+
+The chain is built when the match is sealed (the signer reads the stored moves), so the moves table needs no per-row hash columns. A match with no moves has no moves digest.
+
 ## 5. Manifest
 
 The manifest is a JSON object written once, when the match reaches a final status (`COMPLETED`, `FAILED` or `CANCELLED`).
@@ -131,7 +146,35 @@ Optional members, covered by the signature when present (defined by story m1-06)
 | `options` | The settings the match was created with, as stored: validated, clamped and merged with defaults by the create action, so these are the resolved settings. Omitted when the canonical JSON is larger than 16,384 characters; `options_sha256` is still present. The engine's own view of the settings it used (for example `max_plies`) is in the signed `MATCH_START` event. |
 | `options_sha256` | SHA-256 of the canonical JSON of the stored options (`{}` when there are none). |
 
-Still reserved for later stories: `participants`, and `provenance` (prompt, model and sampling information, raw-response digests; stories m1-07 and m1-08). `seed` is a required member and records the match seed.
+| `provenance` | `{ "v": 1, "moves": { "count": <int>, "head_hash": <64 hex> } }`: the moves digest of section 4.5. Present when the match has moves. |
+
+Still reserved for later stories: `participants`, and raw-response digests inside `provenance` (story m1-08). `seed` is a required member and records the match seed.
+
+### 5.1 The per-move provenance record
+
+Stored with each move (`MatchMove.provenance`, a JSON object) and committed to by the digest above. Every field holds a real value, an explicit marker, or `null` for a part that does not apply. A blank (`""`) or a missing field is never valid.
+
+```json
+{
+  "v": 1,
+  "source": "model",
+  "prompt":   { "id": "chess/white", "version": "1.1.0", "sha256": "<hash of the exact system prompt>" },
+  "model":    { "provider": "anthropic", "requested": "claude-example", "reported": "claude-example-20260101" },
+  "sampling": { "temperature": 0, "max_tokens": 1024, "top_p": "provider-default" },
+  "adapter":  "anthropic"
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `source` | `model` (a model call), `random` (the mock model: a seeded random legal move chosen by the engine) or `engine` (a move the engine made itself, such as a resolve step) |
+| `prompt` | `id` is `<game key>/<role>`; `version` is the ruleset version the engine declared (`unknown` if it declared none); `sha256` is the SHA-256 of the exact system prompt sent. `null` for `random` and `engine` moves |
+| `model` | `provider` and `requested` model id as configured; `reported` is the model or version string the provider echoed back, or `unknown`. For a composite model, `provider` and `requested` name the member that answered, `via` names the composite, and a pipeline adds `steps` listing every contributing step. `null` for `engine` moves |
+| `sampling` | `temperature`, `max_tokens`, `top_p`: the number that was sent, `provider-default` (not sent, so the provider's own setting applied) or `unknown` (the adapter cannot tell). `null` for `random` and `engine` moves |
+| `adapter` | the adapter that made the call, `unknown` if it did not say, `null` when there was no call |
+
+`unknown` and `provider-default` are markers, not blanks: they say why a value is missing. The runner records an adapter that cannot report anything as all `unknown`. What this proves is what the runner says it sent and what the provider said it ran; it is not independent evidence of the provider's behavior.
+
 
 Limits worth knowing: a built-in engine's hash is the one in the table of the deployment that sealed the match, so a deploy that changes an engine while a match is running attributes that match to the new code (the runner's replay check still refuses to continue if the engine's behavior diverged). A hash proves which code ran, not that the code is correct.
 
@@ -193,7 +236,15 @@ Inputs: the match id, all stored events for the match, an envelope, and a set of
 | 9 | That key's status is not `revoked` | `KEY_REVOKED` |
 | 10 | `manifest.key_id` equals `signature.key_id`, and the Ed25519 signature verifies over the signed bytes | `SIGNATURE_INVALID` |
 
-The result is `VERIFIED` only if all ten checks pass. A match that has **no manifest** (every match created before this spec is deployed) is `UNVERIFIED`, which is a different state from `FAILED`; verifiers and the site MUST NOT show it as verified, and MUST NOT backfill signatures for it.
+A verifier that also holds the match's moves performs an eleventh check, only when the manifest has `provenance.moves`:
+
+| # | Check | Failure code |
+|---|---|---|
+| 11 | Sorted by `move_index`, the moves are numbered `0 … m−1`, `m` equals `provenance.moves.count`, and the recomputed moves head (section 4.5) equals `provenance.moves.head_hash` | `MOVES_MISMATCH` |
+
+It runs after the signature check, so a forged manifest is reported as `SIGNATURE_INVALID`. A verifier that was not given the moves still returns `VERIFIED` but MUST say that the moves were not checked (the library returns `unchecked: ["moves"]`).
+
+The result is `VERIFIED` only if all ten checks pass (and the eleventh, when it applies). A match that has **no manifest** (every match created before this spec is deployed) is `UNVERIFIED`, which is a different state from `FAILED`; verifiers and the site MUST NOT show it as verified, and MUST NOT backfill signatures for it.
 
 Events may be supplied in any order; the verifier sorts them by `seq`.
 
@@ -203,7 +254,7 @@ The version string is `arena-integrity/<major>`. A new major version is required
 
 ## 9. Test vectors
 
-[`integrity/test-vectors.json`](integrity/test-vectors.json) holds known answers for every section above: canonicalization (valid and rejected inputs), genesis hashes, hash chains (including the empty log), test keys, and 14 verification cases covering each failure code. The keys in that file are **test keys** and MUST NOT be used for real signatures.
+[`integrity/test-vectors.json`](integrity/test-vectors.json) holds known answers for every section above: canonicalization (valid and rejected inputs), genesis hashes, hash chains (including the empty log), moves chains, test keys, and verification cases covering every failure code, including the moves digest. The keys in that file are **test keys** and MUST NOT be used for real signatures.
 
 Every implementation MUST reproduce every vector. The production library is `src/integrity/verify.ts`: pure TypeScript with no database access and no Node or browser globals except `TextEncoder`, so the same code runs in Node (CLI, tests) and in a web page. The two crypto primitives (SHA-256 and Ed25519 verification) are injected: `nodeProvider` (`verify-node.ts`) and `webProvider` (`verify-web.ts`, WebCrypto; Ed25519 needs Chrome 137, Firefox 129 or Safari 17). Where Ed25519 is unavailable the library reports `ERROR`, never a pass.
 
@@ -224,5 +275,6 @@ Regenerating after an intentional spec change: `UPDATE_INTEGRITY_VECTORS=1 npx j
 - Done: the verification library (m1-05).
 - Done: engine hash, settings and seed in the manifest (m1-06).
 - Done: signing at match completion with an environment-held key behind a `Signer` interface, rotation and revocation (m1-04). Still open: provisioning the production key and publishing it (docs/INTEGRITY_KEYS.md).
-- m1-07, m1-08: the reserved `provenance` member.
+- Done: per-move provenance and the moves digest (m1-07).
+- m1-08: raw provider responses, tokens, latency and cost inside `provenance`.
 - m1-11: the key-set URL and the export bundle format.

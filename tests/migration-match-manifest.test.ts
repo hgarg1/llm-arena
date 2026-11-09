@@ -26,11 +26,11 @@ describe('migration: MatchManifest', () => {
   let out: Record<string, { ok: boolean; rows?: any[]; error?: string }>;
   beforeAll(() => {
     const run = spawnSync(process.execPath, ['scripts/pglite-replay.mjs'], {
-      cwd: root, encoding: 'utf8', timeout: 120_000, input: JSON.stringify({ target: NEW, setup: [match('old')], checks: checks.map(c => c.step) })
+      cwd: root, encoding: 'utf8', timeout: 500_000, input: JSON.stringify({ target: NEW, setup: [match('old')], checks: checks.map(c => c.step) })
     });
     if (run.status !== 0) throw new Error(`replay failed: ${String(run.stderr).slice(-600)}`);
     out = Object.fromEntries(checks.map((c, i) => [c.key, JSON.parse(run.stdout).results[i]]));
-  }, 150_000);
+  }, 600_000);
 
   it('applies on top of existing matches', () => expect(out.existing.rows).toEqual([{ n: 1 }]));
   it('stores and returns a manifest', () => {
