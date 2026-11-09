@@ -1141,6 +1141,340 @@
       }
     },
     {
+      "name": "optional engine and options members are covered by the signature and verify",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "engine": {
+            "kind": "SANDBOXED",
+            "key": "custom-game",
+            "artifact_id": "artifact-1",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "contract_version": 1
+          },
+          "options": {
+            "maxPlies": 40,
+            "allowDraws": true
+          },
+          "options_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "b3jVlgvcAdGsGQSYAA3AcPZBgsu06guvtRAqSr70UYuIkOpcyThuQY3s13snp6GRLDvF5hMoMmAoKmYZCed2Cg"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "result": "VERIFIED"
+      }
+    },
+    {
+      "name": "a changed engine hash invalidates the signature",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "engine": {
+            "kind": "SANDBOXED",
+            "key": "custom-game",
+            "artifact_id": "artifact-1",
+            "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "contract_version": 1
+          },
+          "options": {
+            "maxPlies": 40,
+            "allowDraws": true
+          },
+          "options_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "b3jVlgvcAdGsGQSYAA3AcPZBgsu06guvtRAqSr70UYuIkOpcyThuQY3s13snp6GRLDvF5hMoMmAoKmYZCed2Cg"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "result": "FAILED",
+        "code": "SIGNATURE_INVALID"
+      }
+    },
+    {
+      "name": "a removed engine member invalidates the signature",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "options": {
+            "maxPlies": 40,
+            "allowDraws": true
+          },
+          "options_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "b3jVlgvcAdGsGQSYAA3AcPZBgsu06guvtRAqSr70UYuIkOpcyThuQY3s13snp6GRLDvF5hMoMmAoKmYZCed2Cg"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "result": "FAILED",
+        "code": "SIGNATURE_INVALID"
+      }
+    },
+    {
+      "name": "members a verifier does not know are ignored by it but still signed",
+      "match_id": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        {
+          "seq": 0,
+          "turn_index": 0,
+          "type": "MATCH_START",
+          "actor_role": "system",
+          "payload": {
+            "seed": 42,
+            "game": "iterated-negotiation",
+            "ruleset_version": "1.0.0"
+          }
+        },
+        {
+          "seq": 1,
+          "turn_index": 1,
+          "type": "ACTION",
+          "actor_role": "player1",
+          "payload": {
+            "action": "propose",
+            "amount": 50,
+            "note": "split 50/50 é😀"
+          }
+        },
+        {
+          "seq": 2,
+          "turn_index": 2,
+          "type": "GAME_END",
+          "actor_role": null,
+          "payload": {
+            "winner": "player1",
+            "scores": {
+              "player1": 50,
+              "player2": 50
+            }
+          }
+        }
+      ],
+      "envelope": {
+        "manifest": {
+          "spec": "arena-integrity/1",
+          "key_id": "56475aa75463474c",
+          "match_id": "11111111-2222-4333-8444-555555555555",
+          "game_type": "iterated-negotiation",
+          "ruleset_version": "1.0.0",
+          "seed": 42,
+          "status": "COMPLETED",
+          "events": {
+            "count": 3,
+            "head_hash": "b82979b2bdd37adea9efbcb27efc8a113524d5b763dba86babd7c1a1bbbb66b3"
+          },
+          "started_at": "2026-11-08T12:00:00.000Z",
+          "finished_at": "2026-11-08T12:00:07.250Z",
+          "future_member": {
+            "anything": [
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        "signature": {
+          "alg": "Ed25519",
+          "key_id": "56475aa75463474c",
+          "sig": "goszdN2bu3CCHxBpM6pRXUAQAt4KJzBVZdbW3w_EyhcaBIBOF_xoSEUvkB1EtrDQAmMVVDckDrXCDF_SEsKABg"
+        }
+      },
+      "keys": [
+        {
+          "key_id": "56475aa75463474c",
+          "alg": "Ed25519",
+          "public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+          "status": "active"
+        }
+      ],
+      "expect": {
+        "result": "VERIFIED"
+      }
+    },
+    {
       "name": "a manifest for another match is rejected",
       "match_id": "99999999-8888-4777-8666-555555555555",
       "events": [

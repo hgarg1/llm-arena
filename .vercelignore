@@ -20,3 +20,5 @@
 /.eslintrc.cjs
 /scripts/test-with-pglite.mjs
 /scripts/pglite-replay.mjs
+/scripts/hash-engines.mjs
+/scripts/generate-integrity-key.mjs

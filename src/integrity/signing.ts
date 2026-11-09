@@ -5,6 +5,7 @@
  */
 import { createPublicKey, sign } from 'crypto';
 import { SPEC, canonicalize } from './hash-chain';
+import { EngineIdentity } from './engine-identity';
 import { IntegrityConfigError, KeySet, activeKey, keyIdOf, privateKeyFromSeed, publicKeyRawFromSeed } from './keys';
 
 const DOMAIN_MANIFEST = `${SPEC}/manifest\0`;
@@ -28,11 +29,19 @@ export interface ManifestInput {
   headHash: string;
   startedAt: Date | null;
   finishedAt: Date | null;
+  /** Which game code ran (spec section 5); omitted when it cannot be established. */
+  engine?: EngineIdentity | null;
+  /** The settings the match was created with (already validated and clamped by the create action), and their hash. */
+  options?: unknown;
+  optionsSha256?: string;
 }
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null); // always YYYY-MM-DDTHH:mm:ss.sssZ
 
-/** The manifest object of spec section 5 (required members only; reserved members are added by later stories). */
+/**
+ * The manifest object of spec section 5: the required members, plus the optional `engine`, `options` and `options_sha256`
+ * when they are known. Optional members are covered by the signature like every other member.
+ */
 export const buildManifest = (input: ManifestInput) => ({
   spec: SPEC,
   key_id: input.keyId,
@@ -43,7 +52,10 @@ export const buildManifest = (input: ManifestInput) => ({
   status: input.status,
   events: { count: input.eventCount, head_hash: input.headHash },
   started_at: iso(input.startedAt),
-  finished_at: iso(input.finishedAt)
+  finished_at: iso(input.finishedAt),
+  ...(input.engine ? { engine: input.engine } : {}),
+  ...(input.options !== undefined ? { options: input.options } : {}),
+  ...(input.optionsSha256 ? { options_sha256: input.optionsSha256 } : {})
 });
 
 export type Manifest = ReturnType<typeof buildManifest>;

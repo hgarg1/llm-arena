@@ -79,6 +79,18 @@ const verification = (): { name: string; match_id: string; events: EventRecord[]
     { name: 'an unknown key id is rejected', match_id: MATCH_ID, events: EVENTS, envelope: good, keys: [keyEntry(SEED_B)], expect: { result: 'FAILED', code: 'KEY_UNKNOWN' } },
     { name: 'a revoked key is rejected', match_id: MATCH_ID, events: EVENTS, envelope: good, keys: [keyEntry(SEED_A, 'revoked')], expect: { result: 'FAILED', code: 'KEY_REVOKED' } },
     { name: 'an unsupported spec version is rejected', match_id: MATCH_ID, events: EVENTS, envelope: signManifest(manifestFor(EVENTS, SEED_A, { spec: 'arena-integrity/2' }), SEED_A), keys: keysA, expect: { result: 'FAILED', code: 'SPEC_UNSUPPORTED' } },
+    ...(() => {
+      const members = { engine: { kind: 'SANDBOXED', key: 'custom-game', artifact_id: 'artifact-1', sha256: 'c'.repeat(64), contract_version: 1 }, options: { maxPlies: 40, allowDraws: true }, options_sha256: 'd'.repeat(64) };
+      const withMembers = signManifest(manifestFor(EVENTS, SEED_A, members), SEED_A);
+      const changedEngine = { ...clone(withMembers), manifest: { ...withMembers.manifest, engine: { ...members.engine, sha256: 'e'.repeat(64) } } };
+      const { engine: _engine, ...withoutEngine } = withMembers.manifest;
+      return [
+        { name: 'optional engine and options members are covered by the signature and verify', match_id: MATCH_ID, events: EVENTS, envelope: withMembers, keys: keysA, expect: { result: 'VERIFIED' } as const },
+        { name: 'a changed engine hash invalidates the signature', match_id: MATCH_ID, events: EVENTS, envelope: changedEngine, keys: keysA, expect: { result: 'FAILED', code: 'SIGNATURE_INVALID' } as const },
+        { name: 'a removed engine member invalidates the signature', match_id: MATCH_ID, events: EVENTS, envelope: { ...clone(withMembers), manifest: withoutEngine }, keys: keysA, expect: { result: 'FAILED', code: 'SIGNATURE_INVALID' } as const },
+        { name: 'members a verifier does not know are ignored by it but still signed', match_id: MATCH_ID, events: EVENTS, envelope: signManifest(manifestFor(EVENTS, SEED_A, { future_member: { anything: [1, 2, 3] } }), SEED_A), keys: keysA, expect: { result: 'VERIFIED' } as const }
+      ];
+    })(),
     { name: 'a manifest for another match is rejected', match_id: OTHER_MATCH_ID, events: EVENTS, envelope: good, keys: keysA, expect: { result: 'FAILED', code: 'MATCH_ID_MISMATCH' } }
   ];
 };

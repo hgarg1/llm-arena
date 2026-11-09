@@ -17,8 +17,26 @@ import { signerFromSeed } from '../../src/integrity/signing';
 import { getGameEngine } from '../../src/game/registry';
 import { scriptedAdapter } from '../helpers/scripted-adapter';
 import * as integrity from '../helpers/integrity-reference';
+import { createHash } from 'crypto';
+import { ensureNativeArtifacts } from '../../src/services/default-games.service';
+import { builtInEngineHash, sandboxedEngineHash } from '../../src/integrity/engine-identity';
+import { verifyMatch as verifyWithLibrary } from '../../src/integrity/verify';
+import { nodeProvider } from '../../src/integrity/verify-node';
 
 const maybe = url ? describe : describe.skip;
+
+const GENERATED = `export default class Race {
+  n = 0;
+  initialize() { this.n = 0; return [{ turn: 0, actor: 'system', type: 'START', payload: {} }]; }
+  processMove(h: any, m: any) {
+    this.n++;
+    const events = [{ turn: h[h.length - 1].turn + 1, actor: m.actor, type: 'STEP', payload: { content: m.content } }];
+    return { events, result: this.n >= 3 ? { isFinished: true, scores: { player1: 1, player2: 0 } } : null };
+  }
+  getSystemPrompt(r: string) { return 'run ' + r; }
+  getRandomMove(h: any, r: string) { return { actor: r, content: 'go' }; }
+}`;
+const sha256 = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
 const uid = () => Math.random().toString(36).slice(2, 10);
 const repo = new MatchRepository();
 
@@ -257,6 +275,81 @@ maybe('sealing finished matches (real SQL, real runner)', () => {
       expect(await sealUnsealed()).toEqual({ scanned: 0, counts: {} });
       expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
+    });
+  });
+  describe('what the manifest says about the engine and the settings', () => {
+    const manifestMembers = async (id: string) => (await manifestOf(id))!.manifest as any;
+    /** Both verifiers (the independent reference and the production library) accept the sealed match. */
+    const bothVerify = async (id: string) => {
+      expect(await verify(id, keysA)).toEqual({ result: 'VERIFIED' });
+      const row = (await manifestOf(id))!;
+      const events = (await prisma.matchEvent.findMany({ where: { match_id: id }, orderBy: { seq: 'asc' } })).map(e => ({ seq: e.seq, turn_index: e.turn_index, type: e.type, actor_role: e.actor_role, payload: e.payload }));
+      expect(await verifyWithLibrary(nodeProvider, id, events, { manifest: row.manifest as any, signature: { alg: 'Ed25519', key_id: row.key_id, sig: row.signature } }, keysA)).toEqual({ result: 'VERIFIED' });
+    };
+
+    it('a built-in game records its engine hash, the resolved settings, their hash and the seed', async () => {
+      const options = { maxPlies: 12, allowDraws: false };
+      const id = await play({ options, seed: 31 }, options);
+      const m = await manifestMembers(id);
+      expect(m.seed).toBe(31);
+      expect(m.engine).toEqual({ kind: 'BUILT_IN', key: 'chess', artifact_id: null, sha256: builtInEngineHash('chess') });
+      expect(m.options).toEqual(options);
+      expect(m.options_sha256).toBe(sha256(integrity.canonicalize(options)));
+      await bothVerify(id);
+    });
+
+    it('a match pinned to a native artifact is NATIVE and names the engine it points to', async () => {
+      await ensureNativeArtifacts();
+      const artifact = await prisma.gameEngineArtifact.findFirst({ where: { kind: 'NATIVE', game: { key: 'chess' } } });
+      const id = await play({ engine_artifact_id: artifact!.id });
+      expect((await manifestMembers(id)).engine).toEqual({ kind: 'NATIVE', key: 'chess', artifact_id: artifact!.id, sha256: builtInEngineHash('chess') });
+      await bothVerify(id);
+    });
+
+    it('a generated game records the hash of the code that ran, and a later edit of that code is detectable', async () => {
+      const key = `gen-${uid()}`;
+      const game = await prisma.gameDefinition.create({ data: { key, name: key, roles: ['player1', 'player2'], capabilities: [], status: 'LIVE' } });
+      const artifact = await prisma.gameEngineArtifact.create({ data: { game_id: game.id, status: 'PUBLISHED', spec: {}, code_ts: GENERATED } });
+      const match = await prisma.match.create({ data: { game_type: key, seed: 5, engine_artifact_id: artifact.id, participants: { create: await Promise.all(['player1', 'player2'].map(async role => ({ role, model_id: (await prisma.model.create({ data: { name: `m-${uid()}`, api_provider: 'openai', api_model_id: 'x' } })).id }))) } } });
+      await runMatch(match.id, {}, mk());
+
+      const m = await manifestMembers(match.id);
+      expect(m.engine).toEqual({ kind: 'SANDBOXED', key, artifact_id: artifact.id, sha256: sha256(GENERATED), contract_version: artifact.contract_version });
+      await bothVerify(match.id);
+
+      // someone later swaps the artifact's code: the manifest still commits to the original, so the mismatch shows
+      await prisma.gameEngineArtifact.update({ where: { id: artifact.id }, data: { code_ts: GENERATED + '\n// edited after the match' } });
+      const current = (await prisma.gameEngineArtifact.findUnique({ where: { id: artifact.id } }))!;
+      expect(sandboxedEngineHash(current.code_ts)).not.toBe(m.engine.sha256);
+      await bothVerify(match.id); // and the signature on what was recorded is untouched
+    });
+
+    it('settings too large to embed are represented by their hash alone', async () => {
+      const options = { notes: 'x'.repeat(20_000) };
+      const match = await createMatch({ status: 'CANCELLED', finished_at: new Date(), options });
+      await sealIfFinal(match.id);
+      const m = await manifestMembers(match.id);
+      expect(m.options).toBeUndefined();
+      expect(m.options_sha256).toBe(sha256(integrity.canonicalize(options)));
+      await bothVerify(match.id);
+    });
+
+    it('a match with no settings records the hash of the empty object', async () => {
+      const match = await createMatch({ status: 'CANCELLED', finished_at: new Date() });
+      await sealIfFinal(match.id);
+      const m = await manifestMembers(match.id);
+      expect(m.options).toEqual({});
+      expect(m.options_sha256).toBe(sha256('{}'));
+    });
+
+    it('an engine that cannot be identified is left out, with a warning, and the match is still sealed', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const match = await createMatch({ game_type: `unknown-${uid()}`, status: 'CANCELLED', finished_at: new Date() });
+      expect(await sealIfFinal(match.id)).toMatchObject({ status: 'signed' });
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('engine identity'));
+      warn.mockRestore();
+      expect((await manifestMembers(match.id)).engine).toBeUndefined();
+      await bothVerify(match.id);
     });
   });
 });

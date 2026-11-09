@@ -25,7 +25,8 @@
     "lint": "eslint src tests --ext .ts",
     "test": "jest",
     "test:db": "node scripts/test-with-pglite.mjs",
-    "test:browser": "BROWSER_TESTS=1 jest tests/browser"
+    "test:browser": "BROWSER_TESTS=1 jest tests/browser",
+    "integrity:engines": "node scripts/hash-engines.mjs"
   },
   "keywords": [
     "llm",

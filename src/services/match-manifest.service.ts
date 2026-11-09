@@ -12,11 +12,17 @@
  */
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/db';
+import { createHash } from 'crypto';
+import { canonicalize } from '../integrity/canonical';
+import { engineIdentity } from '../integrity/engine-identity';
 import { chain, genesisHash } from '../integrity/hash-chain';
 import { IntegrityConfigError, KeySet, PUBLISHED_KEYS } from '../integrity/keys';
 import { FinalStatus, Signer, assertSignerPublished, buildManifest, signManifest, signerFromSeed } from '../integrity/signing';
 
 export const FINAL_STATUSES: FinalStatus[] = ['COMPLETED', 'FAILED', 'CANCELLED'];
+
+/** Settings larger than this (canonical JSON) are represented by their hash only. */
+const MAX_OPTIONS_CHARS = 16_384;
 
 export type SealResult =
   | { status: 'signed'; keyId: string }
@@ -70,7 +76,7 @@ export const sealIfFinal = async (matchId: string, options: { now?: Date } = {})
     await tx.$queryRaw`SELECT "id" FROM "Match" WHERE "id" = ${matchId} FOR UPDATE`;
     const match = await tx.match.findUnique({
       where: { id: matchId },
-      select: { id: true, game_type: true, ruleset_version: true, seed: true, status: true, started_at: true, finished_at: true, lease_owner: true, lease_expires_at: true, manifest: { select: { match_id: true } } }
+      select: { id: true, game_type: true, ruleset_version: true, seed: true, options: true, engine_artifact_id: true, status: true, started_at: true, finished_at: true, lease_owner: true, lease_expires_at: true, manifest: { select: { match_id: true } } }
     });
     if (!match) return skipped('NOT_FOUND', 'match not found');
     if (!FINAL_STATUSES.includes(match.status as FinalStatus)) return skipped('NOT_FINAL', `match is ${match.status}`);
@@ -94,10 +100,24 @@ export const sealIfFinal = async (matchId: string, options: { now?: Date } = {})
       return skipped('CHAIN_BROKEN', 'the stored hash chain does not verify');
     }
 
+    // Which code ran, and with which settings (spec section 5). Missing information is left out, never guessed.
+    const artifact = match.engine_artifact_id
+      ? await tx.gameEngineArtifact.findUnique({ where: { id: match.engine_artifact_id }, select: { id: true, kind: true, native_key: true, code_ts: true, contract_version: true } })
+      : null;
+    const engine = engineIdentity(match.game_type, artifact);
+    if (!engine) log('warn', 'engine identity could not be established; the manifest will not name it', { matchId, gameType: match.game_type });
+    let optionsMembers: { options?: unknown; optionsSha256?: string } = {};
+    try {
+      const text = canonicalize(match.options ?? {});
+      optionsMembers = { optionsSha256: createHash('sha256').update(text, 'utf8').digest('hex'), ...(text.length <= MAX_OPTIONS_CHARS ? { options: match.options ?? {} } : {}) };
+    } catch (err) {
+      log('warn', 'match options cannot be canonicalized; the manifest will not record them', { matchId, reason: (err as Error).message });
+    }
+
     const manifest = buildManifest({
       matchId, keyId: signer!.keyId, gameType: match.game_type, rulesetVersion: match.ruleset_version, seed: match.seed,
       status: match.status as FinalStatus, eventCount: rows.length, headHash: recomputed.head,
-      startedAt: match.started_at, finishedAt: match.finished_at
+      startedAt: match.started_at, finishedAt: match.finished_at, engine, ...optionsMembers
     });
     const envelope = await signManifest(manifest, signer!);
     await tx.matchManifest.create({
