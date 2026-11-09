@@ -146,15 +146,22 @@ export const clearManifest = async (matchId: string): Promise<void> => {
 
 /**
  * Repair pass: seals recent final matches that have no manifest (a runner died before sealing, a cancel raced with a
- * live runner, signing was misconfigured for a while). Old matches are not scanned; matches that began before chaining
- * are never candidates because they have events without hashes.
+ * live runner, signing was misconfigured for a while). Old matches are not scanned, and matches from before hash chaining
+ * began are never candidates: they either have events without hashes, or were created before the first chained event.
+ * Nothing is ever signed retroactively (docs/INTEGRITY_SPEC.md section 7).
  */
 export const sealUnsealed = async (options: { limit?: number; lookbackHours?: number; now?: Date } = {}) => {
   let configured = false;
   try { configured = Boolean(currentSigner()); } catch { configured = true; /* misconfigured: sealIfFinal reports it */ }
   if (!configured) return { scanned: 0, counts: {} as Record<string, number> }; // signing is off: no database work
   const now = options.now ?? new Date();
-  const since = new Date(now.getTime() - (options.lookbackHours ?? Number(process.env.INTEGRITY_SEAL_LOOKBACK_HOURS || 72)) * 3_600_000);
+  const lookback = new Date(now.getTime() - (options.lookbackHours ?? Number(process.env.INTEGRITY_SEAL_LOOKBACK_HOURS || 72)) * 3_600_000);
+  // Never backfill: only matches created since hash chaining began in this database can be repaired. Without this, a match from
+  // before chaining that finished with no events (for example "could not start") would be signed after the fact, vouching for a
+  // record nobody witnessed. The first chained event marks the start of the chain era; with none yet there is nothing to repair.
+  const firstChained = await prisma.matchEvent.findFirst({ where: { hash: { not: null } }, orderBy: { created_at: 'asc' }, select: { created_at: true } });
+  if (!firstChained) return { scanned: 0, counts: {} as Record<string, number> };
+  const since = firstChained.created_at > lookback ? firstChained.created_at : lookback;
   const candidates = await prisma.match.findMany({
     where: {
       status: { in: FINAL_STATUSES },

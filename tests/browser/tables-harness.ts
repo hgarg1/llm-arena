@@ -25,7 +25,7 @@ const participants = [
   { role: 'black', model: { name: 'GPT-4o' } }
 ];
 const matches = ['COMPLETED', 'RUNNING', 'FAILED', 'PENDING', 'CANCELLED'].map((status, i) => ({
-  id: `0a1b2c3d-4e5f-6789-abcd-ef01234567${i}${i}`, game_type: i % 2 ? 'texas_holdem' : 'chess_standard_variant', status, created_at: ago(i), finished_at: null, participants
+  id: `0a1b2c3d-4e5f-6789-abcd-ef01234567${i}${i}`, game_type: i % 2 ? 'texas_holdem' : 'chess_standard_variant', status, created_at: ago(i), finished_at: null, manifest: i === 0 ? { match_id: 'x' } : null, participants
 }));
 
 const userRow = (i: number) => ({
@@ -76,7 +76,7 @@ export const pages: Record<string, TablePage> = {
     view: 'matches/list.ejs', text: ['Match History', 'Replay'],
     locals: {
       path: '/matches', matches, games: [{ key: 'chess', name: 'Chess' }], statuses: ['PENDING', 'RUNNING', 'COMPLETED'], queueEnabled: false,
-      query: { search: '', gameType: '', status: '' }, pagination: { page: 2, totalPages: 4 }
+      query: { search: '', gameType: '', status: '', verification: '' }, pagination: { page: 2, totalPages: 4 }
     }
   },
   filings: { view: 'investors/filings.ejs', text: ['SEC Filings', 'Quarterly report pursuant to Section 13 or 15(d)'], locals: { path: '/investors/filings' } },

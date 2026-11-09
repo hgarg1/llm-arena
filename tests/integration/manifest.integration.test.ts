@@ -22,6 +22,7 @@ import { ensureDefaultGames, ensureNativeArtifacts } from '../../src/services/de
 import { builtInEngineHash, sandboxedEngineHash } from '../../src/integrity/engine-identity';
 import { verifyMatch as verifyWithLibrary, verifyRawResponses, MoveRecord } from '../../src/integrity/verify';
 import { purgeExpiredRawResponses } from '../../src/services/raw-retention.service';
+import { verifyStoredMatch } from '../../src/services/match-verification.service';
 import { MAX_RAW_BYTES } from '../../src/integrity/raw-response';
 import { nodeProvider } from '../../src/integrity/verify-node';
 
@@ -588,6 +589,149 @@ maybe('sealing finished matches (real SQL, real runner)', () => {
       await prisma.matchParticipant.deleteMany({ where: { match_id: match.id } });
       await prisma.match.delete({ where: { id: match.id } });
       expect(await prisma.moveRawResponse.count({ where: { match_id: match.id } })).toBe(0);
+    });
+  });
+  describe('what visitors are told about a match (story m1-09)', () => {
+    /** A match from before signing: finished, with events that carry no hashes, and no manifest. */
+    const legacyMatch = async (extra: any = {}) => {
+      const match = await createMatch({ status: 'COMPLETED', finished_at: new Date(), ...extra });
+      await prisma.matchEvent.createMany({ data: [0, 1, 2].map(seq => ({ match_id: match.id, turn_index: seq, seq, type: 'OLD', actor_role: 'system', payload: {} })) });
+      return match.id;
+    };
+    const ids = async (options: any) => (await repo.findAll({ limit: 1000, ...options })).matches.map(m => m.id);
+    const stateOf = async (id: string, keys = keysA) => verifyStoredMatch(id, { keys });
+
+    describe('the match history filter', () => {
+      it('signed shows only matches with a manifest; unverified only finished matches without one; in-progress matches are neither', async () => {
+        const signed = await play();
+        const legacy = await legacyMatch();
+        const running = (await createMatch({ status: 'RUNNING' })).id;
+        const pending = (await createMatch({ status: 'PENDING' })).id;
+        configureIntegrityForTests({ signer: null, keys: { keys: keysA } });
+        const unsealedFailed = (await createMatch({ status: 'FAILED', finished_at: new Date() })).id;
+        configureIntegrityForTests({ signer: signerA(), keys: { keys: keysA } });
+
+        const onlySigned = await ids({ verification: 'signed' });
+        expect(onlySigned).toContain(signed);
+        for (const other of [legacy, running, pending, unsealedFailed]) expect(onlySigned).not.toContain(other);
+
+        const onlyUnverified = await ids({ verification: 'unverified' });
+        expect(onlyUnverified).toEqual(expect.arrayContaining([legacy, unsealedFailed]));
+        for (const other of [signed, running, pending]) expect(onlyUnverified).not.toContain(other);
+
+        const everything = await ids({});
+        expect(everything).toEqual(expect.arrayContaining([signed, legacy, running, pending, unsealedFailed]));
+      });
+
+      it('combines with the other filters: an unverified filter never returns an unfinished match, even when asked for one', async () => {
+        const running = (await createMatch({ status: 'RUNNING' })).id;
+        const legacy = await legacyMatch();
+        expect(await ids({ verification: 'unverified', status: 'RUNNING' })).not.toContain(running);
+        expect(await ids({ verification: 'unverified', status: 'COMPLETED' })).toContain(legacy);
+        expect(await ids({ verification: 'signed', status: 'COMPLETED' })).not.toContain(legacy);
+      });
+
+      it('the total and the pages follow the filter, and each row says only whether it has a manifest', async () => {
+        const signed = await play();
+        const result = await repo.findAll({ verification: 'signed', limit: 5 });
+        expect(result.total).toBe((await prisma.matchManifest.count()));
+        expect(result.matches.length).toBeLessThanOrEqual(5);
+        const row: any = result.matches.find(m => m.id === signed);
+        expect(row.manifest).toEqual({ match_id: signed }); // not the manifest itself, and never the signature
+      });
+    });
+
+    describe('the state shown on a match page comes from really verifying it', () => {
+      it('verified: a sealed match whose log, moves and signature all check out', async () => {
+        expect(await stateOf(await play())).toEqual({ state: 'verified' });
+      });
+
+      it('failed: an event edited after sealing, with the verifier\'s code', async () => {
+        const id = await play();
+        const event = await prisma.matchEvent.findFirst({ where: { match_id: id, seq: 1 } });
+        await prisma.matchEvent.update({ where: { id: event!.id }, data: { payload: { tampered: true } } });
+        expect(await stateOf(id)).toEqual({ state: 'failed', code: 'HEAD_MISMATCH' });
+      });
+
+      it('failed: a move edited after sealing', async () => {
+        const id = await play();
+        const move = await prisma.matchMove.findFirst({ where: { match_id: id, move_index: 0 } });
+        await prisma.matchMove.update({ where: { id: move!.id }, data: { content: 'a1a2' } });
+        expect(await stateOf(id)).toEqual({ state: 'failed', code: 'MOVES_MISMATCH' });
+      });
+
+      it('failed: a manifest whose key is not in the published key set, or has been revoked', async () => {
+        const id = await play();
+        expect(await stateOf(id, [])).toEqual({ state: 'failed', code: 'KEY_UNKNOWN' });
+        expect(await stateOf(id, [entry(SEED_A, 'revoked')])).toEqual({ state: 'failed', code: 'KEY_REVOKED' });
+        expect(await stateOf(id, [entry(SEED_A, 'retired')])).toEqual({ state: 'verified' }); // retired keys still verify
+      });
+
+      it('failed: a manifest that was swapped for another match\'s', async () => {
+        const a = await play();
+        const b = await play();
+        const other = (await manifestOf(b))!;
+        await prisma.matchManifest.update({ where: { match_id: a }, data: { manifest: other.manifest as any, signature: other.signature } });
+        expect(await stateOf(a)).toMatchObject({ state: 'failed', code: 'MATCH_ID_MISMATCH' });
+      });
+
+      it('unverified: a finished match with no manifest (from before signing, or never sealed), which is not a failure', async () => {
+        expect(await stateOf(await legacyMatch())).toEqual({ state: 'unverified' });
+      });
+
+      it('in progress: a match that has not finished', async () => {
+        expect(await stateOf((await createMatch({ status: 'RUNNING' })).id)).toEqual({ state: 'in-progress' });
+        expect(await stateOf((await createMatch({ status: 'PENDING' })).id)).toEqual({ state: 'in-progress' });
+      });
+
+      it('a match that does not exist is unverified, not an error', async () => {
+        expect(await stateOf('00000000-0000-4000-8000-000000000000')).toEqual({ state: 'unverified' });
+      });
+
+      it('checking is read-only: it never signs, never writes, and never repairs', async () => {
+        const id = await legacyMatch();
+        const before = await prisma.matchManifest.count();
+        await stateOf(id); await stateOf(id);
+        expect(await prisma.matchManifest.count()).toBe(before);
+        expect(await manifestOf(id)).toBeNull();
+      });
+    });
+
+    describe('no signatures are ever backfilled for old matches', () => {
+      it('sealing, the repair pass and every status change leave a legacy match unsigned, however often they run', async () => {
+        const legacy = await legacyMatch();
+        for (let i = 0; i < 2; i++) {
+          expect(await sealIfFinal(legacy)).toMatchObject({ status: 'skipped', code: 'UNCHAINED' });
+          await sealUnsealed({ limit: 1000, lookbackHours: 24 * 365 });
+          await repo.sealIfFinal(legacy);
+        }
+        expect(await manifestOf(legacy)).toBeNull();
+        expect(await stateOf(legacy)).toEqual({ state: 'unverified' });
+      });
+
+      it('a match finished with no events from before chaining began is not signed by the repair pass either', async () => {
+        configureIntegrityForTests({ signer: null, keys: { keys: keysA } });
+        const old = (await createMatch({ status: 'FAILED', finished_at: new Date() })).id; // "could not start": no events at all
+        await new Promise(resolve => setTimeout(resolve, 20));
+        await play(); // chaining begins here: the first chained event is newer than `old`
+        const newer = (await createMatch({ status: 'FAILED', finished_at: new Date() })).id;
+        await prisma.match.update({ where: { id: old }, data: { created_at: new Date(Date.now() - 3 * 86_400_000) } });
+        const firstChained = await prisma.matchEvent.findFirst({ where: { hash: { not: null } }, orderBy: { created_at: 'asc' } });
+        await prisma.match.update({ where: { id: old }, data: { created_at: new Date(firstChained!.created_at.getTime() - 60_000) } });
+
+        configureIntegrityForTests({ signer: signerA(), keys: { keys: keysA } });
+        await sealUnsealed({ limit: 1000, lookbackHours: 24 * 365 });
+        expect(await manifestOf(old)).toBeNull();
+        expect(await manifestOf(newer)).not.toBeNull();
+      });
+
+      it('with no chained event anywhere yet, the repair pass has nothing it may sign', async () => {
+        const spy = jest.spyOn(prisma.matchEvent, 'findFirst').mockResolvedValueOnce(null);
+        const found = jest.spyOn(prisma.match, 'findMany');
+        expect(await sealUnsealed({ limit: 1000 })).toEqual({ scanned: 0, counts: {} });
+        expect(found).not.toHaveBeenCalled();
+        spy.mockRestore(); found.mockRestore();
+      });
     });
   });
 });

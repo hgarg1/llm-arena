@@ -116,6 +116,7 @@
                             <span class="badge <%= match.status === 'COMPLETED' ? 'badge-success' : 'badge-neutral' %>"><%= match.status %></span>
                         </div>
                         <h4 class="font-bold text-sm">Match <%= match.id.substring(0,6) %></h4>
+                        <div class="mt-2"><%- include('../partials/verification_badge', { state: match.manifest ? 'signed' : (['COMPLETED', 'FAILED', 'CANCELLED'].includes(match.status) ? 'unverified' : 'in-progress') }) %></div>
                     </div>
                     <div class="card-body py-4">
                         <div class="text-sm text-secondary space-y-1">

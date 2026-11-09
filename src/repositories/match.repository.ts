@@ -5,6 +5,7 @@ import { chainAppend, ChainTail } from '../integrity/append';
 import { sealIfFinal } from '../services/match-manifest.service';
 import { MoveProvenance } from '../integrity/provenance';
 import { PreparedRaw } from '../integrity/raw-response';
+import { VerificationFilter, verificationWhere } from '../integrity/status';
 
 export interface MoveUsage {
   provider: string;
@@ -200,14 +201,15 @@ export class MatchRepository {
     await prisma.match.update({ where: { id }, data: { ruleset_version: version } });
   }
 
-  async findAll(options?: { search?: string; gameType?: string; status?: MatchStatus; page?: number; limit?: number }) {
+  async findAll(options?: { search?: string; gameType?: string; status?: MatchStatus; verification?: VerificationFilter; page?: number; limit?: number }) {
     if (!isDatabaseConfigured()) {
       const page = options?.page || 1;
       const limit = options?.limit || 20;
       return { matches: [], total: 0, page, limit, totalPages: 0 };
     }
 
-    const where: Prisma.MatchWhereInput = {};
+    // ANDed, so it can never be overridden by (or override) the status filter below
+    const where: Prisma.MatchWhereInput = options?.verification ? { AND: [verificationWhere(options.verification)] } : {};
     const page = options?.page || 1;
     const limit = options?.limit || 20;
     const skip = (page - 1) * limit;
@@ -233,7 +235,9 @@ export class MatchRepository {
             where,
             include: {
                 participants: { include: { model: true } },
-                tournament: true
+                tournament: true,
+                // only whether a manifest exists (lists show "Signed"); the match page verifies it for real
+                manifest: { select: { match_id: true } }
             },
             orderBy: { created_at: 'desc' },
             skip,

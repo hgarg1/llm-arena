@@ -235,6 +235,24 @@ maybe('signed-in app pages on phones', () => {
       expect(errors).toEqual([]);
     }, 90_000);
 
+    it('the match page says in words whether the match is verified, unverified or failed, without overflowing', async () => {
+      for (const [name, text, state] of [['match-chess', null, 'verified'], ['match-unverified', 'not a failure', 'unverified'], ['match-verification-failed', 'Do not rely on this replay', 'failed']] as Array<[string, string | null, string]>) {
+        const { context, tab, errors } = await open(phone, name);
+        const badges = await tab.locator(`[data-verification="${state}"]`).evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { visible: r.width > 0 && r.height > 0, left: r.left, right: r.right }; }));
+        expect(badges.some(b => b.visible && b.left >= 0 && b.right <= phone.viewport.width)).toBe(true); // a badge is on screen at this width
+        if (text) {
+          const notice = tab.locator('[data-testid="verification-notice"]');
+          expect(await notice.isVisible()).toBe(true);
+          expect(await notice.innerText()).toContain(text);
+        } else {
+          expect(await tab.locator('[data-testid="verification-notice"]').count()).toBe(0);
+        }
+        expectClean(await audit(tab), `${name} verification`);
+        await context.close();
+        expect(errors).toEqual([]);
+      }
+    }, 90_000);
+
     it('account settings: delete modal fits the screen', async () => {
       const { context, tab } = await open(phone, 'account-settings');
       await tab.getByRole('button', { name: 'Delete', exact: true }).click();

@@ -265,6 +265,18 @@ The result is `VERIFIED` only if all ten checks pass (and the eleventh, when it 
 
 Events may be supplied in any order; the verifier sorts them by `seq`.
 
+### 7.1 What the site shows
+
+| State | Meaning | Where |
+|---|---|---|
+| **Verified** | the full check above passed on this request (event chain, signature, and the moves digest when the moves are available) | match page |
+| **Signed** | the match has a signed manifest; it has not been re-verified on this request | lists (match history, home) |
+| **Unverified** | a finished match with no manifest: it was played before matches were signed, or was never sealed. Not a failure, and never backfilled | lists and match page |
+| **Verification failed** | the manifest exists but a check failed, with the code | match page |
+| **In progress** | the match has not finished | lists and match page |
+
+Match history can be filtered to **Signed only** or **Unverified only** (`?verification=signed|unverified`; any other value means no filter). The filter on "Signed" is exactly "has a manifest" (`signedMatchWhere` in `src/integrity/status.ts`); a leaderboard that claims to count verified matches only MUST restrict its input to that set. State is shown in words and in an icon, never by colour alone. Unverified matches are never signed after the fact: the only code that writes a manifest is the sealing service, the repair pass only considers matches created since hash chaining began, and a test fails if any other code path, script or migration writes one.
+
 ## 8. Versioning
 
 The version string is `arena-integrity/<major>`. A new major version is required for any change that makes a previously valid record verify differently. A verifier that sees a version it does not implement reports `SPEC_UNSUPPORTED` and does not guess.
@@ -290,6 +302,7 @@ Regenerating after an intentional spec change: `UPDATE_INTEGRITY_VECTORS=1 npx j
 
 - Done: storage columns (m1-02) and chaining on every append path with the no-fork index (m1-03).
 - Done: the verification library (m1-05).
+- Done: verification state on matches, the Signed/Unverified filter, and the no-backfill guard (m1-09).
 - Done: engine hash, settings and seed in the manifest (m1-06).
 - Done: signing at match completion with an environment-held key behind a `Signer` interface, rotation and revocation (m1-04). Still open: provisioning the production key and publishing it (docs/INTEGRITY_KEYS.md).
 - Done: per-move provenance and the moves digest (m1-07).

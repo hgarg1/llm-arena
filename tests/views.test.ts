@@ -25,7 +25,8 @@ const baseLocals = {
   seo: { title: 'T', description: 'd', canonicalPath: '/x', robots: 'noindex', structuredData: [] },
   can: () => true,
   success: undefined,
-  error: undefined
+  error: undefined,
+  verification: { state: 'unverified' }
 };
 
 const render = (file: string, data: any) =>

@@ -170,4 +170,25 @@ maybe('tables and data components on phones', () => {
     expect(await d.locator('aside a[href^="#"]').count()).toBe(3);
     await desktop.close();
   }, 60_000);
+
+  it('match history: every row shows its verification state, and the filter is a comfortable, labelled control', async () => {
+    for (const viewport of [{ width: 360, height: 740 }, { width: 1280, height: 800 }]) {
+      const ctx = await browser.newContext({ viewport, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });
+      const p = await ctx.newPage();
+      await p.goto(`${site.base}/match-history`);
+      const states = await p.locator('[data-verification]:visible').evaluateAll(els => els.map(e => e.getAttribute('data-verification')));
+      expect(states.length).toBe(5);
+      expect(new Set(states)).toEqual(new Set(['signed', 'unverified', 'in-progress']));
+      // the words are on screen, not only a colour
+      const text = await p.locator('main').innerText();
+      expect(text).toContain('Signed');
+      expect(text).toContain('Unverified');
+      const select = p.locator('select#matchVerification');
+      expect(await select.getAttribute('aria-label')).toBe('Verification');
+      expect((await select.boundingBox())!.height).toBeGreaterThanOrEqual(viewport.width < 600 ? 43.5 : 30);
+      expect(await select.locator('option').allInnerTexts()).toEqual(['All matches', 'Signed only', 'Unverified only']);
+      expect(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await ctx.close();
+    }
+  }, 60_000);
 });

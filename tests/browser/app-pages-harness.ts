@@ -132,7 +132,7 @@ const matchOf = (kind: string, game_type: string, roles: string[], status = 'COM
 
 const replayPage = (kind: string, renderer: string, game_type: string, roles: string[], status = 'COMPLETED', extra: Record<string, any> = {}): TablePage => ({
   view: 'matches/detail.ejs', text: ['Match Replay'],
-  locals: { path: '/matches', match: matchOf(kind, game_type, roles, status, extra), renderer, boardSize: 100 }
+  locals: { path: '/matches', match: matchOf(kind, game_type, roles, status, extra), renderer, boardSize: 100, verification: { state: 'verified' } }
 });
 
 // ------------------------------------------------------------------ models / account
@@ -188,6 +188,8 @@ export const appPages: Record<string, TablePage> = {
   'match-poker6': replayPage('poker6', 'poker', 'texas_holdem', ['player1', 'player2', 'player3', 'player4', 'player5', 'player6']),
   'match-blackjack': replayPage('blackjack', 'blackjack', 'blackjack', ['player1', 'player2', 'player3', 'player4']),
   'match-generic': replayPage('generic', 'generic', 'iterated-prisoners-dilemma-with-reputation-and-communication-channel', ['cooperative-proposer', 'skeptical-responder']),
+  'match-unverified': { ...replayPage('unv', 'chess', 'chess', ['white', 'black']), locals: { ...replayPage('unv', 'chess', 'chess', ['white', 'black']).locals, verification: { state: 'unverified' } } },
+  'match-verification-failed': { ...replayPage('vfail', 'chess', 'chess', ['white', 'black']), locals: { ...replayPage('vfail', 'chess', 'chess', ['white', 'black']).locals, verification: { state: 'failed', code: 'HEAD_MISMATCH' } } },
   'match-failed': replayPage('failed', 'chess', 'chess', ['white', 'black'], 'FAILED', { failure_reason: 'Provider timeout after 30000ms while waiting for ' + LONG_MODEL }),
   'match-live': replayPage('live', 'generic', 'iterated-prisoners-dilemma-with-reputation-and-communication-channel', ['cooperative-proposer', 'skeptical-responder'], 'RUNNING'),
   'models-list': {

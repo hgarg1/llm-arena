@@ -16,6 +16,8 @@ import {
 } from '../services/seo.service';
 import { renderOgImage } from '../services/og-image.service';
 import { mapOptionsToEngine } from '../game/options';
+import { parseVerificationFilter } from '../integrity/status';
+import { verifyStoredMatch } from '../services/match-verification.service';
 
 const reject = (req: Request, res: Response, status: number, message: string) => {
   if (req.accepts(['html', 'json']) === 'json') return res.status(status).json({ error: message });
@@ -179,7 +181,8 @@ export const list = async (req: Request, res: Response) => {
   const gameType = req.query.game as string;
   const status = req.query.status as MatchStatus;
   const queue = req.query.queue as string;
-  const hasFilters = Boolean(search || gameType || status);
+  const verification = parseVerificationFilter(req.query.verification);
+  const hasFilters = Boolean(search || gameType || status || verification);
   const canonicalPath = hasFilters ? '/matches' : (page > 1 ? `/matches?page=${page}` : '/matches');
   const seo = buildSeo({
     title: hasFilters ? 'Match Search' : (page > 1 ? `Matches - Page ${page}` : 'Matches'),
@@ -210,7 +213,7 @@ export const list = async (req: Request, res: Response) => {
       seo,
       matches: [],
       pagination: { page: 1, totalPages: 0, total: 0 },
-      query: { search: '', gameType: '', status: '', queue: '' },
+      query: { search: '', gameType: '', status: '', queue: '', verification: '' },
       games: [],
       statuses: Object.values(MatchStatus),
       queueEnabled: isRunnerEnabled(),
@@ -225,7 +228,7 @@ export const list = async (req: Request, res: Response) => {
       .join(' ');
 
   const [result, games, matchGameTypes] = await Promise.all([
-    matchRepo.findAll({ page, search, gameType, status }),
+    matchRepo.findAll({ page, search, gameType, status, verification }),
     prisma.gameDefinition.findMany({
       orderBy: { name: 'asc' },
       select: { key: true, name: true }
@@ -254,7 +257,7 @@ export const list = async (req: Request, res: Response) => {
           totalPages: result.totalPages,
           total: result.total
       },
-      query: { search, gameType, status, queue },
+      query: { search, gameType, status, queue, verification: verification || '' },
       games: gameOptions,
       statuses,
       queueEnabled: isRunnerEnabled(),
@@ -528,6 +531,8 @@ export const detail = async (req: Request, res: Response) => {
   const canonicalPath = `/matches/${match.id}`;
   const description = buildMatchDescription(match);
   const isIndexable = match.status === MatchStatus.COMPLETED;
+  // Run the real verifier on this match (read-only), so the badge says "Verified" only when the checks pass.
+  const verification = await verifyStoredMatch(match.id).catch(() => ({ state: 'failed' as const, code: 'CHECK_UNAVAILABLE' }));
   res.render('matches/detail', {
     title: `${match.game_type.replace(/[_-]/g, ' ')} Match Replay`,
     seo: buildSeo({
@@ -546,6 +551,7 @@ export const detail = async (req: Request, res: Response) => {
       ]
     }),
     match,
+    verification,
     renderer,
     boardSize,
     path: '/matches'

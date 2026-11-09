@@ -49,7 +49,16 @@
                     </select>
                 </div>
 
-                <% if (query.search || query.gameType || query.status) { %>
+                <!-- Verification filter -->
+                <div class="w-full md:w-44">
+                    <select name="verification" class="input-field cursor-pointer" id="matchVerification" aria-label="Verification">
+                        <option value="">All matches</option>
+                        <option value="signed" <%= query.verification === 'signed' ? 'selected' : '' %>>Signed only</option>
+                        <option value="unverified" <%= query.verification === 'unverified' ? 'selected' : '' %>>Unverified only</option>
+                    </select>
+                </div>
+
+                <% if (query.search || query.gameType || query.status || query.verification) { %>
                     <a href="/matches" class="btn btn-secondary flex items-center justify-center">Reset</a>
                 <% } %>
             </form>
@@ -64,6 +73,7 @@
                         <th class="table-th">Game</th>
                         <th class="table-th">Participants</th>
                         <th class="table-th">Status</th>
+                        <th class="table-th">Verification</th>
                         <th class="table-th">Date</th>
                         <th class="table-th text-right">Action</th>
                     </tr>
@@ -98,6 +108,9 @@
                                     <%= match.status %>
                                 </span>
                             </td>
+                            <td class="table-td" data-label="Verification">
+                                <%- include('../partials/verification_badge', { state: match.manifest ? 'signed' : (['COMPLETED', 'FAILED', 'CANCELLED'].includes(match.status) ? 'unverified' : 'in-progress') }) %>
+                            </td>
                             <td class="table-td text-secondary text-xs" data-label="Date">
                                 <%= new Date(match.created_at).toLocaleDateString() %>
                             </td>
@@ -122,7 +135,7 @@
         <% if (pagination.totalPages > 1) { %>
             <div class="flex justify-center gap-2">
                 <% if (pagination.page > 1) { %>
-                    <a href="?page=<%= pagination.page - 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>" class="btn btn-sm btn-secondary">&larr; Prev</a>
+                    <a href="?page=<%= pagination.page - 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>&verification=<%= query.verification || '' %>" class="btn btn-sm btn-secondary">&larr; Prev</a>
                 <% } %>
                 
                 <span class="px-4 py-1.5 text-sm text-secondary bg-white rounded border border-border flex items-center">
@@ -130,7 +143,7 @@
                 </span>
 
                 <% if (pagination.page < pagination.totalPages) { %>
-                    <a href="?page=<%= pagination.page + 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>" class="btn btn-sm btn-secondary">Next &rarr;</a>
+                    <a href="?page=<%= pagination.page + 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>&verification=<%= query.verification || '' %>" class="btn btn-sm btn-secondary">Next &rarr;</a>
                 <% } %>
             </div>
         <% } %>
@@ -141,6 +154,7 @@
             const search = document.getElementById('matchSearch');
             const game = document.getElementById('matchGame');
             const status = document.getElementById('matchStatus');
+            const verification = document.getElementById('matchVerification');
             let timer = null;
 
             const submitWithReset = () => {
@@ -157,6 +171,9 @@
             }
             if (game) {
                 game.addEventListener('change', submitWithReset);
+            }
+            if (verification) {
+                verification.addEventListener('change', submitWithReset);
             }
             if (status) {
                 status.addEventListener('change', submitWithReset);

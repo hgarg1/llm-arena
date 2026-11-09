@@ -22,6 +22,7 @@
                 <div class="min-w-0">
                     <h1 class="sr-only font-bold text-lg leading-tight sm:not-sr-only">Match Replay</h1>
                     <div class="sr-only truncate text-xs font-mono text-secondary sm:not-sr-only"><%= match.id %></div>
+                    <div class="mt-1 hidden sm:block"><%- include('../partials/verification_badge', { state: verification.state, code: verification.code }) %></div>
                 </div>
             </div>
             
@@ -38,6 +39,20 @@
                 </button>
             </div>
         </div>
+
+        <!-- Verification: always shown, in words, because it decides how far the replay can be trusted -->
+        <% if (verification.state === 'unverified' || verification.state === 'failed') { %>
+        <div class="shrink-0 border-b px-4 py-2 text-sm rv:px-6 break-words <%= verification.state === 'failed' ? 'border-red-200 bg-red-50 text-red-900' : 'border-slate-200 bg-slate-50 text-slate-800' %>" data-testid="verification-notice" role="status">
+            <span class="sm:hidden mr-1 align-middle"><%- include('../partials/verification_badge', { state: verification.state, code: verification.code }) %></span>
+            <% if (verification.state === 'failed') { %>
+                <strong>This match failed verification<%= verification.code ? ' (' + verification.code + ')' : '' %>.</strong> Something no longer matches what was signed. Do not rely on this replay.
+            <% } else { %>
+                <strong>Unverified.</strong> This match has no signed manifest, for example because it was played before matches were signed, so its record cannot be checked. That is not a failure, and we never add signatures to old matches after the fact.
+            <% } %>
+        </div>
+        <% } else { %>
+        <div class="shrink-0 border-b border-border bg-white px-4 py-1.5 sm:hidden" data-testid="verification-phone"><%- include('../partials/verification_badge', { state: verification.state, code: verification.code }) %></div>
+        <% } %>
 
         <!-- Main Content Area -->
         <div class="flex flex-grow flex-col bg-gray-50 rv:flex-row rv:overflow-hidden">
