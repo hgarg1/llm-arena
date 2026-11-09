@@ -1,4 +1,3 @@
-import { EmailMessage, SMSMessage } from './types';
 import { MockEmailProvider } from './email.provider';
 import { MockSMSProvider, TwilioSMSProvider } from './sms.provider';
 import { settingsService } from '../settings.service';

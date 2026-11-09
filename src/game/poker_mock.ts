@@ -1,7 +1,7 @@
 import { ModelAdapter, GameEvent } from './types';
 
 export class MockPokerModelAdapter implements ModelAdapter {
-  async generateMove(systemPrompt: string, history: GameEvent[]): Promise<string> {
+  async generateMove(_systemPrompt: string, _history: GameEvent[]): Promise<string> {
     // Simple strategy: check or call, rarely bet
     const rand = Math.random();
     if (rand < 0.1) return "FOLD";

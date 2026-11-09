@@ -1,9 +1,7 @@
 import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
-import { ModelRepository } from '../repositories/model.repository';
 
 const prisma = new PrismaClient();
-const modelRepo = new ModelRepository();
 
 interface ImportedModel {
   name: string;
@@ -160,7 +158,7 @@ export class ModelSyncService {
                 owner_id: admin.id,
                 capabilities: defaultCapabilities
             }
-        }).catch(async (e) => {
+        }).catch(async () => {
              const existing = await prisma.model.findFirst({
                  where: { 
                      api_provider: m.provider,

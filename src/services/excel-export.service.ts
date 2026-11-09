@@ -25,7 +25,7 @@ const columnLetter = (index: number) => {
   return result;
 };
 
-export const createWorkbook = (title: string) => {
+export const createWorkbook = (_title: string) => {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'LLM Arena';
   workbook.created = new Date();

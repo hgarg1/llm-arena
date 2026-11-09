@@ -1,4 +1,4 @@
-import { PrismaClient, ChatChannel, ChatMessage, ChatChannelType, ChatMemberRole, User, ChatAuditAction } from '@prisma/client';
+import { ChatChannel, ChatMessage, ChatChannelType, ChatMemberRole, ChatAuditAction } from '@prisma/client';
 import { prisma as db } from '../config/db';
 import { entitlementsService } from './entitlements.service';
 import { settingsService } from './settings.service';

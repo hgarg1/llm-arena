@@ -63,7 +63,7 @@ export const index = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
-export const createChat = async (req: Request, res: Response, next: NextFunction) => {
+export const createChat = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = (req.session as any).userId;
         const { provider, model } = req.body;
@@ -75,7 +75,7 @@ export const createChat = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-export const deleteChat = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteChat = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = (req.session as any).userId;
         const { id } = req.params;
@@ -87,7 +87,7 @@ export const deleteChat = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-export const renameChat = async (req: Request, res: Response, next: NextFunction) => {
+export const renameChat = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = (req.session as any).userId;
         const { id } = req.params;
@@ -102,7 +102,7 @@ export const renameChat = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-export const getChatHistory = async (req: Request, res: Response, next: NextFunction) => {
+export const getChatHistory = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = (req.session as any).userId;
         const { id } = req.params;
@@ -114,7 +114,7 @@ export const getChatHistory = async (req: Request, res: Response, next: NextFunc
     }
 };
 
-export const getModels = async (req: Request, res: Response, next: NextFunction) => {
+export const getModels = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const { provider } = req.params;
         const models = await adminAIService.fetchAvailableModels(provider);
@@ -124,7 +124,7 @@ export const getModels = async (req: Request, res: Response, next: NextFunction)
     }
 };
 
-export const query = async (req: Request, res: Response, next: NextFunction) => {
+export const query = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const { chatId, provider, model, question, images } = req.body;
         const userId = (req.session as any).userId;

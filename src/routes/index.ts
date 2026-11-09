@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import * as homeController from '../controllers/home.controller';
 import * as matchController from '../controllers/match.controller';
 import * as modelController from '../controllers/model.controller';
 import * as accessController from '../controllers/access.controller';
