@@ -307,7 +307,6 @@ export const updateStripePrice = async (req: Request, res: Response) => {
   const status = (req.body.status || 'ACTIVE').toUpperCase();
   const isDefault = req.body.is_default === 'on';
   const nickname = (req.body.nickname || '').trim() || null;
-  const mode = parseStripeMode(req.body.mode);
 
   if (!['ACTIVE', 'INACTIVE', 'LEGACY'].includes(status)) {
     return res.redirect('/admin/plans?error=Invalid price status');

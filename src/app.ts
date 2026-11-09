@@ -371,7 +371,7 @@ export const createApp = (options?: { io?: Server | null }) => {
     res.status(404).render('errors/404');
   });
 
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error('[runtime] error-handler', {
       path: req.path,
       method: req.method,

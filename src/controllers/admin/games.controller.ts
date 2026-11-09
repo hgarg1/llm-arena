@@ -3,7 +3,6 @@ import { prisma } from '../../config/db';
 import { Prisma } from '@prisma/client';
 import { logAdminAction } from '../../services/audit.service';
 import { generateEngineBundle } from '../../services/engine-generator.service';
-import { getGameEngine } from '../../game/registry';
 import { mapOptionsToEngine } from '../../game/options';
 import { validateEngine } from '../../services/game-validation.service';
 import {

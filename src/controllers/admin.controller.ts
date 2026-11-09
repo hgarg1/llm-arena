@@ -762,7 +762,7 @@ export const exportUsers = async (req: Request, res: Response) => {
 
     const buffer = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=\"users_export.xlsx\"');
+    res.setHeader('Content-Disposition', 'attachment; filename="users_export.xlsx"');
     res.send(Buffer.from(buffer as ArrayBuffer));
 };
 
@@ -1121,6 +1121,6 @@ export const exportAuditLogs = async (req: Request, res: Response) => {
 
     const buffer = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=\"admin_audit_log.xlsx\"');
+    res.setHeader('Content-Disposition', 'attachment; filename="admin_audit_log.xlsx"');
     res.send(Buffer.from(buffer as ArrayBuffer));
 };

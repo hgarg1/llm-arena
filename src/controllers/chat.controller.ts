@@ -59,7 +59,7 @@ export const getChannel = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-export const createChannel = async (req: Request, res: Response, next: NextFunction) => {
+export const createChannel = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = res.locals.user.id;
         const { name, description, type, min_role, entitlement } = req.body;
@@ -82,7 +82,7 @@ export const createChannel = async (req: Request, res: Response, next: NextFunct
     }
 };
 
-export const joinChannel = async (req: Request, res: Response, next: NextFunction) => {
+export const joinChannel = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = res.locals.user.id;
         const { id } = req.params;
@@ -104,7 +104,7 @@ export const postMessage = async (req: Request, res: Response, next: NextFunctio
         const files = req.files as Express.Multer.File[];
 
         const attachments: { filename: string, path: string, url?: string, mimetype: string, size: number }[] = [];
-        let type: any = 'TEXT';
+        const type: any = 'TEXT';
         
         if (files && files.length > 0) {
             files.forEach(file => {
@@ -156,7 +156,7 @@ export const postMessage = async (req: Request, res: Response, next: NextFunctio
     }
 };
 
-export const editMessage = async (req: Request, res: Response, next: NextFunction) => {
+export const editMessage = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = res.locals.user.id;
         const { id, messageId } = req.params;
@@ -179,7 +179,7 @@ export const editMessage = async (req: Request, res: Response, next: NextFunctio
     }
 };
 
-export const deleteMessage = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteMessage = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = res.locals.user.id;
         const { id, messageId } = req.params;
@@ -199,7 +199,7 @@ export const deleteMessage = async (req: Request, res: Response, next: NextFunct
     }
 };
 
-export const pollNotifications = async (req: Request, res: Response, next: NextFunction) => {
+export const pollNotifications = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = res.locals.user.id;
         const notifications = await chatService.getPendingNotifications(userId);
@@ -222,7 +222,7 @@ export const pollNotifications = async (req: Request, res: Response, next: NextF
     }
 };
 
-export const startDM = async (req: Request, res: Response, next: NextFunction) => {
+export const startDM = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = res.locals.user.id;
         const { targetUserId } = req.body;
@@ -257,7 +257,7 @@ export const searchCandidates = async (req: Request, res: Response, next: NextFu
     }
 };
 
-export const blockUser = async (req: Request, res: Response, next: NextFunction) => {
+export const blockUser = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = res.locals.user.id;
         const { targetId } = req.body;
@@ -268,7 +268,7 @@ export const blockUser = async (req: Request, res: Response, next: NextFunction)
     }
 };
 
-export const unblockUser = async (req: Request, res: Response, next: NextFunction) => {
+export const unblockUser = async (req: Request, res: Response, _next: NextFunction) => {
     try {
         const userId = res.locals.user.id;
         const { targetId } = req.body;
