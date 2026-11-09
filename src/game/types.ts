@@ -81,9 +81,13 @@ export interface CallMeta {
   member?: { provider: string; requested: string };
   /** Pipeline composites: every step that contributed, in order. */
   steps?: Array<{ provider: string; requested: string; reported: string }>;
+  /** Token counts as the provider reported them; absent (or markers) when it did not. */
+  usage?: { input_tokens: number | Marker; output_tokens: number | Marker };
 }
 
 export interface MoveCall {
   text: string;
   meta: CallMeta;
+  /** The provider's response body, already scrubbed of credentials by the adapter. Absent when the adapter keeps none. */
+  raw?: unknown;
 }

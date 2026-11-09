@@ -135,6 +135,38 @@ export const moveChainHashes = async (crypto: CryptoProvider, matchId: string, m
   return { hashes, head: prev };
 };
 
+// ---- raw provider responses -------------------------------------------------------------------------------------------
+
+export interface RawResponseRecord { move_index: number; text: string; bytes: number; sha256: string; truncated: boolean }
+export type RawStatus = 'verified' | 'truncated' | 'missing' | 'mismatch';
+
+/**
+ * Checks the raw responses a caller holds against the digests in the (already verified) moves' provenance. This is separate from
+ * verifyMatch: a raw response may legitimately be absent (deleted by retention), cut at the size limit, or never recorded.
+ *  - verified   the stored text hashes to the digest the signed moves commit to
+ *  - truncated  the stored copy was cut at the size limit: it is consistent with the digest but cannot be re-hashed
+ *  - missing    no stored copy was supplied (retention, or the adapter keeps none): the digest still stands
+ *  - mismatch   the stored copy disagrees with the digest: it was altered, or does not belong to this move
+ */
+export const verifyRawResponses = async (
+  crypto: CryptoProvider, moves: Array<{ move_index: number; provenance: unknown }>, raws: RawResponseRecord[]
+): Promise<Array<{ move_index: number; status: RawStatus }>> => {
+  const byIndex = new Map(raws.map(r => [r.move_index, r]));
+  const out: Array<{ move_index: number; status: RawStatus }> = [];
+  for (const move of moves) {
+    const digest = (move.provenance as { response?: unknown } | null)?.response as { sha256?: string; bytes?: number; truncated?: boolean } | string | null | undefined;
+    if (!digest || typeof digest !== 'object') continue; // no raw response was kept for this move
+    const raw = byIndex.get(move.move_index);
+    if (!raw) { out.push({ move_index: move.move_index, status: 'missing' }); continue; }
+    if (raw.sha256 !== digest.sha256 || raw.bytes !== digest.bytes || raw.truncated !== digest.truncated) { out.push({ move_index: move.move_index, status: 'mismatch' }); continue; }
+    const storedBytes = utf8(raw.text).length;
+    if (raw.truncated) { out.push({ move_index: move.move_index, status: storedBytes <= raw.bytes ? 'truncated' : 'mismatch' }); continue; }
+    const actual = toHex(await crypto.sha256(utf8(raw.text)));
+    out.push({ move_index: move.move_index, status: actual === digest.sha256 && storedBytes === digest.bytes ? 'verified' : 'mismatch' });
+  }
+  return out;
+};
+
 // ---- verification ---------------------------------------------------------------------------------------------------
 
 const isInt = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n);

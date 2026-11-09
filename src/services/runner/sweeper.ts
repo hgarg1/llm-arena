@@ -1,5 +1,6 @@
 import { prisma } from '../../config/db';
 import { sealUnsealed } from '../match-manifest.service';
+import { purgeExpiredRawResponses } from '../raw-retention.service';
 import { getEnv } from '../../config/runtime';
 import { dispatchSlice } from './dispatch';
 
@@ -35,6 +36,9 @@ export const sweepMatches = async (now = new Date(), dispatch = dispatchSlice): 
 
   // Repair pass: seal recent finished matches whose runner died (or was cancelled) before it could. No-op unless signing is on.
   await sealUnsealed({ now }).catch(err => console.error(JSON.stringify({ at: 'integrity', level: 'error', message: 'seal repair pass failed', reason: String(err?.message || err) })));
+
+  // Retention: expired raw provider responses are deleted; their digests stay in the signed moves, so verification is unaffected.
+  await purgeExpiredRawResponses({ now }).catch(err => console.error(JSON.stringify({ at: 'integrity', level: 'error', message: 'raw response retention failed', reason: String(err?.message || err) })));
 
   const leaseFree = [{ lease_expires_at: null }, { lease_expires_at: { lt: now } }];
   const active = await prisma.match.count({ where: { status: 'RUNNING', lease_expires_at: { gt: now } } });

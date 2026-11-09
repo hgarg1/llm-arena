@@ -4,6 +4,7 @@ import { isDatabaseConfigured } from '../config/runtime';
 import { chainAppend, ChainTail } from '../integrity/append';
 import { sealIfFinal } from '../services/match-manifest.service';
 import { MoveProvenance } from '../integrity/provenance';
+import { PreparedRaw } from '../integrity/raw-response';
 
 export interface MoveUsage {
   provider: string;
@@ -112,7 +113,7 @@ export class MatchRepository {
    */
   async recordMove(
     id: string,
-    move: { index: number; actor: string; content: string; usage?: MoveUsage; provenance?: MoveProvenance },
+    move: { index: number; actor: string; content: string; usage?: MoveUsage; provenance?: MoveProvenance; raw?: PreparedRaw },
     events: { turn_index: number; seq: number; type: string; actor_role: string; payload: any }[]
   ): Promise<void> {
     if (!isDatabaseConfigured()) return;
@@ -134,6 +135,8 @@ export class MatchRepository {
             provenance: move.provenance ? (move.provenance as unknown as Prisma.InputJsonValue) : undefined
           }
         });
+        // The raw response goes in the same transaction, so a move and its evidence exist together or not at all.
+        if (move.raw) await tx.moveRawResponse.create({ data: { match_id: id, move_index: move.index, body: move.raw.text, bytes: move.raw.bytes, sha256: move.raw.sha256, truncated: move.raw.truncated } });
         if (events.length > 0) await this.appendEventsIn(tx, id, events);
         await tx.match.update({
           where: { id },

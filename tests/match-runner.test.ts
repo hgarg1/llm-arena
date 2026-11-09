@@ -299,7 +299,9 @@ describe('slices', () => {
           expect(result.status).toBe('completed');
           expect(JSON.stringify(sliced.events)).toBe(JSON.stringify(reference.events));
           expect(sliced.scores).toEqual(reference.scores);
-          expect(sliced.moves).toEqual(reference.moves);
+          // the measured latency of a model call differs between any two runs by nature; everything else must be identical
+          const stable = (moves: typeof reference.moves) => moves.map(m => ({ ...m, provenance: m.provenance && { ...m.provenance, latency_ms: m.provenance.latency_ms === null ? null : 0 } }));
+          expect(stable(sliced.moves)).toEqual(stable(reference.moves));
         }
       }
     }

@@ -1,7 +1,10 @@
 import { ModelAdapter, GameEvent, MoveRequestOptions, MoveCall, CallMeta, PROVIDER_DEFAULT, UNKNOWN } from './types';
 
 const reported = (value: unknown): string => (typeof value === 'string' && value.trim() ? value : UNKNOWN);
+/** A provider's token count, or UNKNOWN when it did not give a usable number. */
+const count = (value: unknown): number | typeof UNKNOWN => (typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : UNKNOWN);
 import axios from 'axios';
+import { scrubSecrets } from '../integrity/redact';
 import { prisma } from '../config/db';
 
 export const REQUEST_TIMEOUT_MS = 90_000;
@@ -137,7 +140,12 @@ export class OpenAICompatibleAdapter implements ModelAdapter {
         if (typeof text !== 'string') throw new Error('Empty completion');
         return {
           text,
-          meta: { adapter: 'openai-compatible', model_reported: reported(res.data?.model), sampling: { temperature: fixedTemperature ? PROVIDER_DEFAULT : 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT } }
+          meta: {
+            adapter: 'openai-compatible', model_reported: reported(res.data?.model),
+            sampling: { temperature: fixedTemperature ? PROVIDER_DEFAULT : 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT },
+            usage: { input_tokens: count(res.data?.usage?.prompt_tokens), output_tokens: count(res.data?.usage?.completion_tokens) }
+          },
+          raw: scrubSecrets(res.data, [this.apiKey])
         };
     } catch (error: any) {
         if (error instanceof ModelUnavailableError) throw error;
@@ -173,7 +181,14 @@ export class AnthropicAdapter implements ModelAdapter {
 
           const text = (res.data?.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
           if (!text) throw new Error('Empty completion');
-          return { text, meta: { adapter: 'anthropic', model_reported: reported(res.data?.model), sampling: { temperature: 0, max_tokens: 1024, top_p: PROVIDER_DEFAULT } } };
+          return {
+            text,
+            meta: {
+              adapter: 'anthropic', model_reported: reported(res.data?.model), sampling: { temperature: 0, max_tokens: 1024, top_p: PROVIDER_DEFAULT },
+              usage: { input_tokens: count(res.data?.usage?.input_tokens), output_tokens: count(res.data?.usage?.output_tokens) }
+            },
+            raw: scrubSecrets(res.data, [this.apiKey])
+          };
       } catch (error: any) {
           if (error instanceof ModelUnavailableError) throw error;
           throw failure('anthropic', this.modelId, error);
@@ -207,7 +222,14 @@ export class GoogleAdapter implements ModelAdapter {
 
           const text = res.data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('');
           if (!text) throw new Error('Empty completion');
-          return { text, meta: { adapter: 'google', model_reported: reported(res.data?.modelVersion), sampling: { temperature: 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT } } };
+          return {
+            text,
+            meta: {
+              adapter: 'google', model_reported: reported(res.data?.modelVersion), sampling: { temperature: 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT },
+              usage: { input_tokens: count(res.data?.usageMetadata?.promptTokenCount), output_tokens: count(res.data?.usageMetadata?.candidatesTokenCount) }
+            },
+            raw: scrubSecrets(res.data, [this.apiKey])
+          };
       } catch (error: any) {
           if (error instanceof ModelUnavailableError) throw error;
           throw failure('google', this.modelId, error);
@@ -303,15 +325,17 @@ export class CompositeAdapter implements ModelAdapter {
       let input = '';
       let last: MoveCall | null = null;
       const steps: NonNullable<CallMeta['steps']> = [];
+      const raws: unknown[] = [];
       for (const step of this.pipeline) {
         const prompt = renderPipelinePrompt(step.promptTemplate, systemPrompt, history, input);
         last = await this.call(step, prompt, history, role, options);
         input = last.text;
+        raws.push(last.raw === undefined ? null : last.raw);
         steps.push({ provider: step.provider, requested: step.modelId, reported: last.meta.model_reported });
       }
       if (!input || !last) throw new ModelUnavailableError('Pipeline produced no output');
       const final = this.pipeline[this.pipeline.length - 1];
-      return { text: input, meta: { ...last.meta, member: { provider: final.provider, requested: final.modelId }, steps } };
+      return { text: input, meta: { ...last.meta, member: { provider: final.provider, requested: final.modelId }, steps }, raw: { pipeline_steps: raws } };
     }
 
     if (this.strategy === 'FALLBACK') {
@@ -319,7 +343,7 @@ export class CompositeAdapter implements ModelAdapter {
       for (const member of this.adapters) {
         try {
           const result = await this.call(member, systemPrompt, history, role, options);
-          return { text: result.text, meta: { ...result.meta, member: { provider: member.provider, requested: member.modelId } } };
+          return { ...result, meta: { ...result.meta, member: { provider: member.provider, requested: member.modelId } } };
         } catch (err) {
           lastError = err;
         }
@@ -332,7 +356,7 @@ export class CompositeAdapter implements ModelAdapter {
       : this.adapters[this.pointer++ % this.adapters.length];
 
     const result = await this.call(choice, systemPrompt, history, role, options);
-    return { text: result.text, meta: { ...result.meta, member: { provider: choice.provider, requested: choice.modelId } } };
+    return { ...result, meta: { ...result.meta, member: { provider: choice.provider, requested: choice.modelId } } };
   }
 }
 

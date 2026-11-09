@@ -465,10 +465,32 @@ model MatchMove {
   /// Where the move came from and which prompt, model and sampling settings produced it (src/integrity/provenance.ts).
   /// NULL for moves recorded before provenance existed.
   provenance Json?
+  raw        MoveRawResponse?
   created_at DateTime @default(now())
 
   @@unique([match_id, move_index])
   @@index([provider, created_at])
+}
+
+/// The raw provider response for a model move, scrubbed of credentials and capped at 64 KiB (docs/INTEGRITY_SPEC.md 5.2).
+/// The move's provenance holds the digest of the FULL response, so this copy can be cut at the limit or deleted by
+/// retention without affecting verification of the signed manifest.
+model MoveRawResponse {
+  match_id   String
+  move_index Int
+  /// The scrubbed response as JSON text, cut at the size limit when it was longer.
+  body       String   @db.Text
+  /// Byte length of the full scrubbed response (before any cut).
+  bytes      Int
+  /// SHA-256 of the full scrubbed response text.
+  sha256     String   @db.VarChar(64)
+  truncated  Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  move       MatchMove @relation(fields: [match_id, move_index], references: [match_id, move_index], onDelete: Cascade)
+
+  @@id([match_id, move_index])
+  @@index([created_at])
 }
 
 /// Token buckets shared by every runner process, one per provider and unit (e.g. "openai:rpm").

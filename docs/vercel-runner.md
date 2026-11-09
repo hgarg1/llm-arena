@@ -105,3 +105,13 @@ Neon branches inherit the parent's role passwords, so a branch connection string
 ## Signing finished matches (milestone M1)
 
 When `INTEGRITY_SIGNING_KEY` is set, every finished match gets a signed manifest (see `docs/INTEGRITY_SPEC.md` and `docs/INTEGRITY_KEYS.md`). The runner seals a match at the end of its last slice; the per-minute sweeper also seals recent finished matches that were missed (`INTEGRITY_SEAL_LOOKBACK_HOURS`, default 72). Apply the `MatchManifest` migration before enabling it. Without the variable nothing is signed and nothing changes.
+
+### Raw provider responses and cost (milestone M1)
+
+Every model move also stores the provider's raw response (scrubbed of credentials, at most 64 KiB, `MoveRawResponse` table), the token counts the provider reported, the measured latency and a computed cost. Apply the `MoveRawResponse` and `MatchMove.provenance` migrations before deploying. Settings:
+
+| Variable | Meaning |
+|---|---|
+| `INTEGRITY_RAW_RETENTION_DAYS` | days to keep raw responses (default 90, `0` = forever); the sweeper deletes older ones, and the signed digests are unaffected |
+
+Cost needs a price list: `src/config/model-pricing.json` ships empty, so every cost is recorded as `unknown` until it is filled in from the providers' own price lists (entries are `{ provider, model_prefix, input_per_mtok, output_per_mtok }`; set `version` and `as_of`, commit, deploy). The rates applied are stored with each move, so a later price change never rewrites old costs.

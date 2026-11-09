@@ -1,7 +1,10 @@
 import { randomUUID } from 'crypto';
 import { MatchStatus } from '@prisma/client';
 import { CallMeta, GameEngine, GameEvent, GameResult, ModelAdapter } from '../game/types';
-import { MoveProvenance, engineProvenance, modelProvenance, promptIdentity, randomProvenance } from '../integrity/provenance';
+import { MoveProvenance, engineProvenance, modelProvenance, promptIdentity, randomProvenance, tokenUsage } from '../integrity/provenance';
+import { PreparedRaw, prepareRawResponse } from '../integrity/raw-response';
+import { PriceTable } from '../integrity/pricing';
+import { UNKNOWN } from '../game/types';
 import { ModelUnavailableError } from '../game/adapters';
 import { LeaseLostError, MoveUsage } from '../repositories/match.repository';
 import { RateLimiter } from './rate-limit.service';
@@ -56,7 +59,7 @@ export interface RunnerRepo {
   releaseLease(id: string, owner: string): Promise<void>;
   getMoves(id: string): Promise<StoredMove[]>;
   countEvents(id: string): Promise<number>;
-  recordMove(id: string, move: { index: number; actor: string; content: string; usage?: MoveUsage; provenance?: MoveProvenance }, events: RunnerEventRow[]): Promise<void>;
+  recordMove(id: string, move: { index: number; actor: string; content: string; usage?: MoveUsage; provenance?: MoveProvenance; raw?: PreparedRaw }, events: RunnerEventRow[]): Promise<void>;
   recordMoveFailure(id: string): Promise<number>;
   resetMoveFailures(id: string): Promise<unknown>;
   setRulesetVersion?(id: string, version: string): Promise<unknown>;
@@ -88,6 +91,8 @@ export interface RunnerDeps {
   /** Model output longer than this is truncated before it is stored or played. */
   maxMoveChars?: number;
   metric?: (name: string, fields: MetricFields) => void;
+  /** Price list used to compute each move's cost; defaults to src/config/model-pricing.json. */
+  prices?: PriceTable;
 }
 
 export interface SliceOptions {
@@ -248,7 +253,7 @@ const runSliceInner = async (
       role: string,
       systemPrompt: string,
       history: GameEvent[]
-    ): Promise<{ content: string; usage: MoveUsage; meta: CallMeta | null } | null> => {
+    ): Promise<{ content: string; usage: MoveUsage; meta: CallMeta | null; raw: unknown } | null> => {
       const estimatedInput = estimateTokens(systemPrompt + JSON.stringify(history));
       let throttled = 0;
       for (;;) {
@@ -271,12 +276,12 @@ const runSliceInner = async (
           // An adapter that can report what it did (model version, sampling) does; one that cannot is recorded as unknown.
           const call = adapter.generateMoveWithMeta
             ? await adapter.generateMoveWithMeta(systemPrompt, history, role, { timeoutMs: moveTimeoutMs })
-            : { text: await adapter.generateMove(systemPrompt, history, role, { timeoutMs: moveTimeoutMs }), meta: null };
+            : { text: await adapter.generateMove(systemPrompt, history, role, { timeoutMs: moveTimeoutMs }), meta: null, raw: undefined };
           const raw = call.text;
           const content = raw.length > maxMoveChars ? raw.slice(0, maxMoveChars) : raw;
           const usage = { provider, latencyMs: now() - callStarted, inputTokens: estimatedInput, outputTokens: estimateTokens(content) };
           metric('provider.call', { provider, ok: true, latencyMs: usage.latencyMs, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens });
-          return { content, usage, meta: call.meta };
+          return { content, usage, meta: call.meta, raw: (call as { raw?: unknown }).raw };
         } catch (err) {
           if (err instanceof ModelUnavailableError && err.rateLimited) {
             throttled++;
@@ -335,6 +340,7 @@ const runSliceInner = async (
       let usage: MoveUsage | undefined;
       let content: string;
       let provenance: MoveProvenance = engineProvenance();
+      let rawResponse: PreparedRaw | null = null;
       if (activeRole === 'system') {
         content = 'RESOLVE';
       } else {
@@ -366,11 +372,18 @@ const runSliceInner = async (
           }
           content = generated.content;
           usage = generated.usage;
+          // The adapter already scrubbed the response of its own credentials; prepareRawResponse scrubs once more by pattern,
+          // then hashes the whole text and cuts the stored copy at the size limit.
+          rawResponse = prepareRawResponse(generated.raw);
           provenance = modelProvenance({
             provider: player.participant.model.api_provider,
             requested: player.participant.model.api_model_id,
             prompt: promptIdentity(match.game_type, activeRole, systemPrompt, state[0]?.payload?.ruleset_version),
-            meta: generated.meta
+            meta: generated.meta,
+            usage: tokenUsage(generated.meta?.usage, { input: generated.usage.inputTokens, output: generated.usage.outputTokens }),
+            latencyMs: generated.usage.latencyMs,
+            response: rawResponse ? { sha256: rawResponse.sha256, bytes: rawResponse.bytes, truncated: rawResponse.truncated } : UNKNOWN,
+            prices: deps.prices
           });
           stats.modelCalls++;
         }
@@ -378,7 +391,7 @@ const runSliceInner = async (
 
       const step = engine.processMove(state, { actor: activeRole, content });
       try {
-        await repo.recordMove(matchId, { index: moveIndex, actor: activeRole, content, usage, provenance }, rows(step.events, nextSeq));
+        await repo.recordMove(matchId, { index: moveIndex, actor: activeRole, content, usage, provenance, raw: rawResponse ?? undefined }, rows(step.events, nextSeq));
       } catch (err) {
         if (err instanceof LeaseLostError) {
           lost = true;

@@ -1,0 +1,6 @@
+{
+  "version": null,
+  "as_of": null,
+  "note": "US dollars per million tokens. Empty on purpose: prices change and must come from the provider's price list. Add entries as { \"provider\": \"openai\", \"model_prefix\": \"gpt-example\", \"input_per_mtok\": 0.00, \"output_per_mtok\": 0.00 }, set `version` (for example a date) and `as_of`, and commit. Until a model has an entry its cost is recorded as `unknown`.",
+  "models": []
+}

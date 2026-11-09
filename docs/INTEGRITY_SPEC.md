@@ -16,7 +16,7 @@ The key words MUST, MUST NOT and SHOULD are used as in RFC 2119.
 - The manifest was signed by a key we published, and that key was not revoked.
 
 **Does not prove**
-- That the models answered the way the log says. The log records what the runner stored, together with which prompt, model and sampling settings the runner says it used (section 4.5). Raw provider responses and usage numbers are added by story m1-08.
+- That the models answered the way the log says. The log records what the runner stored, together with which prompt, model and sampling settings the runner says it used (section 4.5). Raw provider responses, token counts, latency and cost are recorded with each move (section 5.2) and committed to by the same digest.
 - That re-running the match would give the same moves. Model output is not deterministic. Verification checks the record, not a re-execution.
 - Anything about the order in which events were written in time. Row timestamps (`created_at`) are not part of the record (section 4.2).
 - Protection against someone who holds the private signing key. Key custody is a separate control (story m1-04).
@@ -148,7 +148,7 @@ Optional members, covered by the signature when present (defined by story m1-06)
 
 | `provenance` | `{ "v": 1, "moves": { "count": <int>, "head_hash": <64 hex> } }`: the moves digest of section 4.5. Present when the match has moves. |
 
-Still reserved for later stories: `participants`, and raw-response digests inside `provenance` (story m1-08). `seed` is a required member and records the match seed.
+Still reserved for later stories: `participants`. `seed` is a required member and records the match seed.
 
 ### 5.1 The per-move provenance record
 
@@ -161,7 +161,11 @@ Stored with each move (`MatchMove.provenance`, a JSON object) and committed to b
   "prompt":   { "id": "chess/white", "version": "1.1.0", "sha256": "<hash of the exact system prompt>" },
   "model":    { "provider": "anthropic", "requested": "claude-example", "reported": "claude-example-20260101" },
   "sampling": { "temperature": 0, "max_tokens": 1024, "top_p": "provider-default" },
-  "adapter":  "anthropic"
+  "adapter":  "anthropic",
+  "usage":    { "input_tokens": 812, "output_tokens": 9, "source": "provider" },
+  "latency_ms": 1240,
+  "cost":     { "usd": 0.002571, "basis": "provider-usage", "pricing": { "input_per_mtok": 3, "output_per_mtok": 15, "table_version": "2026-11-01" } },
+  "response": { "sha256": "<hash of the full scrubbed response>", "bytes": 412, "truncated": false }
 }
 ```
 
@@ -172,6 +176,19 @@ Stored with each move (`MatchMove.provenance`, a JSON object) and committed to b
 | `model` | `provider` and `requested` model id as configured; `reported` is the model or version string the provider echoed back, or `unknown`. For a composite model, `provider` and `requested` name the member that answered, `via` names the composite, and a pipeline adds `steps` listing every contributing step. `null` for `engine` moves |
 | `sampling` | `temperature`, `max_tokens`, `top_p`: the number that was sent, `provider-default` (not sent, so the provider's own setting applied) or `unknown` (the adapter cannot tell). `null` for `random` and `engine` moves |
 | `adapter` | the adapter that made the call, `unknown` if it did not say, `null` when there was no call |
+| `usage` | tokens for the call: `source` is `provider` when the provider reported both counts, otherwise `estimated` (our own estimate; the counts are then marked as such). `null` for `random` and `engine` moves |
+| `latency_ms` | wall-clock time of the model call as the runner measured it. `null` when there was no call. Two runs of the same match differ here by nature |
+| `cost` | `usd` computed from `usage` and the price list in force (`src/config/model-pricing.json`); `pricing` records the rates and the table version that were applied, and `basis` says whether provider or estimated tokens were used, so the figure can be recomputed from the move alone. A model with no price, or without real token counts, is `{ "usd": "unknown", "basis": "unknown", "pricing": "unknown" }`, never zero. `null` when there was no call |
+| `response` | digest of the raw provider response (section 5.2): `sha256` and `bytes` of the whole scrubbed response and whether the stored copy was `truncated`. `unknown` when the adapter keeps no response; `null` when there was no call |
+
+### 5.2 Raw provider responses
+
+For every model move the provider's response body is kept in `MoveRawResponse` (one row per move), and its digest is part of the move's provenance (`response`), so the signed moves digest commits to it.
+
+- **Credentials are never stored.** Before anything is kept or hashed, the response is scrubbed: values under credential-named keys (`authorization`, `x-api-key`, `api_key`, `cookie`, `password`, `client_secret`, access and refresh tokens and similar, matched by exact name so usage fields such as `prompt_tokens` are untouched) are replaced with `[redacted]`; strings that look like credentials (`Bearer ...`, `sk-...`, Google and xAI keys) and the adapter's own API key wherever it appears are masked. Only the response body is kept, never request headers. The digest is taken over the scrubbed text, so it never depends on a secret.
+- **Size limit and truncation marker.** The stored copy is at most 65,536 bytes of UTF-8, cut on a character boundary, with `truncated = true` and the true length in `bytes`. The database enforces the limit and that an untruncated copy is exactly `bytes` long. The digest in the provenance always covers the whole scrubbed response, so a truncated copy is consistent with it but cannot be re-hashed.
+- **Retention.** Stored responses older than `INTEGRITY_RAW_RETENTION_DAYS` (default 90, `0` keeps them forever) are deleted by the per-minute sweeper. The digest stays in the signed moves, so verification is unaffected; a verifier that kept a copy can still check it against the digest.
+- **Checking a stored response** is separate from verifying the match (`verifyRawResponses` in `src/integrity/verify.ts`): `verified` (the text hashes to the signed digest), `truncated` (consistent but cut), `missing` (deleted by retention, or never kept), `mismatch` (altered, or not this move's).
 
 `unknown` and `provider-default` are markers, not blanks: they say why a value is missing. The runner records an adapter that cannot report anything as all `unknown`. What this proves is what the runner says it sent and what the provider said it ran; it is not independent evidence of the provider's behavior.
 
@@ -276,5 +293,5 @@ Regenerating after an intentional spec change: `UPDATE_INTEGRITY_VECTORS=1 npx j
 - Done: engine hash, settings and seed in the manifest (m1-06).
 - Done: signing at match completion with an environment-held key behind a `Signer` interface, rotation and revocation (m1-04). Still open: provisioning the production key and publishing it (docs/INTEGRITY_KEYS.md).
 - Done: per-move provenance and the moves digest (m1-07).
-- m1-08: raw provider responses, tokens, latency and cost inside `provenance`.
+- Done: raw provider responses, tokens, latency and cost per move (m1-08). Still open: the price list in `src/config/model-pricing.json` is empty until someone fills it from a provider price list.
 - m1-11: the key-set URL and the export bundle format.

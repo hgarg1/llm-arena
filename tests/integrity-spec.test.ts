@@ -27,12 +27,16 @@ const MODEL_PROVENANCE = {
   v: 1, source: 'model', adapter: 'anthropic',
   prompt: { id: 'iterated-negotiation/player1', version: '1.0.0', sha256: '1'.repeat(64) },
   model: { provider: 'anthropic', requested: 'claude-example', reported: 'claude-example-20260101' },
-  sampling: { temperature: 0, max_tokens: 1024, top_p: 'provider-default' }
+  sampling: { temperature: 0, max_tokens: 1024, top_p: 'provider-default' },
+  usage: { input_tokens: 812, output_tokens: 9, source: 'provider' },
+  latency_ms: 1240,
+  cost: { usd: 0.002571, basis: 'provider-usage', pricing: { input_per_mtok: 3, output_per_mtok: 15, table_version: '2026-11-01' } },
+  response: { sha256: '3'.repeat(64), bytes: 412, truncated: false }
 };
 const MOVES = [
   { move_index: 0, actor_role: 'player1', content: 'propose 50/50', provenance: MODEL_PROVENANCE },
-  { move_index: 1, actor_role: 'player2', content: 'accept', provenance: { ...MODEL_PROVENANCE, adapter: 'unknown', model: { provider: 'openai', requested: 'gpt-example', reported: 'unknown' }, sampling: { temperature: 'unknown', max_tokens: 'unknown', top_p: 'unknown' }, prompt: { id: 'iterated-negotiation/player2', version: 'unknown', sha256: '2'.repeat(64) } } },
-  { move_index: 2, actor_role: 'system', content: 'RESOLVE', provenance: { v: 1, source: 'engine', prompt: null, model: null, sampling: null, adapter: null } }
+  { move_index: 1, actor_role: 'player2', content: 'accept', provenance: { ...MODEL_PROVENANCE, adapter: 'unknown', model: { provider: 'openai', requested: 'gpt-example', reported: 'unknown' }, sampling: { temperature: 'unknown', max_tokens: 'unknown', top_p: 'unknown' }, usage: { input_tokens: 700, output_tokens: 5, source: 'estimated' }, latency_ms: 90, cost: { usd: 'unknown', basis: 'unknown', pricing: 'unknown' }, response: 'unknown', prompt: { id: 'iterated-negotiation/player2', version: 'unknown', sha256: '2'.repeat(64) } } },
+  { move_index: 2, actor_role: 'system', content: 'RESOLVE', provenance: { v: 1, source: 'engine', prompt: null, model: null, sampling: null, adapter: null, usage: null, latency_ms: null, cost: null, response: null } }
 ];
 
 const keyEntry = (seed: Buffer, status: PublicKeyEntry['status'] = 'active'): PublicKeyEntry => {

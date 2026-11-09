@@ -166,7 +166,7 @@ describe('what adapters report about a call (provenance)', () => {
     post.mockResolvedValue({ data: { model: 'gpt-4o-2026-01-01', choices: [{ message: { content: 'e2e4' } }] } });
     const call = await new OpenAICompatibleAdapter('key', 'gpt-4o').generateMoveWithMeta('sys', history, 'white');
     expect(call.text).toBe('e2e4');
-    expect(call.meta).toEqual({ adapter: 'openai-compatible', model_reported: 'gpt-4o-2026-01-01', sampling: { temperature: 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT } });
+    expect(call.meta).toEqual({ adapter: 'openai-compatible', model_reported: 'gpt-4o-2026-01-01', sampling: { temperature: 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT }, usage: { input_tokens: UNKNOWN, output_tokens: UNKNOWN } });
   });
 
   it('OpenAI-compatible: a reasoning model gets the provider default temperature, and says so', async () => {
@@ -185,13 +185,13 @@ describe('what adapters report about a call (provenance)', () => {
   it('Anthropic: reports the model and the exact sampling it sent', async () => {
     post.mockResolvedValue({ data: { model: 'claude-x-20260101', content: [{ type: 'text', text: 'e2e4' }] } });
     const { meta } = await new AnthropicAdapter('key', 'claude-x').generateMoveWithMeta('sys', history, 'white');
-    expect(meta).toEqual({ adapter: 'anthropic', model_reported: 'claude-x-20260101', sampling: { temperature: 0, max_tokens: 1024, top_p: PROVIDER_DEFAULT } });
+    expect(meta).toEqual({ adapter: 'anthropic', model_reported: 'claude-x-20260101', sampling: { temperature: 0, max_tokens: 1024, top_p: PROVIDER_DEFAULT }, usage: { input_tokens: UNKNOWN, output_tokens: UNKNOWN } });
     expect(post.mock.calls[0][1]).toMatchObject({ temperature: 0, max_tokens: 1024 }); // what is recorded is what was sent
   });
 
   it('Google: reports modelVersion, or unknown when absent', async () => {
     post.mockResolvedValue({ data: { modelVersion: 'gemini-x-002', candidates: [{ content: { parts: [{ text: 'e2e4' }] } }] } });
-    expect((await new GoogleAdapter('key', 'gemini-x').generateMoveWithMeta('sys', history, 'white')).meta).toEqual({ adapter: 'google', model_reported: 'gemini-x-002', sampling: { temperature: 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT } });
+    expect((await new GoogleAdapter('key', 'gemini-x').generateMoveWithMeta('sys', history, 'white')).meta).toEqual({ adapter: 'google', model_reported: 'gemini-x-002', sampling: { temperature: 0, max_tokens: PROVIDER_DEFAULT, top_p: PROVIDER_DEFAULT }, usage: { input_tokens: UNKNOWN, output_tokens: UNKNOWN } });
     post.mockResolvedValue({ data: { candidates: [{ content: { parts: [{ text: 'e2e4' }] } }] } });
     expect((await new GoogleAdapter('key', 'gemini-x').generateMoveWithMeta('sys', history, 'white')).meta.model_reported).toBe(UNKNOWN);
   });
@@ -252,6 +252,54 @@ describe('what adapters report about a call (provenance)', () => {
     it('generateMove on a composite still returns just the text', async () => {
       post.mockResolvedValue({ data: { model: 'm', choices: [{ message: { content: 'abc' } }] } });
       await expect(build('ROUND_ROBIN', [openai('m')]).generateMove('sys', history, 'white')).resolves.toBe('abc');
+    });
+  });
+
+  describe('raw responses and token usage', () => {
+    it('OpenAI-compatible: the provider-reported token counts, and the raw body', async () => {
+      const data = { id: 'chatcmpl-1', model: 'gpt-x-1', usage: { prompt_tokens: 120, completion_tokens: 7, total_tokens: 127 }, choices: [{ message: { content: 'e2e4' } }] };
+      post.mockResolvedValue({ data });
+      const call = await new OpenAICompatibleAdapter('key', 'gpt-x').generateMoveWithMeta('sys', history, 'white');
+      expect(call.meta.usage).toEqual({ input_tokens: 120, output_tokens: 7 });
+      expect(call.raw).toEqual(data);
+    });
+
+    it('Anthropic and Google report their own usage fields', async () => {
+      post.mockResolvedValue({ data: { model: 'c', content: [{ type: 'text', text: 'x' }], usage: { input_tokens: 50, output_tokens: 4 } } });
+      expect((await new AnthropicAdapter('key', 'c').generateMoveWithMeta('s', history, 'white')).meta.usage).toEqual({ input_tokens: 50, output_tokens: 4 });
+      post.mockResolvedValue({ data: { candidates: [{ content: { parts: [{ text: 'x' }] } }], usageMetadata: { promptTokenCount: 30, candidatesTokenCount: 2 } } });
+      expect((await new GoogleAdapter('key', 'g').generateMoveWithMeta('s', history, 'white')).meta.usage).toEqual({ input_tokens: 30, output_tokens: 2 });
+    });
+
+    it('usage a provider does not give (or gives badly) is `unknown`, never zero', async () => {
+      for (const usage of [undefined, {}, { prompt_tokens: 'many', completion_tokens: -1 }, { prompt_tokens: null }]) {
+        post.mockResolvedValue({ data: { usage, choices: [{ message: { content: 'x' } }] } });
+        expect((await new OpenAICompatibleAdapter('key', 'm').generateMoveWithMeta('s', history, 'white')).meta.usage).toEqual({ input_tokens: UNKNOWN, output_tokens: UNKNOWN });
+      }
+    });
+
+    it('a provider that echoes the API key in its body has it removed from the raw response', async () => {
+      const apiKey = 'sk-test-0123456789abcdefghijklmn';
+      post.mockResolvedValue({ data: { choices: [{ message: { content: 'x' } }], debug: { received_header: `Bearer ${apiKey}`, note: `using ${apiKey}` }, Authorization: apiKey } });
+      const call = await new OpenAICompatibleAdapter(apiKey, 'm').generateMoveWithMeta('s', history, 'white');
+      expect(JSON.stringify(call.raw)).not.toContain(apiKey);
+      expect(JSON.stringify(call.raw)).toContain('[redacted]');
+    });
+
+    it('request headers and keys are never part of what is returned (only the response body is)', async () => {
+      post.mockResolvedValue({ data: { choices: [{ message: { content: 'x' } }] }, config: { headers: { Authorization: 'Bearer should-never-appear-123456' } }, request: { _header: 'x-api-key: nope' } });
+      const call = await new OpenAICompatibleAdapter('key-12345678', 'm').generateMoveWithMeta('s', history, 'white');
+      expect(JSON.stringify(call)).not.toMatch(/should-never-appear|x-api-key/);
+    });
+
+    it('a pipeline composite keeps the raw body of every step', async () => {
+      post.mockResolvedValueOnce({ data: { model: 'a', choices: [{ message: { content: 'draft' } }] } }).mockResolvedValueOnce({ data: { model: 'b', content: [{ type: 'text', text: 'final' }] } });
+      const c = new CompositeAdapter('p');
+      (c as any).initialized = true; (c as any).strategy = 'PIPELINE';
+      (c as any).pipeline = [{ adapter: new OpenAICompatibleAdapter('k', 'a'), provider: 'openai', modelId: 'a' }, { adapter: new AnthropicAdapter('k', 'b'), provider: 'anthropic', modelId: 'b' }];
+      const { raw } = await c.generateMoveWithMeta('sys', history, 'white');
+      expect((raw as any).pipeline_steps).toHaveLength(2);
+      expect((raw as any).pipeline_steps[1].model).toBe('b');
     });
   });
 });

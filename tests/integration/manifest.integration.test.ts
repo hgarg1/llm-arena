@@ -20,7 +20,9 @@ import * as integrity from '../helpers/integrity-reference';
 import { createHash } from 'crypto';
 import { ensureDefaultGames, ensureNativeArtifacts } from '../../src/services/default-games.service';
 import { builtInEngineHash, sandboxedEngineHash } from '../../src/integrity/engine-identity';
-import { verifyMatch as verifyWithLibrary, MoveRecord } from '../../src/integrity/verify';
+import { verifyMatch as verifyWithLibrary, verifyRawResponses, MoveRecord } from '../../src/integrity/verify';
+import { purgeExpiredRawResponses } from '../../src/services/raw-retention.service';
+import { MAX_RAW_BYTES } from '../../src/integrity/raw-response';
 import { nodeProvider } from '../../src/integrity/verify-node';
 
 const maybe = url ? describe : describe.skip;
@@ -442,13 +444,150 @@ maybe('sealing finished matches (real SQL, real runner)', () => {
       const first = ((await manifestOf(id))!.manifest as any).provenance.moves;
       await repo.updateStatus(id, MatchStatus.RUNNING, undefined, null);
       const count = first.count;
-      await repo.recordMove(id, { index: count, actor: 'white', content: 'extra', provenance: { v: 1, source: 'engine', prompt: null, model: null, sampling: null, adapter: null } }, [{ turn_index: 99, seq: await repo.countEvents(id), type: 'EXTRA', actor_role: 'white', payload: {} }]);
+      await repo.recordMove(id, { index: count, actor: 'white', content: 'extra', provenance: { v: 1, source: 'engine', prompt: null, model: null, sampling: null, adapter: null, usage: null, latency_ms: null, cost: null, response: null } }, [{ turn_index: 99, seq: await repo.countEvents(id), type: 'EXTRA', actor_role: 'white', payload: {} }]);
       await prisma.match.update({ where: { id }, data: { status: 'COMPLETED', finished_at: new Date() } });
       expect(await sealIfFinal(id)).toMatchObject({ status: 'signed' });
       const second = ((await manifestOf(id))!.manifest as any).provenance.moves;
       expect(second.count).toBe(count + 1);
       expect(second.head_hash).not.toBe(first.head_hash);
       expect(await check(id, await movesOf(id))).toEqual({ result: 'VERIFIED' });
+    });
+  });
+  describe('raw provider responses, tokens, latency and cost per move', () => {
+    const SECRET = 'sk-live-0123456789abcdefghijklmnopqr';
+    /** A provider that reports usage and a body, and (badly) echoes the caller's credentials inside it. */
+    const providerAdapter = (body: (n: number) => unknown = n => ({ id: `resp-${n}`, usage: { prompt_tokens: 800 + n, completion_tokens: 9 }, debug: { Authorization: `Bearer ${SECRET}`, echo: `key ${SECRET}` } })) => () => {
+      const inner = scriptedAdapter();
+      let n = 0;
+      return {
+        generateMove: inner.generateMove,
+        generateMoveWithMeta: async (...a: Parameters<typeof inner.generateMove>) => {
+          const call = n++;
+          return { text: await inner.generateMove(...a), meta: { adapter: 'openai-compatible', model_reported: 'model-x-1', sampling: { temperature: 0, max_tokens: 'provider-default', top_p: 'provider-default' }, usage: { input_tokens: 800 + call, output_tokens: 9 } }, raw: body(call) };
+        }
+      };
+    };
+    const playWith = async (factory: () => any, options: any = { maxPlies: 8 }) => {
+      const match = await createMatch({ options });
+      await runMatch(match.id, options, mk({ getAdapter: factory }));
+      return match.id;
+    };
+    const rawRows = (id: string) => prisma.moveRawResponse.findMany({ where: { match_id: id }, orderBy: { move_index: 'asc' } });
+    const movesOf = async (id: string): Promise<MoveRecord[]> =>
+      (await prisma.matchMove.findMany({ where: { match_id: id }, orderBy: { move_index: 'asc' } })).map(m => ({ move_index: m.move_index, actor_role: m.actor_role, content: m.content, provenance: m.provenance }));
+    const manifestOk = async (id: string) => {
+      const row = (await manifestOf(id))!;
+      const events = (await prisma.matchEvent.findMany({ where: { match_id: id }, orderBy: { seq: 'asc' } })).map(e => ({ seq: e.seq, turn_index: e.turn_index, type: e.type, actor_role: e.actor_role, payload: e.payload }));
+      return verifyWithLibrary(nodeProvider, id, events, { manifest: row.manifest as any, signature: { alg: 'Ed25519', key_id: row.key_id, sig: row.signature } }, keysA, { moves: await movesOf(id) });
+    };
+    const statuses = async (id: string) => (await verifyRawResponses(nodeProvider, await movesOf(id), (await rawRows(id)).map(r => ({ move_index: r.move_index, text: r.body, bytes: r.bytes, sha256: r.sha256, truncated: r.truncated })))).map(r => r.status);
+
+    it('every model move has its raw response, tokens, latency and cost recorded, and the signed manifest commits to all of it', async () => {
+      const id = await playWith(providerAdapter());
+      const moves = await movesOf(id);
+      const raws = await rawRows(id);
+      expect(raws.map(r => r.move_index)).toEqual(moves.filter(m => (m.provenance as any).source === 'model').map(m => m.move_index));
+      for (const move of moves) {
+        const p: any = move.provenance;
+        if (p.source !== 'model') continue;
+        const raw = raws.find(r => r.move_index === move.move_index)!;
+        expect(p.response).toEqual({ sha256: raw.sha256, bytes: raw.bytes, truncated: false });
+        expect(p.usage).toMatchObject({ output_tokens: 9, source: 'provider' });
+        expect(p.usage.input_tokens).toBeGreaterThanOrEqual(800); // the provider's count, not our estimate
+        expect(typeof p.latency_ms).toBe('number');
+        expect(p.cost).toEqual({ usd: 'unknown', basis: 'unknown', pricing: 'unknown' }); // the shipped price list is empty
+      }
+      expect(await manifestOk(id)).toEqual({ result: 'VERIFIED' });
+      expect(await statuses(id)).toEqual(raws.map(() => 'verified'));
+    });
+
+    it('a stored raw response that is edited afterwards is reported as a mismatch, while the signed moves and manifest still verify', async () => {
+      const id = await playWith(providerAdapter());
+      const target = (await rawRows(id))[1];
+      const where = { match_id_move_index: { match_id: id, move_index: target.move_index } };
+      // an edit that changes the length is refused by the database itself (an untruncated copy must match its recorded size)...
+      await expect(prisma.moveRawResponse.update({ where, data: { body: target.body.replace('resp-', 'edited-') } })).rejects.toThrow();
+      // ...so a tamperer has to keep the length, and then the digest in the signed moves is what catches it
+      await prisma.moveRawResponse.update({ where, data: { body: target.body.replace('resp-', 'RESP-') } });
+      const result = await statuses(id);
+      expect(result.filter(s => s === 'mismatch')).toHaveLength(1);
+      expect(result.filter(s => s === 'verified').length).toBe(result.length - 1);
+      expect(await manifestOk(id)).toEqual({ result: 'VERIFIED' });
+    });
+
+    it('a response over the size limit is stored cut off with a truncation marker, and everything still verifies', async () => {
+      const big = { filler: 'x'.repeat(MAX_RAW_BYTES * 2), id: 'huge' };
+      const id = await playWith(providerAdapter(() => big), { maxPlies: 4 });
+      const raws = await rawRows(id);
+      expect(raws.length).toBeGreaterThan(0);
+      for (const raw of raws) {
+        expect(raw.truncated).toBe(true);
+        expect(Buffer.byteLength(raw.body, 'utf8')).toBeLessThanOrEqual(MAX_RAW_BYTES);
+        expect(raw.bytes).toBe(Buffer.byteLength(JSON.stringify(big), 'utf8'));
+      }
+      expect(await statuses(id)).toEqual(raws.map(() => 'truncated'));
+      expect(await manifestOk(id)).toEqual({ result: 'VERIFIED' });
+    });
+
+    it('the database refuses an oversized body even from a writer that skips the application checks', async () => {
+      const match = await createMatch({ status: 'RUNNING' });
+      await repo.recordMove(match.id, { index: 0, actor: 'white', content: 'e2e4' }, []);
+      await expect(prisma.moveRawResponse.create({ data: { match_id: match.id, move_index: 0, body: 'x'.repeat(MAX_RAW_BYTES + 1), bytes: MAX_RAW_BYTES + 1, sha256: 'a'.repeat(64), truncated: false } })).rejects.toThrow();
+      expect(await prisma.moveRawResponse.count({ where: { match_id: match.id } })).toBe(0);
+    });
+
+    it('credentials in a provider response never reach any stored column', async () => {
+      const id = await playWith(providerAdapter());
+      const raws = await rawRows(id);
+      expect(raws.length).toBeGreaterThan(0);
+      const everything = JSON.stringify({
+        raws, moves: await prisma.matchMove.findMany({ where: { match_id: id } }), events: await prisma.matchEvent.findMany({ where: { match_id: id } }), manifest: await manifestOf(id)
+      });
+      expect(everything).not.toContain(SECRET);
+      expect(raws.every(r => r.body.includes('[redacted]'))).toBe(true);
+    });
+
+    it('a move and its raw response are written together or not at all', async () => {
+      const match = await createMatch({ status: 'RUNNING' });
+      const raw = { text: '{"a":1}', bytes: 7, sha256: 'b'.repeat(64), truncated: false };
+      await repo.recordMove(match.id, { index: 0, actor: 'white', content: 'e2e4', raw }, []);
+      // a second writer for the same move index loses, and leaves no extra raw row behind
+      await expect(repo.recordMove(match.id, { index: 0, actor: 'white', content: 'd2d4', raw: { ...raw, text: '{"a":2}', sha256: 'c'.repeat(64) } }, [])).rejects.toBeInstanceOf(LeaseLostError);
+      expect((await rawRows(match.id)).map(r => r.body)).toEqual(['{"a":1}']);
+      // a raw row the database rejects rolls the whole move back
+      await expect(repo.recordMove(match.id, { index: 1, actor: 'black', content: 'e7e5', raw: { ...raw, sha256: 'not-hex' } }, [])).rejects.toThrow();
+      expect(await prisma.matchMove.count({ where: { match_id: match.id } })).toBe(1);
+    });
+
+    it('retention deletes expired raw responses, and the signed manifest and moves still verify without them', async () => {
+      const id = await playWith(providerAdapter());
+      const before = (await rawRows(id)).length;
+      expect(before).toBeGreaterThan(0);
+
+      expect((await purgeExpiredRawResponses({ days: 90 })).deleted).toBe(0); // nothing is old yet
+      expect(await rawRows(id)).toHaveLength(before);
+
+      const result = await purgeExpiredRawResponses({ days: 1, now: new Date(Date.now() + 2 * 86_400_000) }); // two days later, 1-day window
+      expect(result.deleted).toBeGreaterThanOrEqual(before);
+      expect(await rawRows(id)).toHaveLength(0);
+      expect(await prisma.matchMove.count({ where: { match_id: id } })).toBeGreaterThan(0); // moves are never retention's business
+      expect(await manifestOk(id)).toEqual({ result: 'VERIFIED' });
+      expect((await verifyRawResponses(nodeProvider, await movesOf(id), [])).every(r => r.status === 'missing')).toBe(true);
+    });
+
+    it('with retention off (0 days) nothing is deleted', async () => {
+      const id = await playWith(providerAdapter(), { maxPlies: 2 });
+      const before = (await rawRows(id)).length;
+      expect(await purgeExpiredRawResponses({ days: 0, now: new Date(Date.now() + 3650 * 86_400_000) })).toEqual({ deleted: 0 });
+      expect(await rawRows(id)).toHaveLength(before);
+    });
+
+    it('deleting a match removes its raw responses with it', async () => {
+      const match = await createMatch({ status: 'CANCELLED', finished_at: new Date() });
+      await repo.recordMove(match.id, { index: 0, actor: 'white', content: 'e2e4', raw: { text: '{}', bytes: 2, sha256: 'd'.repeat(64), truncated: false } }, []);
+      await prisma.matchParticipant.deleteMany({ where: { match_id: match.id } });
+      await prisma.match.delete({ where: { id: match.id } });
+      expect(await prisma.moveRawResponse.count({ where: { match_id: match.id } })).toBe(0);
     });
   });
 });

@@ -1,4 +1,4 @@
-const prismaMock: any = { match: { updateMany: jest.fn(), count: jest.fn(), findMany: jest.fn() } };
+const prismaMock: any = { match: { updateMany: jest.fn(), count: jest.fn(), findMany: jest.fn() }, moveRawResponse: { findMany: jest.fn().mockResolvedValue([]), deleteMany: jest.fn() } };
 jest.mock('../src/config/db', () => ({ prisma: prismaMock }));
 
 import { sweepMatches } from '../src/services/runner/sweeper';

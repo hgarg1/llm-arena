@@ -218,6 +218,26 @@
               "temperature": 0,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -243,7 +263,19 @@
               "temperature": "unknown",
               "max_tokens": "unknown",
               "top_p": "unknown"
-            }
+            },
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 5,
+              "source": "estimated"
+            },
+            "latency_ms": 90,
+            "cost": {
+              "usd": "unknown",
+              "basis": "unknown",
+              "pricing": "unknown"
+            },
+            "response": "unknown"
           }
         },
         {
@@ -256,16 +288,20 @@
             "prompt": null,
             "model": null,
             "sampling": null,
-            "adapter": null
+            "adapter": null,
+            "usage": null,
+            "latency_ms": null,
+            "cost": null,
+            "response": null
           }
         }
       ],
       "hashes": [
-        "a2c18ab1e829ce361fe98c62b26c36464af772462f13134017cf8dc2720b0031",
-        "841f05e4f811be448dd00a06222473501913573b3e3239f29c1056f1b7a5fd39",
-        "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+        "e76753ea3f59735e7e321c989f56b972b32bf5e4b29c4bfea1f652f0ac99539f",
+        "cd4550c78732a57b33e8b732e1ccef2bea51c65224e0d61bc3f5bcdcb61977ef",
+        "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
       ],
-      "head": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+      "head": "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
     },
     {
       "name": "the same moves under another match id give a different chain",
@@ -293,6 +329,26 @@
               "temperature": 0,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -318,7 +374,19 @@
               "temperature": "unknown",
               "max_tokens": "unknown",
               "top_p": "unknown"
-            }
+            },
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 5,
+              "source": "estimated"
+            },
+            "latency_ms": 90,
+            "cost": {
+              "usd": "unknown",
+              "basis": "unknown",
+              "pricing": "unknown"
+            },
+            "response": "unknown"
           }
         },
         {
@@ -331,16 +399,20 @@
             "prompt": null,
             "model": null,
             "sampling": null,
-            "adapter": null
+            "adapter": null,
+            "usage": null,
+            "latency_ms": null,
+            "cost": null,
+            "response": null
           }
         }
       ],
       "hashes": [
-        "d792ddcc2bdbbc84367471d7482e712b92f8dd3551c38e0374b28e417ac85434",
-        "3ed446b4e5312c8c7aa7750542a35543f43fc79571f0d7ea3471067e72b21587",
-        "dbdacdabcdef81b503ee4a36c9587900e2ac872a9c16deac00f1b29702ae406c"
+        "74304d59bdf1cf03c7fdc86056abf103c4882b70590b596d7a1ee2d551a1d168",
+        "12e19126fc1e5c69f3438280f272711c1c3a2c45287d608e235caadca1044899",
+        "2d5df79d563b6c9de3cc93d84506bdbfba26774f84da0926744030687e7c3139"
       ],
-      "head": "dbdacdabcdef81b503ee4a36c9587900e2ac872a9c16deac00f1b29702ae406c"
+      "head": "2d5df79d563b6c9de3cc93d84506bdbfba26774f84da0926744030687e7c3139"
     }
   ],
   "verification": [
@@ -1692,14 +1764,14 @@
             "v": 1,
             "moves": {
               "count": 3,
-              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+              "head_hash": "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
             }
           }
         },
         "signature": {
           "alg": "Ed25519",
           "key_id": "56475aa75463474c",
-          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+          "sig": "YijjhLx9EtWGuJ4D4sTIZh5HQQLOZWSAx2G35qRLRzaJDfv3FMwDbJPqu5JA56TjVDQpxPjYzROCXHXz_quPDQ"
         }
       },
       "keys": [
@@ -1733,6 +1805,26 @@
               "temperature": 0,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -1758,7 +1850,19 @@
               "temperature": "unknown",
               "max_tokens": "unknown",
               "top_p": "unknown"
-            }
+            },
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 5,
+              "source": "estimated"
+            },
+            "latency_ms": 90,
+            "cost": {
+              "usd": "unknown",
+              "basis": "unknown",
+              "pricing": "unknown"
+            },
+            "response": "unknown"
           }
         },
         {
@@ -1771,7 +1875,11 @@
             "prompt": null,
             "model": null,
             "sampling": null,
-            "adapter": null
+            "adapter": null,
+            "usage": null,
+            "latency_ms": null,
+            "cost": null,
+            "response": null
           }
         }
       ],
@@ -1838,14 +1946,14 @@
             "v": 1,
             "moves": {
               "count": 3,
-              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+              "head_hash": "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
             }
           }
         },
         "signature": {
           "alg": "Ed25519",
           "key_id": "56475aa75463474c",
-          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+          "sig": "YijjhLx9EtWGuJ4D4sTIZh5HQQLOZWSAx2G35qRLRzaJDfv3FMwDbJPqu5JA56TjVDQpxPjYzROCXHXz_quPDQ"
         }
       },
       "keys": [
@@ -1919,14 +2027,14 @@
             "v": 1,
             "moves": {
               "count": 3,
-              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+              "head_hash": "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
             }
           }
         },
         "signature": {
           "alg": "Ed25519",
           "key_id": "56475aa75463474c",
-          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+          "sig": "YijjhLx9EtWGuJ4D4sTIZh5HQQLOZWSAx2G35qRLRzaJDfv3FMwDbJPqu5JA56TjVDQpxPjYzROCXHXz_quPDQ"
         }
       },
       "keys": [
@@ -1960,6 +2068,26 @@
               "temperature": 0.7,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -1985,7 +2113,19 @@
               "temperature": "unknown",
               "max_tokens": "unknown",
               "top_p": "unknown"
-            }
+            },
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 5,
+              "source": "estimated"
+            },
+            "latency_ms": 90,
+            "cost": {
+              "usd": "unknown",
+              "basis": "unknown",
+              "pricing": "unknown"
+            },
+            "response": "unknown"
           }
         },
         {
@@ -1998,7 +2138,11 @@
             "prompt": null,
             "model": null,
             "sampling": null,
-            "adapter": null
+            "adapter": null,
+            "usage": null,
+            "latency_ms": null,
+            "cost": null,
+            "response": null
           }
         }
       ],
@@ -2066,14 +2210,14 @@
             "v": 1,
             "moves": {
               "count": 3,
-              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+              "head_hash": "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
             }
           }
         },
         "signature": {
           "alg": "Ed25519",
           "key_id": "56475aa75463474c",
-          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+          "sig": "YijjhLx9EtWGuJ4D4sTIZh5HQQLOZWSAx2G35qRLRzaJDfv3FMwDbJPqu5JA56TjVDQpxPjYzROCXHXz_quPDQ"
         }
       },
       "keys": [
@@ -2107,6 +2251,26 @@
               "temperature": 0,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -2132,7 +2296,19 @@
               "temperature": "unknown",
               "max_tokens": "unknown",
               "top_p": "unknown"
-            }
+            },
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 5,
+              "source": "estimated"
+            },
+            "latency_ms": 90,
+            "cost": {
+              "usd": "unknown",
+              "basis": "unknown",
+              "pricing": "unknown"
+            },
+            "response": "unknown"
           }
         },
         {
@@ -2145,7 +2321,11 @@
             "prompt": null,
             "model": null,
             "sampling": null,
-            "adapter": null
+            "adapter": null,
+            "usage": null,
+            "latency_ms": null,
+            "cost": null,
+            "response": null
           }
         }
       ],
@@ -2213,14 +2393,14 @@
             "v": 1,
             "moves": {
               "count": 3,
-              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+              "head_hash": "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
             }
           }
         },
         "signature": {
           "alg": "Ed25519",
           "key_id": "56475aa75463474c",
-          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+          "sig": "YijjhLx9EtWGuJ4D4sTIZh5HQQLOZWSAx2G35qRLRzaJDfv3FMwDbJPqu5JA56TjVDQpxPjYzROCXHXz_quPDQ"
         }
       },
       "keys": [
@@ -2254,6 +2434,26 @@
               "temperature": 0,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -2279,7 +2479,19 @@
               "temperature": "unknown",
               "max_tokens": "unknown",
               "top_p": "unknown"
-            }
+            },
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 5,
+              "source": "estimated"
+            },
+            "latency_ms": 90,
+            "cost": {
+              "usd": "unknown",
+              "basis": "unknown",
+              "pricing": "unknown"
+            },
+            "response": "unknown"
           }
         },
         {
@@ -2292,7 +2504,11 @@
             "prompt": null,
             "model": null,
             "sampling": null,
-            "adapter": null
+            "adapter": null,
+            "usage": null,
+            "latency_ms": null,
+            "cost": null,
+            "response": null
           }
         }
       ],
@@ -2360,14 +2576,14 @@
             "v": 1,
             "moves": {
               "count": 3,
-              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+              "head_hash": "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
             }
           }
         },
         "signature": {
           "alg": "Ed25519",
           "key_id": "56475aa75463474c",
-          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+          "sig": "YijjhLx9EtWGuJ4D4sTIZh5HQQLOZWSAx2G35qRLRzaJDfv3FMwDbJPqu5JA56TjVDQpxPjYzROCXHXz_quPDQ"
         }
       },
       "keys": [
@@ -2401,6 +2617,26 @@
               "temperature": 0,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -2426,7 +2662,19 @@
               "temperature": "unknown",
               "max_tokens": "unknown",
               "top_p": "unknown"
-            }
+            },
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 5,
+              "source": "estimated"
+            },
+            "latency_ms": 90,
+            "cost": {
+              "usd": "unknown",
+              "basis": "unknown",
+              "pricing": "unknown"
+            },
+            "response": "unknown"
           }
         }
       ],
@@ -2494,14 +2742,14 @@
             "v": 1,
             "moves": {
               "count": 3,
-              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+              "head_hash": "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
             }
           }
         },
         "signature": {
           "alg": "Ed25519",
           "key_id": "56475aa75463474c",
-          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+          "sig": "YijjhLx9EtWGuJ4D4sTIZh5HQQLOZWSAx2G35qRLRzaJDfv3FMwDbJPqu5JA56TjVDQpxPjYzROCXHXz_quPDQ"
         }
       },
       "keys": [
@@ -2535,6 +2783,26 @@
               "temperature": 0,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -2548,7 +2816,11 @@
             "prompt": null,
             "model": null,
             "sampling": null,
-            "adapter": null
+            "adapter": null,
+            "usage": null,
+            "latency_ms": null,
+            "cost": null,
+            "response": null
           }
         }
       ],
@@ -2616,14 +2888,14 @@
             "v": 1,
             "moves": {
               "count": 3,
-              "head_hash": "235980f296c41f3b24b17d4f13ace929d10cb14eda5f74f228c85dae49d4e265"
+              "head_hash": "70e29f2ade2befc1b93b609d7c0e71824abaafc8873aa964dcd233dfdd5ba7a7"
             }
           }
         },
         "signature": {
           "alg": "Ed25519",
           "key_id": "56475aa75463474c",
-          "sig": "nSLgdroOjO7GM3ljVRe67O8RRe7zP_50t09VSS_UVJILYZTTIcDxy8pBVqa01J5CuCr-kMeZN1XLQVc-ZPTtAw"
+          "sig": "YijjhLx9EtWGuJ4D4sTIZh5HQQLOZWSAx2G35qRLRzaJDfv3FMwDbJPqu5JA56TjVDQpxPjYzROCXHXz_quPDQ"
         }
       },
       "keys": [
@@ -2657,6 +2929,26 @@
               "temperature": 0,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -2682,7 +2974,19 @@
               "temperature": "unknown",
               "max_tokens": "unknown",
               "top_p": "unknown"
-            }
+            },
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 5,
+              "source": "estimated"
+            },
+            "latency_ms": 90,
+            "cost": {
+              "usd": "unknown",
+              "basis": "unknown",
+              "pricing": "unknown"
+            },
+            "response": "unknown"
           }
         },
         {
@@ -2695,7 +2999,11 @@
             "prompt": null,
             "model": null,
             "sampling": null,
-            "adapter": null
+            "adapter": null,
+            "usage": null,
+            "latency_ms": null,
+            "cost": null,
+            "response": null
           }
         }
       ],
@@ -2797,6 +3105,26 @@
               "temperature": 0,
               "max_tokens": 1024,
               "top_p": "provider-default"
+            },
+            "usage": {
+              "input_tokens": 812,
+              "output_tokens": 9,
+              "source": "provider"
+            },
+            "latency_ms": 1240,
+            "cost": {
+              "usd": 0.002571,
+              "basis": "provider-usage",
+              "pricing": {
+                "input_per_mtok": 3,
+                "output_per_mtok": 15,
+                "table_version": "2026-11-01"
+              }
+            },
+            "response": {
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "bytes": 412,
+              "truncated": false
             }
           }
         },
@@ -2822,7 +3150,19 @@
               "temperature": "unknown",
               "max_tokens": "unknown",
               "top_p": "unknown"
-            }
+            },
+            "usage": {
+              "input_tokens": 700,
+              "output_tokens": 5,
+              "source": "estimated"
+            },
+            "latency_ms": 90,
+            "cost": {
+              "usd": "unknown",
+              "basis": "unknown",
+              "pricing": "unknown"
+            },
+            "response": "unknown"
           }
         },
         {
@@ -2835,7 +3175,11 @@
             "prompt": null,
             "model": null,
             "sampling": null,
-            "adapter": null
+            "adapter": null,
+            "usage": null,
+            "latency_ms": null,
+            "cost": null,
+            "response": null
           }
         }
       ],
