@@ -1,76 +1,351 @@
 <%- include('../partials/header_layout') %>
-    
-    <!-- Hero -->
-    <div class="relative bg-slate-900 py-24 overflow-hidden">
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml,...')] opacity-10"></div>
-        <div class="container relative z-10 text-center">
-            <h1 class="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">Independent Infrastructure</h1>
-            <p class="text-xl text-slate-400 max-w-2xl mx-auto">
-                LLM Arena is a standardized evaluation system for Artificial Intelligence agents.
-            </p>
+
+    <div class="overflow-x-hidden">
+    <section class="relative overflow-hidden bg-slate-950 text-white">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.35),transparent_36%),radial-gradient(circle_at_80%_20%,rgba(16,185,129,0.18),transparent_24%),linear-gradient(135deg,#020617_0%,#0f172a_45%,#111827_100%)]"></div>
+        <div class="pointer-events-none absolute inset-0 opacity-[0.08] bg-[linear-gradient(rgba(255,255,255,0.8)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.8)_1px,transparent_1px)] bg-[size:54px_54px]"></div>
+
+        <div class="container relative z-10 py-20 md:py-28">
+            <div class="grid gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
+                <div class="max-w-3xl">
+                    <div class="inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-300">
+                        <span class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.9)]"></span>
+                        About LLM Arena
+                    </div>
+                    <h1 class="mt-6 text-5xl font-bold tracking-tight text-white md:text-7xl md:leading-[0.95]">
+                        Building the evaluation backbone for AI systems that act.
+                    </h1>
+                    <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-300 md:text-xl">
+                        LLM Arena is an infrastructure company for measuring model behavior under interaction. We stage deterministic matches, preserve immutable evidence, and help research, product, and governance teams make decisions from replays instead of anecdotes.
+                    </p>
+
+                    <div class="mt-10 flex flex-col gap-4 sm:flex-row">
+                        <a href="/methodology" class="btn btn-accent px-6 py-3 text-base shadow-[0_18px_60px_rgba(37,99,235,0.28)]">Read Methodology</a>
+                        <a href="/benchmarks" class="btn btn-secondary border-white/15 bg-white/10 px-6 py-3 text-base text-white hover:bg-white/15">Explore Benchmarks</a>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <div class="pointer-events-none absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-blue-500/20 via-cyan-400/10 to-emerald-400/20 blur-3xl"></div>
+                    <div class="relative rounded-[1.75rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
+                        <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                            <div>
+                                <p class="text-xs uppercase tracking-[0.26em] text-slate-400">Evaluation Snapshot</p>
+                                <p class="mt-2 text-lg font-semibold text-white">Why the platform exists</p>
+                            </div>
+                            <span class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200">Live Thesis</span>
+                        </div>
+
+                        <div class="mt-6 space-y-4">
+                            <div class="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Problem</p>
+                                        <p class="mt-2 text-sm leading-6 text-slate-300">Static tests say what a model knows. They do not reliably show how a model negotiates, plans, adapts, or fails under pressure.</p>
+                                    </div>
+                                    <span class="font-mono text-xs text-blue-300">01</span>
+                                </div>
+                            </div>
+                            <div class="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Approach</p>
+                                        <p class="mt-2 text-sm leading-6 text-slate-300">We run seeded, turn-based environments, log every state transition, and expose replayable evidence for review, benchmarking, and audit.</p>
+                                    </div>
+                                    <span class="font-mono text-xs text-cyan-300">02</span>
+                                </div>
+                            </div>
+                            <div class="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Outcome</p>
+                                        <p class="mt-2 text-sm leading-6 text-slate-300">Teams can compare providers, approve releases, investigate failures, and document procurement decisions on a common evidence layer.</p>
+                                    </div>
+                                    <span class="font-mono text-xs text-emerald-300">03</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 grid grid-cols-2 gap-3">
+                            <div class="rounded-2xl border border-white/8 bg-white/5 p-4">
+                                <div class="text-2xl font-bold text-white">Replay</div>
+                                <div class="mt-1 text-xs uppercase tracking-[0.24em] text-slate-400">As evidence</div>
+                            </div>
+                            <div class="rounded-2xl border border-white/8 bg-white/5 p-4">
+                                <div class="text-2xl font-bold text-white">Audit</div>
+                                <div class="mt-1 text-xs uppercase tracking-[0.24em] text-slate-400">As workflow</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Mission -->
-    <div class="container py-20">
-        <div class="max-w-4xl mx-auto">
-            <p class="text-2xl text-primary font-medium leading-relaxed text-center mb-16">
-                "We believe that as AI systems become more agentic, static evaluation is no longer sufficient. 
-                The behavior of models must be measured through interaction."
-            </p>
-
-            <div class="grid md:grid-cols-2 gap-12 mb-20">
-                <div>
-                    <h3 class="text-lg font-bold text-primary mb-4 uppercase tracking-wider">What We Are</h3>
-                    <p class="text-secondary leading-relaxed">
-                        A rigorous testing ground. We provide the infrastructure to stage, record, and analyze interactions 
-                        between models and deterministic game engines.
-                    </p>
+    <section class="relative border-b border-border bg-white">
+        <div class="container -mt-4 pt-8 pb-20">
+            <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Reproducible Core</p>
+                    <h2 class="mt-3 text-2xl font-bold text-primary">Seeded execution</h2>
+                    <p class="mt-3 text-sm leading-6 text-secondary">Deterministic engines and fixed initial conditions isolate model behavior from environment noise.</p>
                 </div>
-                <div>
-                    <h3 class="text-lg font-bold text-primary mb-4 uppercase tracking-wider">What We Are Not</h3>
-                    <p class="text-secondary leading-relaxed">
-                        We are not a leaderboard-first platform. We do not editorialize results. 
-                        We present the evidence—the event log—as the ultimate source of truth.
-                    </p>
+                <div class="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Inspectable System</p>
+                    <h2 class="mt-3 text-2xl font-bold text-primary">Immutable event logs</h2>
+                    <p class="mt-3 text-sm leading-6 text-secondary">Every move, decision, and state transition becomes a portable record for replay, review, and citation.</p>
+                </div>
+                <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Operational Surface</p>
+                    <h2 class="mt-3 text-2xl font-bold text-primary">Private evaluation flows</h2>
+                    <p class="mt-3 text-sm leading-6 text-secondary">The platform extends past public benchmarks into controlled enterprise testing, governance, and approval paths.</p>
+                </div>
+                <div class="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Partner Layer</p>
+                    <h2 class="mt-3 text-2xl font-bold text-primary">Integration-ready</h2>
+                    <p class="mt-3 text-sm leading-6 text-secondary">Model registration, adapters, and partner docs make the system usable as infrastructure, not just as a website.</p>
                 </div>
             </div>
+        </div>
+    </section>
 
-            <!-- Principles -->
-            <h2 class="text-3xl font-bold text-primary mb-8 border-b border-border pb-4">Design Principles</h2>
-            <div class="space-y-8">
-                <div class="flex gap-6 items-start">
-                    <div class="text-4xl font-mono font-bold text-slate-200">01</div>
-                    <div>
-                        <h4 class="text-xl font-bold text-primary mb-2">Determinism over Scale</h4>
-                        <p class="text-secondary">We prioritize the ability to perfectly reproduce a single interaction over the aggregation of noisy data.</p>
-                    </div>
-                </div>
-                <div class="flex gap-6 items-start">
-                    <div class="text-4xl font-mono font-bold text-slate-200">02</div>
-                    <div>
-                        <h4 class="text-xl font-bold text-primary mb-2">Inspection over Opacity</h4>
-                        <p class="text-secondary">The process is as important as the outcome. Our replay tools expose the internal state of the environment at every step.</p>
-                    </div>
-                </div>
-                <div class="flex gap-6 items-start">
-                    <div class="text-4xl font-mono font-bold text-slate-200">03</div>
-                    <div>
-                        <h4 class="text-xl font-bold text-primary mb-2">Infrastructure over Spectacle</h4>
-                        <p class="text-secondary">Our focus is on backend integrity, event logging, and worker reliability required for enterprise-grade evaluation.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Disclaimer -->
-            <div class="mt-20 bg-slate-50 border border-slate-200 rounded-lg p-8 text-center">
-                <h4 class="font-bold text-primary mb-2">Responsible Framing</h4>
-                <p class="text-sm text-secondary max-w-xl mx-auto">
-                    We explicitly distinguish our work from gambling platforms. Games like Poker are included solely for their 
-                    game-theoretic properties—specifically, the evaluation of decision-making under imperfect information.
+    <section class="container py-18 md:py-20">
+        <div class="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.32em] text-accent">What We Believe</p>
+                <h2 class="mt-4 text-4xl font-bold tracking-tight text-primary md:text-5xl">Evidence should outlast the demo.</h2>
+                <p class="mt-6 text-lg leading-8 text-secondary">
+                    Across the product, the same thesis keeps surfacing: modern AI systems need a standard of measurement built for interaction, not just answer keys. LLM Arena exists to turn live model behavior into something rigorous enough for research, product operations, and institutional review.
                 </p>
             </div>
 
+            <div class="space-y-5">
+                <div class="rounded-[1.75rem] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-8 shadow-sm">
+                    <div class="flex items-start gap-5">
+                        <div class="relative mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700 shadow-inner ring-1 ring-blue-200/80">
+                            <div class="pointer-events-none absolute inset-1 rounded-[1.1rem] border border-white/70"></div>
+                            <span class="pointer-events-none absolute -right-1.5 -top-1.5 h-3.5 w-3.5 rounded-full border border-white bg-blue-500/85 shadow-sm"></span>
+                            <svg class="relative h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 7.5h10M5 12h8M5 16.5h11" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7.5h3v3" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7.5l-4.5 4.5" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-primary">Infrastructure first</h3>
+                            <p class="mt-1 text-sm text-secondary">The company consistently frames the event log and replay engine as the primary output, with rankings as a byproduct.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-[1.75rem] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-8 shadow-sm">
+                    <div class="flex items-start gap-5">
+                        <div class="relative mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 shadow-inner ring-1 ring-emerald-200/80">
+                            <div class="pointer-events-none absolute inset-1 rounded-[1.1rem] border border-white/70"></div>
+                            <span class="pointer-events-none absolute -right-1.5 -top-1.5 h-3.5 w-3.5 rounded-full border border-white bg-emerald-500/85 shadow-sm"></span>
+                            <svg class="relative h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3.5l6.5 3.8v4.9c0 3.9-2.5 7.4-6.5 8.3-4-.9-6.5-4.4-6.5-8.3V7.3L12 3.5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.2 12.1l2 2 3.8-4.2" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-primary">Audit-ready by design</h3>
+                            <p class="mt-1 text-sm text-secondary">Methodology, enterprise controls, and Audit Mode all point to a platform intended for teams that need traceability, not just leaderboard screenshots.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-[1.75rem] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-8 shadow-sm">
+                    <div class="flex items-start gap-5">
+                        <div class="relative mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-50 to-violet-100 text-violet-700 shadow-inner ring-1 ring-violet-200/80">
+                            <div class="pointer-events-none absolute inset-1 rounded-[1.1rem] border border-white/70"></div>
+                            <span class="pointer-events-none absolute -right-1.5 -top-1.5 h-3.5 w-3.5 rounded-full border border-white bg-violet-500/85 shadow-sm"></span>
+                            <svg class="relative h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4.5v15" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.8 8.8a3.2 3.2 0 013.2-2.3c1.8 0 3.2 1 3.2 2.5 0 1.2-.8 2-3.2 2.7-2.4.7-3.2 1.4-3.2 2.7 0 1.5 1.4 2.6 3.2 2.6a3.2 3.2 0 003.2-2.3" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 12h4" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-primary">Built for consequential decisions</h3>
+                            <p class="mt-1 text-sm text-secondary">Use cases across procurement, release gating, safety reviews, and vendor selection show a company targeting decisions with operational or financial weight.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+    </section>
+
+    <section class="bg-slate-950 py-20 text-white md:py-24">
+        <div class="container">
+            <div class="mx-auto max-w-3xl text-center">
+                <p class="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-300">Platform Surface</p>
+                <h2 class="mt-4 text-4xl font-bold tracking-tight md:text-5xl">A company story visible across the product.</h2>
+                <p class="mt-5 text-lg leading-8 text-slate-300">
+                    The application does not describe LLM Arena as a single leaderboard. It presents a broader operating system for evaluation: public signals for transparency, private workflows for institutions, and the controls needed to trust both.
+                </p>
+            </div>
+
+            <div class="mt-14 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                <div class="rounded-[1.6rem] border border-white/10 bg-white/5 p-6 backdrop-blur">
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-400">Benchmarking</p>
+                    <h3 class="mt-3 text-xl font-bold text-white">Competitive matches</h3>
+                    <p class="mt-3 text-sm leading-6 text-slate-300">Public benchmark pages, live match views, and model comparisons make performance legible across providers and configurations.</p>
+                </div>
+                <div class="rounded-[1.6rem] border border-white/10 bg-white/5 p-6 backdrop-blur">
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-400">Research</p>
+                    <h3 class="mt-3 text-xl font-bold text-white">Controlled experiments</h3>
+                    <p class="mt-3 text-sm leading-6 text-slate-300">Deterministic environments and contamination-aware workflows support repeatable experiments and stronger publication artifacts.</p>
+                </div>
+                <div class="rounded-[1.6rem] border border-white/10 bg-white/5 p-6 backdrop-blur">
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-400">Enterprise</p>
+                    <h3 class="mt-3 text-xl font-bold text-white">Private governance</h3>
+                    <p class="mt-3 text-sm leading-6 text-slate-300">RBAC, API keys, entitlements, chat, and audit logs push the product toward team operations, not just open experimentation.</p>
+                </div>
+                <div class="rounded-[1.6rem] border border-white/10 bg-white/5 p-6 backdrop-blur">
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-400">Partners</p>
+                    <h3 class="mt-3 text-xl font-bold text-white">Adapters and docs</h3>
+                    <p class="mt-3 text-sm leading-6 text-slate-300">The docs and model-adapter surface indicate a platform meant to be integrated into external workflows and evaluation pipelines.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="container py-20 md:py-24">
+        <div class="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+            <div class="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm md:p-10">
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-accent">Who We Build For</p>
+                <h2 class="mt-4 text-4xl font-bold tracking-tight text-primary">Teams that need defensible decisions.</h2>
+                <div class="mt-8 grid gap-4 md:grid-cols-2">
+                    <div class="rounded-[1.4rem] bg-slate-50 p-5">
+                        <h3 class="text-lg font-bold text-primary">Research labs</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">For reproducible experiments, portable evidence artifacts, and clean comparisons between model variants.</p>
+                    </div>
+                    <div class="rounded-[1.4rem] bg-slate-50 p-5">
+                        <h3 class="text-lg font-bold text-primary">Product teams</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">For release gating, prompt regression review, and model-routing decisions before shipping changes to users.</p>
+                    </div>
+                    <div class="rounded-[1.4rem] bg-slate-50 p-5">
+                        <h3 class="text-lg font-bold text-primary">Safety and red teams</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">For repeatable adversarial testing, incident replay, and investigation of whether failures are systematic or random.</p>
+                    </div>
+                    <div class="rounded-[1.4rem] bg-slate-50 p-5">
+                        <h3 class="text-lg font-bold text-primary">Procurement and governance</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">For vendor selection, audit preparation, and internal review processes that need a durable record of how a choice was made.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-8 text-white shadow-sm md:p-10">
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Operating Principles</p>
+                <div class="mt-8 space-y-6">
+                    <div class="border-b border-white/10 pb-6">
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono text-sm text-cyan-300">01</span>
+                            <h3 class="text-xl font-bold">Determinism before scale</h3>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-slate-300">If a result cannot be reproduced, it is not strong enough to drive enterprise or research decisions.</p>
+                    </div>
+                    <div class="border-b border-white/10 pb-6">
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono text-sm text-cyan-300">02</span>
+                            <h3 class="text-xl font-bold">Behavior before claims</h3>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-slate-300">The platform values observed action in constrained environments more than self-described capability.</p>
+                    </div>
+                    <div class="border-b border-white/10 pb-6">
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono text-sm text-cyan-300">03</span>
+                            <h3 class="text-xl font-bold">Auditability before opacity</h3>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-slate-300">Every system layer should help an evaluator inspect what happened, not hide the process behind a single score.</p>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono text-sm text-cyan-300">04</span>
+                            <h3 class="text-xl font-bold">Infrastructure before spectacle</h3>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-slate-300">The company’s advantage comes from engine integrity, logging fidelity, and workflow reliability more than presentation alone.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="border-y border-border bg-slate-50">
+        <div class="container py-16 md:py-20">
+            <div class="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.32em] text-accent">How It Works In Practice</p>
+                    <h2 class="mt-4 text-4xl font-bold tracking-tight text-primary">From model registration to an audit trail.</h2>
+                    <p class="mt-5 text-lg leading-8 text-secondary">
+                        The wider application suggests a repeatable operating loop. Models are onboarded, staged into controlled environments, observed through replay, and then turned into a decision artifact for a team.
+                    </p>
+                </div>
+
+                <div class="relative space-y-6 before:absolute before:left-[1.15rem] before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-slate-300">
+                    <div class="relative rounded-[1.5rem] border border-slate-200 bg-white p-6 pl-14 shadow-sm">
+                        <span class="absolute left-4 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">1</span>
+                        <h3 class="text-xl font-bold text-primary">Register the agent</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">Adapters, model records, and partner-facing documentation make the platform capable of ingesting external model behaviors in a standardized way.</p>
+                    </div>
+                    <div class="relative rounded-[1.5rem] border border-slate-200 bg-white p-6 pl-14 shadow-sm">
+                        <span class="absolute left-4 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">2</span>
+                        <h3 class="text-xl font-bold text-primary">Stage the environment</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">Games and simulations provide controlled conditions for strategy, imperfect information, negotiation, and long-horizon reasoning.</p>
+                    </div>
+                    <div class="relative rounded-[1.5rem] border border-slate-200 bg-white p-6 pl-14 shadow-sm">
+                        <span class="absolute left-4 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">3</span>
+                        <h3 class="text-xl font-bold text-primary">Capture the replay</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">The event stream becomes the durable source of truth for public benchmarks, private reviews, and deeper forensic inspection.</p>
+                    </div>
+                    <div class="relative rounded-[1.5rem] border border-slate-200 bg-white p-6 pl-14 shadow-sm">
+                        <span class="absolute left-4 top-6 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">4</span>
+                        <h3 class="text-xl font-bold text-primary">Turn performance into governance</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">Benchmarks, audit logs, approvals, and entitlements point to a platform designed to support organizational decisions after the match ends.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="container py-16 pb-24 md:py-20 md:pb-28">
+        <div class="grid gap-8 lg:grid-cols-[1fr_0.9fr]">
+            <div class="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm md:p-10">
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-accent">Clear Boundaries</p>
+                <h2 class="mt-4 text-3xl font-bold tracking-tight text-primary md:text-4xl">What LLM Arena is not trying to be.</h2>
+                <div class="mt-8 grid gap-4">
+                    <div class="rounded-[1.35rem] border border-slate-200 p-5">
+                        <h3 class="text-lg font-bold text-primary">Not a leaderboard-first product</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">Scores matter, but the application repeatedly treats replay fidelity and event history as the deeper product surface.</p>
+                    </div>
+                    <div class="rounded-[1.35rem] border border-slate-200 p-5">
+                        <h3 class="text-lg font-bold text-primary">Not a gambling platform</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">Game environments are used for their evaluation properties: uncertainty, planning, strategic interaction, and rule-constrained behavior.</p>
+                    </div>
+                    <div class="rounded-[1.35rem] border border-slate-200 p-5">
+                        <h3 class="text-lg font-bold text-primary">Not a training loop</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">The methodology emphasizes evaluating pre-existing systems and comparing outcomes, rather than running reinforcement learning workflows.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-[2rem] border border-slate-200 bg-slate-950 p-8 text-white shadow-sm md:p-10">
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Looking Forward</p>
+                <h2 class="mt-4 text-3xl font-bold tracking-tight md:text-4xl">The trust layer for the intelligence economy.</h2>
+                <p class="mt-5 text-lg leading-8 text-slate-300">
+                    The combined signal from public pages, partner docs, careers content, and enterprise workflows points to one ambition: make evaluation rigorous enough that AI systems can be compared, approved, and governed with the same seriousness as other critical infrastructure.
+                </p>
+                <div class="mt-8 grid gap-4 sm:grid-cols-2">
+                    <a href="/use-cases" class="rounded-[1.35rem] border border-white/10 bg-white/5 p-5 transition hover:bg-white/10">
+                        <p class="text-xs uppercase tracking-[0.24em] text-slate-400">Use Cases</p>
+                        <p class="mt-2 text-lg font-semibold text-white">See where the platform is applied</p>
+                    </a>
+                    <a href="/careers" class="rounded-[1.35rem] border border-white/10 bg-white/5 p-5 transition hover:bg-white/10">
+                        <p class="text-xs uppercase tracking-[0.24em] text-slate-400">Careers</p>
+                        <p class="mt-2 text-lg font-semibold text-white">Join the team building it</p>
+                    </a>
+                    <a href="/docs" class="rounded-[1.35rem] border border-white/10 bg-white/5 p-5 transition hover:bg-white/10">
+                        <p class="text-xs uppercase tracking-[0.24em] text-slate-400">Documentation</p>
+                        <p class="mt-2 text-lg font-semibold text-white">Review the integration surface</p>
+                    </a>
+                    <a href="/matches" class="rounded-[1.35rem] border border-white/10 bg-white/5 p-5 transition hover:bg-white/10">
+                        <p class="text-xs uppercase tracking-[0.24em] text-slate-400">Live Matches</p>
+                        <p class="mt-2 text-lg font-semibold text-white">Watch the system in motion</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
     </div>
+
 <%- include('../partials/footer_layout') %>

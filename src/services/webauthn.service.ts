@@ -8,8 +8,46 @@ import type { AuthenticatorTransport } from '@simplewebauthn/server';
 import { prisma } from '../config/db';
 
 const rpName = 'LLM Arena';
-const rpID = process.env.RP_ID || 'localhost';
-const origin = process.env.APP_URL || `http://${rpID}:3000`;
+const getConfiguredOrigin = () => {
+  const configured =
+    process.env.APP_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL ||
+    '';
+
+  if (!configured) {
+    return null;
+  }
+
+  const normalized = configured.startsWith('http://') || configured.startsWith('https://')
+    ? configured
+    : `https://${configured}`;
+
+  try {
+    return new URL(normalized).origin;
+  } catch {
+    return null;
+  }
+};
+
+const resolveRelyingParty = (requestOrigin?: string, requestRpID?: string) => {
+  if (requestOrigin && requestRpID) {
+    return { origin: requestOrigin, rpID: requestRpID };
+  }
+
+  const configuredOrigin = getConfiguredOrigin();
+  if (configuredOrigin) {
+    return {
+      origin: configuredOrigin,
+      rpID: new URL(configuredOrigin).hostname
+    };
+  }
+
+  return {
+    origin: 'http://localhost:3000',
+    rpID: 'localhost'
+  };
+};
 
 const toBase64Url = (input: ArrayBuffer | Uint8Array | Buffer | string | undefined) => {
   if (!input) throw new Error('Missing credential data');
@@ -24,7 +62,8 @@ const fromBase64Url = (input: string | undefined) => {
 
 export class WebAuthnService {
   
-  async getRegistrationOptions(userId: string, email: string) {
+  async getRegistrationOptions(userId: string, email: string, requestOrigin?: string, requestRpID?: string) {
+    const { rpID } = resolveRelyingParty(requestOrigin, requestRpID);
     const userPasskeys = await prisma.passkey.findMany({ where: { user_id: userId } });
     
     return generateRegistrationOptions({
@@ -43,7 +82,8 @@ export class WebAuthnService {
     });
   }
 
-  async verifyRegistration(userId: string, body: any, expectedChallenge: string) {
+  async verifyRegistration(userId: string, body: any, expectedChallenge: string, requestOrigin?: string, requestRpID?: string) {
+    const { origin, rpID } = resolveRelyingParty(requestOrigin, requestRpID);
     const verification = await verifyRegistrationResponse({
       response: body,
       expectedChallenge,
@@ -74,14 +114,16 @@ export class WebAuthnService {
     return false;
   }
 
-  async getAuthenticationOptions() {
+  async getAuthenticationOptions(requestOrigin?: string, requestRpID?: string) {
+    const { rpID } = resolveRelyingParty(requestOrigin, requestRpID);
     return generateAuthenticationOptions({
       rpID,
       userVerification: 'preferred',
     });
   }
 
-  async verifyAuthentication(body: any, expectedChallenge: string) {
+  async verifyAuthentication(body: any, expectedChallenge: string, requestOrigin?: string, requestRpID?: string) {
+    const { origin, rpID } = resolveRelyingParty(requestOrigin, requestRpID);
     if (!body?.id) throw new Error('Missing passkey credential id');
     const passkey = await prisma.passkey.findFirst({
         where: { credential_id: body.id }

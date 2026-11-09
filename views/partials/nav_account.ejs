@@ -1,0 +1,45 @@
+<%
+    // Account menu used by both the top bar and the condensed dock. Opens on click/tap (never hover) so it works on touch screens.
+    const dark = variant === 'dock';
+    // Each instance owns its state: a shared flag lets the hidden copy's "click outside" close the visible one.
+    const open = dark ? 'dockAccount' : 'account';
+%>
+<div class="relative" @click.outside="<%= open %> = false" @keydown.escape="<%= open %> = false">
+    <button
+        type="button"
+        class="site-nav__account <%= dark ? 'site-nav__account--dark' : '' %>"
+        aria-haspopup="menu"
+        :aria-expanded="<%= open %> ? 'true' : 'false'"
+        aria-label="Account menu for <%= user.name || user.email %>"
+        @click="<%= open %> = !<%= open %>"
+    >
+        <% if (user.avatar_url) { %>
+            <img src="<%= user.avatar_url %>" alt="" class="h-8 w-8 shrink-0 rounded-full object-cover">
+        <% } else { %>
+            <span class="site-nav__avatar" aria-hidden="true"><%= user.email.charAt(0).toUpperCase() %></span>
+        <% } %>
+        <span class="site-nav__account-name"><%= user.name || user.email %></span>
+        <%- icon('chevron', 'h-4 w-4 shrink-0 opacity-60') %>
+    </button>
+    <div
+        x-show="<%= open %>"
+        x-cloak
+        x-transition.opacity.duration.150ms
+        class="site-nav__menu"
+        role="menu"
+        aria-label="Account"
+    >
+        <div class="px-3 pb-2 pt-1">
+            <p class="truncate text-sm font-semibold text-primary"><%= user.name || 'Signed in' %></p>
+            <p class="truncate text-xs text-slate-500"><%= user.email %></p>
+        </div>
+        <a role="menuitem" href="/account" class="site-nav__menu-item"><%- icon('user', 'h-5 w-5') %> Account</a>
+        <% if (typeof can === 'function' && can('admin.access')) { %>
+            <a role="menuitem" href="/admin" class="site-nav__menu-item"><%- icon('shield', 'h-5 w-5') %> Admin console</a>
+        <% } %>
+        <form action="/auth/logout" method="POST" class="border-t border-border mt-1 pt-1">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button role="menuitem" class="site-nav__menu-item w-full text-left"><%- icon('logout', 'h-5 w-5') %> Sign out</button>
+        </form>
+    </div>
+</div>

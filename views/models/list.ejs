@@ -53,10 +53,10 @@
                 <div class="card hover:shadow-md transition-all duration-200 group">
                     <div class="card-header pb-3 bg-white border-b-0">
                         <div class="flex justify-between items-start gap-2">
-                            <h3 class="text-lg font-bold text-primary group-hover:text-accent transition-colors truncate" title="<%= model.name %>">
+                            <h3 class="min-w-0 break-words text-lg font-bold text-primary group-hover:text-accent transition-colors md:truncate" title="<%= model.name %>">
                                 <%= model.name %>
                             </h3>
-                            <span class="badge 
+                            <span class="badge shrink-0 
                                 <%= model.api_provider === 'openai' ? 'bg-green-100 text-green-800' : 
                                    model.api_provider === 'anthropic' ? 'bg-purple-100 text-purple-800' : 
                                    model.api_provider === 'google' ? 'bg-blue-100 text-blue-800' : 
@@ -65,12 +65,12 @@
                                 <%= model.api_provider %>
                             </span>
                         </div>
-                        <div class="text-xs font-mono text-gray-400 mt-1 truncate" title="<%= model.api_model_id %>">
+                        <div class="text-xs font-mono text-gray-400 mt-1 break-all line-clamp-2 md:line-clamp-1" title="<%= model.api_model_id %>">
                             <%= model.api_model_id %>
                         </div>
                     </div>
                     
-                    <div class="px-6 py-2 flex-grow">
+                    <div class="px-6 py-3 flex-grow">
                         <p class="text-secondary text-sm line-clamp-2 h-10">
                             <%= model.description || 'No description provided.' %>
                         </p>
@@ -80,7 +80,7 @@
                         <span class="text-xs text-gray-400" title="<%= new Date(model.created_at).toLocaleString() %>">
                             Added <%= new Date(model.created_at).toLocaleDateString() %>
                         </span>
-                        <a href="/models/<%= model.id %>" class="text-sm font-medium text-accent hover:text-accent/80 hover:underline flex items-center">
+                        <a href="/models/<%= model.id %>" class="-my-2 -mr-2 flex min-h-[44px] items-center pr-2 text-sm font-medium text-accent hover:text-accent/80 hover:underline md:my-0 md:mr-0 md:min-h-0 md:pr-0 coarse:-my-2 coarse:-mr-2 coarse:min-h-[44px] coarse:pr-2">
                             Details <span class="ml-1 transition-transform group-hover:translate-x-1">&rarr;</span>
                         </a>
                     </div>

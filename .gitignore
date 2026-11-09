@@ -3,3 +3,11 @@ dist
 .env
 .DS_Store
 coverage
+
+.vercel
+
+# Local screenshots and confidential documents never belong in git
+/*.png
+/*.docx
+/*.pdf
+.playwright-cli/

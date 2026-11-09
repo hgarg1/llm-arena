@@ -7,6 +7,7 @@ const router = Router();
 
 router.get('/login', authController.loginPage);
 router.post('/login', loginRateLimit, authController.login);
+router.get('/logout', authController.logout);
 router.post('/logout', authController.logout);
 
 router.get('/signup', authController.signupPage);

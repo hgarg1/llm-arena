@@ -1,0 +1,57 @@
+<%- include('../partials/header_layout') %>
+    <div class="border-b border-border bg-surface">
+        <div class="container py-16 md:py-24">
+            <h1 class="text-4xl md:text-6xl font-bold tracking-tight text-primary mb-4">Data Retention</h1>
+            <p class="text-xl text-secondary max-w-2xl leading-relaxed">
+                What we keep from model responses, for how long, and what stays so that a signed match record still verifies after the rest is gone.
+            </p>
+        </div>
+    </div>
+
+    <div class="container py-12">
+        <div class="prose prose-slate max-w-3xl prose-headings:scroll-mt-24">
+
+            <section id="window" class="mb-12">
+                <h2 class="text-2xl font-bold text-primary border-b border-border pb-2 mb-6">Raw model responses</h2>
+                <p class="text-secondary leading-relaxed mb-4" data-retention-days="<%= retentionDays %>">
+                    <% if (retentionDays === 0) { %>
+                        The raw response body for each model move is <strong>kept indefinitely</strong>.
+                    <% } else { %>
+                        The raw response body for each model move is kept for <strong><%= retentionDays %> <%= retentionDays === 1 ? 'day' : 'days' %></strong> after the move, then deleted.
+                    <% } %>
+                    A background sweeper removes expired responses every minute, in small batches.
+                </p>
+                <ul class="text-secondary leading-relaxed list-disc pl-6 space-y-2">
+                    <li>Each stored response is limited to <strong><%= maxRawKiB %> KiB</strong>. Longer responses are cut and marked as truncated; the true length is recorded.</li>
+                    <li>Credentials are removed before anything is stored: API keys, authorization headers, cookies and tokens never reach the database.</li>
+                    <li>The administrators of this deployment set the window. Whatever it is, this page reports the value the sweeper is using now.</li>
+                </ul>
+            </section>
+
+            <section id="stays" class="mb-12">
+                <h2 class="text-2xl font-bold text-primary border-b border-border pb-2 mb-6">What stays after deletion</h2>
+                <p class="text-secondary leading-relaxed mb-4">
+                    Deleting a raw response does not weaken a match record. These are never removed by retention:
+                </p>
+                <ul class="text-secondary leading-relaxed list-disc pl-6 space-y-2">
+                    <li>The match, its move text and its event log.</li>
+                    <li>The signed manifest and the digest chain over every move.</li>
+                    <li>Each move's record of how it was produced, including the SHA-256 digest and length of the raw response.</li>
+                </ul>
+                <p class="text-secondary leading-relaxed mt-4">
+                    The signature covers the digest, not the body, so verification gives the same answer before and after deletion. Anyone who kept a copy of a response can still check it against the signed digest.
+                    A deleted response is reported as <em>missing</em>, never as <em>altered</em>. See the <a href="/methodology#audit" class="text-accent hover:underline">methodology</a> for how verification works.
+                </p>
+            </section>
+
+            <section id="accounts" class="mb-12">
+                <h2 class="text-2xl font-bold text-primary border-b border-border pb-2 mb-6">Accounts and deletion requests</h2>
+                <p class="text-secondary leading-relaxed">
+                    Raw responses are not used to profile or identify people, and are not served to anyone through the site. Deleting an account removes the account; matches it created are kept as evidence,
+                    detached from the account, and their raw responses expire on the same schedule as all others. Rules for personal information are in the <a href="/privacy#retention" class="text-accent hover:underline">privacy policy</a>.
+                </p>
+            </section>
+
+        </div>
+    </div>
+<%- include('../partials/footer_layout') %>

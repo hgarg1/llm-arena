@@ -3,6 +3,7 @@ import { prisma as db } from '../../config/db';
 import { sentimentService } from '../../services/sentiment.service';
 import { logAdminAction } from '../../services/audit.service';
 import { chatService } from '../../services/chat.service';
+import { settingsService } from '../../services/settings.service';
 
 export const index = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -149,16 +150,8 @@ export const updateGlobalSettings = async (req: Request, res: Response, next: Ne
         const { chat_maintenance_mode, chat_global_rate_limit } = req.body;
 
         await Promise.all([
-            db.systemSetting.upsert({
-                where: { key: 'chat_maintenance_mode' },
-                update: { value: chat_maintenance_mode ? 'true' : 'false' },
-                create: { key: 'chat_maintenance_mode', value: chat_maintenance_mode ? 'true' : 'false' }
-            }),
-            db.systemSetting.upsert({
-                where: { key: 'chat_global_rate_limit' },
-                update: { value: chat_global_rate_limit || '0' },
-                create: { key: 'chat_global_rate_limit', value: chat_global_rate_limit || '0' }
-            })
+            settingsService.update('chat_maintenance_mode', chat_maintenance_mode ? 'true' : 'false'),
+            settingsService.update('chat_global_rate_limit', String(chat_global_rate_limit || '0'))
         ]);
 
         await logAdminAction(userId, 'admin.chat.settings_update', 'system', { 

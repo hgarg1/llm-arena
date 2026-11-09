@@ -1,6 +1,6 @@
 import { prisma } from '../config/db';
 import { EntitlementOverrideTarget, EntitlementValueType } from '@prisma/client';
-import { checkQuota, incrementUsage } from './usage-counter.service';
+import { checkQuota, incrementUsage, reserveUsage, releaseUsage } from './usage-counter.service';
 
 type ResolvedEntitlement = {
   enabled: boolean;
@@ -203,12 +203,32 @@ export const resolveEntitlements = async (input: ResolveInput) => {
     return { ...result, overage_behavior: config.overage_behavior || 'block' };
   };
 
+  /**
+   * Atomically reserves one unit of quota. `release()` must be called if the guarded action then fails.
+   * Entitlements without a limit are always allowed and `release()` is a no-op.
+   */
+  const reserveQuota = async (key: string, scope: { type: 'user' | 'org'; id: string }) => {
+    const config = entitlementValue<any>(key, null);
+    if (!config || !config.limit) {
+      return { allowed: true, release: async () => undefined };
+    }
+    const target = {
+      entitlementKey: key,
+      scopeType: (scope.type === 'org' ? 'ORG' : 'USER') as 'ORG' | 'USER',
+      scopeId: scope.id,
+      window: (config.window || 'day') as 'minute' | 'hour' | 'day' | 'month'
+    };
+    const allowed = await reserveUsage({ ...target, limit: config.limit });
+    return { allowed, release: allowed ? () => releaseUsage(target) : async () => undefined };
+  };
+
   return {
     resolved,
     hasEntitlement,
     entitlementValue,
     enforceMode,
     enforceQuota,
+    reserveQuota,
     incrementUsage
   };
 };

@@ -29,12 +29,9 @@
             Return to Dashboard
         </a>
         
-        <form action="/auth/logout" method="POST" class="w-full sm:w-auto">
-            <input type="hidden" name="_csrf" value="${(typeof csrfToken !== 'undefined' ? csrfToken : '')}">
-            <button type="submit" class="inline-flex items-center justify-center px-8 py-3 border border-slate-600 text-slate-300 font-medium rounded-lg hover:bg-slate-800 hover:text-white transition-all w-full">
+        <a href="/auth/logout" class="inline-flex items-center justify-center px-8 py-3 border border-slate-600 text-slate-300 font-medium rounded-lg hover:bg-slate-800 hover:text-white transition-all w-full sm:w-auto">
                 Switch Identity
-            </button>
-        </form>
+        </a>
     </div>
 
     ${(typeof requiredPermission !== 'undefined' && requiredPermission) ? `

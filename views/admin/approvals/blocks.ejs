@@ -14,7 +14,7 @@
     <% } %>
 
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        <table class="min-w-full text-xs">
+        <table class="responsive-table min-w-full text-xs">
             <thead class="text-gray-500 uppercase bg-gray-50">
                 <tr>
                     <th class="p-3 text-left">Blocker</th>
@@ -27,27 +27,27 @@
             <tbody class="divide-y">
                 <% blocks.forEach(block => { %>
                     <tr>
-                        <td class="p-3">
+                        <td class="rt-title p-3">
                             <div class="text-sm font-semibold text-gray-900"><%= block.blocker.email %></div>
                             <div class="text-[10px] text-gray-400">ID: <%= block.blocker.id %></div>
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="Blocked User">
                             <div class="text-sm font-medium text-gray-800"><%= block.blocked.email %></div>
                             <div class="text-[10px] text-gray-400">ID: <%= block.blocked.id %></div>
                         </td>
-                        <td class="p-3 text-gray-500">
+                        <td class="p-3 text-gray-500" data-label="Date">
                             <%= new Date(block.created_at).toLocaleString() %>
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="Capabilities">
                             <form action="/admin/approvals/blocks/toggle-capability" method="POST">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <input type="hidden" name="userId" value="<%= block.blocker.id %>">
-                                <button class="px-2 py-1 rounded text-[10px] font-semibold <%= block.blocker.can_block_people ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' %>">
+                                <button class="min-h-[2.75rem] px-3 py-1 rounded text-[10px] font-semibold md:min-h-0 md:px-2 <%= block.blocker.can_block_people ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' %>">
                                     <%= block.blocker.can_block_people ? 'Can Block' : 'Blocking Disabled' %>
                                 </button>
                             </form>
                         </td>
-                        <td class="p-3">
+                        <td class="rt-actions p-3">
                             <form action="/admin/approvals/blocks/delete" method="POST" onsubmit="return confirm('Remove this block?');">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <input type="hidden" name="id" value="<%= block.id %>">
@@ -57,7 +57,7 @@
                     </tr>
                 <% }) %>
                 <% if (blocks.length === 0) { %>
-                    <tr><td class="p-6 text-center text-gray-500" colspan="5">No active blocks found.</td></tr>
+                    <tr><td class="rt-title p-6 text-center text-gray-500" colspan="5">No active blocks found.</td></tr>
                 <% } %>
             </tbody>
         </table>

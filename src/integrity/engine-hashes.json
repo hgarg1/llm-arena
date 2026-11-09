@@ -1,0 +1,76 @@
+{
+  "iterated-negotiation": {
+    "sha256": "187a3c43a7108c36d48129b9fb8a186f2061582fd4f8c1b5e2f5c0d025c8f7da",
+    "files": [
+      {
+        "path": "src/game/negotiation.ts",
+        "sha256": "1592394721240932ac15aa78cd197fcf701a1a86024edf451336821902d52820"
+      },
+      {
+        "path": "src/game/types.ts",
+        "sha256": "49fa8f960f49953998cddfb4ba32bf21c21056f88e58d657fc6583cbd1778ad0"
+      }
+    ],
+    "deps": {}
+  },
+  "chess": {
+    "sha256": "cc8ff8d17f406f03aa1f913b1b020ac5bac86f65d938f9aa403536e9f2ab5eef",
+    "files": [
+      {
+        "path": "src/game/chess.ts",
+        "sha256": "9da4dd4197a3f0faa0a122c04dd91d1787587f9f017a6e018004feeed8ab6ebf"
+      },
+      {
+        "path": "src/game/types.ts",
+        "sha256": "49fa8f960f49953998cddfb4ba32bf21c21056f88e58d657fc6583cbd1778ad0"
+      }
+    ],
+    "deps": {
+      "chess.js": "1.4.0"
+    }
+  },
+  "chutes_and_ladders": {
+    "sha256": "ea56cbab80cbf871f2167933be76c72dff6b1c0fd5fcdd7ef2fbfb552ecbcf14",
+    "files": [
+      {
+        "path": "src/game/chutes_ladders.ts",
+        "sha256": "66de4fdca8553de04bf4c0d7a536e6f1257644637dcdea38959ab0454a7264ab"
+      },
+      {
+        "path": "src/game/types.ts",
+        "sha256": "49fa8f960f49953998cddfb4ba32bf21c21056f88e58d657fc6583cbd1778ad0"
+      }
+    ],
+    "deps": {}
+  },
+  "texas_holdem": {
+    "sha256": "d924191d8373d37e3ddb1e9641f3667f04a8ca54038b3ff2f23b960ae44bf82e",
+    "files": [
+      {
+        "path": "src/game/poker.ts",
+        "sha256": "6d9d682c18f10da69b06df0cf4b8eab02d1d4659b1421eec79ad253db9ac76fc"
+      },
+      {
+        "path": "src/game/types.ts",
+        "sha256": "49fa8f960f49953998cddfb4ba32bf21c21056f88e58d657fc6583cbd1778ad0"
+      }
+    ],
+    "deps": {
+      "pokersolver": "2.1.4"
+    }
+  },
+  "blackjack": {
+    "sha256": "09ca656fc835f98a2e499dc2a257c8d269be8cbe55a4f6c4a0fee08c2f5f934b",
+    "files": [
+      {
+        "path": "src/game/blackjack.ts",
+        "sha256": "3c1bb38c7396d62d7ec056229e761bab472f20a6fa648b31ab47f9fb9d3648ca"
+      },
+      {
+        "path": "src/game/types.ts",
+        "sha256": "49fa8f960f49953998cddfb4ba32bf21c21056f88e58d657fc6583cbd1778ad0"
+      }
+    ],
+    "deps": {}
+  }
+}

@@ -14,19 +14,24 @@
         /* Investor Theme Overrides */
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
         h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', serif; }
-        .nav-link { @apply text-slate-600 hover:text-slate-900 transition-colors uppercase tracking-widest text-xs font-semibold; }
-        .nav-link-active { @apply text-slate-900 border-b-2 border-slate-900; }
-        .btn-ir { @apply px-6 py-3 bg-slate-900 text-white font-serif italic rounded-none hover:bg-slate-700 transition-all; }
+        .nav-link { color: #475569; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; line-height: 1rem; font-weight: 600; padding-bottom: 0.25rem; border-bottom: 2px solid transparent; transition: color .15s ease, border-color .15s ease; }
+        .nav-link:hover { color: #0f172a; }
+        .nav-link-active { color: #0f172a; border-bottom-color: #0f172a; }
+        .btn-ir { padding: 0.75rem 1.5rem; background: #0f172a; color: #fff; font-family: 'Playfair Display', serif; font-style: italic; transition: background-color .15s ease; }
+        .btn-ir:hover { background: #334155; }
+        /* Footer links: comfortable to tap on phones, compact from md up */
+        .ir-footer-link { display: inline-flex; align-items: center; min-height: 44px; }
+        @media (min-width: 768px) { .ir-footer-link { min-height: 0; } }
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
     
     <!-- Investor Header -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-50" x-data="{ open: false }">
-        <div class="container mx-auto px-6 py-6 flex justify-between items-center">
-            <a href="/investors" class="text-2xl font-serif font-bold tracking-tight flex items-center gap-3">
+        <div class="container mx-auto px-4 sm:px-6 py-4 sm:py-6 flex justify-between items-center gap-3">
+            <a href="/investors" class="text-xl sm:text-2xl font-serif font-bold tracking-tight flex items-center gap-3 whitespace-nowrap">
                 <div class="w-8 h-8 bg-slate-900 text-white flex items-center justify-center font-sans font-bold text-xs rounded-full">IR</div>
-                LLM Arena <span class="text-slate-400 font-sans text-xs uppercase tracking-widest mt-1 ml-1">Investors</span>
+                LLM Arena <span class="hidden sm:inline text-slate-400 font-sans text-xs uppercase tracking-widest mt-1 ml-1">Investors</span>
             </a>
             
             <nav class="hidden md:flex space-x-8">
@@ -42,7 +47,7 @@
                 Return to Product &rarr;
                 </a>
             </div>
-            <button type="button" class="md:hidden text-xs font-bold uppercase tracking-widest text-slate-500 border border-slate-200 px-3 py-2" @click="open = !open" :aria-expanded="open.toString()">
+            <button type="button" class="md:hidden min-h-[2.75rem] text-xs font-bold uppercase tracking-widest text-slate-500 border border-slate-200 px-4 py-2" @click="open = !open" :aria-expanded="open.toString()">
                 <span x-text="open ? 'Close' : 'Menu'"></span>
             </button>
         </div>
@@ -67,40 +72,40 @@
     </main>
 
     <!-- Investor Footer -->
-    <footer class="bg-slate-900 text-slate-400 py-12 border-t-4 border-slate-800">
-        <div class="container mx-auto px-6 grid md:grid-cols-4 gap-8">
+    <footer class="bg-slate-900 text-slate-400 border-t-4 border-slate-800 pt-10 md:pt-12" style="padding-bottom: max(2rem, env(safe-area-inset-bottom));">
+        <div class="container mx-auto px-5 sm:px-6 grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4 md:gap-8">
             <div class="col-span-2">
-                <h4 class="text-white font-serif text-xl mb-4">LLM Arena Inc.</h4>
+                <h4 class="text-white font-serif text-xl mb-3 md:mb-4">LLM Arena Inc.</h4>
                 <p class="text-sm leading-relaxed max-w-sm">
-                    Defining the standard for artificial intelligence evaluation. 
+                    Defining the standard for artificial intelligence evaluation.
                     Traded on NYSE as <strong>ARENA</strong>.
                 </p>
             </div>
-            <div>
-                <h5 class="text-white text-sm font-bold uppercase tracking-widest mb-4">Governance</h5>
-                <ul class="space-y-2 text-sm">
-                    <li><a href="/investors/governance/board" class="hover:text-white">Board of Directors</a></li>
-                    <li><a href="/investors/governance/executives" class="hover:text-white">Executive Team</a></li>
-                    <li><a href="/investors/governance/committees" class="hover:text-white">Committee Composition</a></li>
-                    <li><a href="/investors/governance/documents" class="hover:text-white">Governance Documents</a></li>
+            <nav aria-label="Governance" class="min-w-0">
+                <h5 class="text-white text-xs font-bold uppercase tracking-[0.14em] mb-2 min-h-8 md:min-h-0 md:mb-4">Governance</h5>
+                <ul class="text-sm md:space-y-2">
+                    <li><a href="/investors/governance/board" class="ir-footer-link hover:text-white">Board of Directors</a></li>
+                    <li><a href="/investors/governance/executives" class="ir-footer-link hover:text-white">Executive Team</a></li>
+                    <li><a href="/investors/governance/committees" class="ir-footer-link hover:text-white">Committee Composition</a></li>
+                    <li><a href="/investors/governance/documents" class="ir-footer-link hover:text-white">Governance Documents</a></li>
                 </ul>
-            </div>
-            <div>
-                <h5 class="text-white text-sm font-bold uppercase tracking-widest mb-4">Shareholder Services</h5>
-                <ul class="space-y-2 text-sm">
-                    <li><a href="#" class="hover:text-white">Transfer Agent</a></li>
-                    <li><a href="#" class="hover:text-white">Dividend History</a></li>
-                    <li><a href="/investors/faq" class="hover:text-white">Investor FAQs</a></li>
+            </nav>
+            <nav aria-label="Shareholder services" class="min-w-0">
+                <h5 class="text-white text-xs font-bold uppercase tracking-[0.14em] mb-2 min-h-8 md:min-h-0 md:mb-4">Shareholder Services</h5>
+                <ul class="text-sm md:space-y-2">
+                    <li><a href="/investors/contact" class="ir-footer-link hover:text-white">Transfer Agent</a></li>
+                    <li><a href="/investors/financials" class="ir-footer-link hover:text-white">Dividend History</a></li>
+                    <li><a href="/investors/faq" class="ir-footer-link hover:text-white">Investor FAQs</a></li>
                 </ul>
-            </div>
+            </nav>
         </div>
-        <div class="container mx-auto px-6 mt-12 pt-8 border-t border-slate-800 text-xs flex justify-between">
-            <span>&copy; 2026 LLM Arena Inc. All rights reserved.</span>
-            <div class="space-x-4">
-                <a href="/careers" class="hover:text-white">Careers</a>
-                <a href="/terms" class="hover:text-white">Terms</a>
-                <a href="/privacy" class="hover:text-white">Privacy</a>
-            </div>
+        <div class="container mx-auto px-5 sm:px-6 mt-10 md:mt-12 pt-6 md:pt-8 border-t border-slate-800 text-xs flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <span class="leading-relaxed">&copy; 2026 LLM Arena Inc. All rights reserved.</span>
+            <nav aria-label="Legal" class="flex flex-wrap gap-x-6">
+                <a href="/careers" class="ir-footer-link hover:text-white">Careers</a>
+                <a href="/terms" class="ir-footer-link hover:text-white">Terms</a>
+                <a href="/privacy" class="ir-footer-link hover:text-white">Privacy</a>
+            </nav>
         </div>
     </footer>
 

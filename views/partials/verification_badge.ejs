@@ -1,0 +1,14 @@
+<%
+    // The verification state of a match (src/integrity/status.ts). Label, icon shape and colour all differ per state, so the
+    // state is never conveyed by colour alone. `state` is required; `code` (optional) is the verifier's failure code.
+    const states = {
+        'in-progress': { label: 'In progress', cls: 'border-blue-200 bg-blue-50 text-blue-800', detail: 'This match has not finished, so there is nothing to verify yet.', icon: 'M12 6v6l4 2M12 21a9 9 0 100-18 9 9 0 000 18z' },
+        signed: { label: 'Signed', cls: 'border-emerald-200 bg-emerald-50 text-emerald-800', detail: 'This match has a signed manifest. Open the match to verify it.', icon: 'M5 13l4 4L19 7' },
+        verified: { label: 'Verified', cls: 'border-emerald-300 bg-emerald-50 text-emerald-900', detail: 'The event log, the moves and the signature were checked and match what we signed.', icon: 'M9 12l2 2 4-4M12 21a9 9 0 100-18 9 9 0 000 18z' },
+        failed: { label: 'Verification failed', cls: 'border-red-300 bg-red-50 text-red-800', detail: 'Something in this match no longer matches what was signed. Treat the replay as untrustworthy.', icon: 'M6 18L18 6M6 6l12 12' },
+        unverified: { label: 'Unverified', cls: 'border-slate-300 bg-slate-100 text-slate-700', detail: 'This match has no signed manifest, for example because it was played before matches were signed. That is not a failure, but it cannot be verified.', icon: 'M9.5 9a2.5 2.5 0 114 2c-.8.7-1.5 1.1-1.5 2M12 17h.01' }
+    };
+    const current = states[typeof state === 'string' && states[state] ? state : 'unverified'];
+    const stateKey = typeof state === 'string' && states[state] ? state : 'unverified';
+    const failureCode = typeof code === 'string' && code ? ' (' + code + ')' : '';
+%><span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold <%= current.cls %>" data-verification="<%= stateKey %>" title="<%= current.detail + failureCode %>"><svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="<%= current.icon %>"/></svg><span><%= current.label %></span></span>

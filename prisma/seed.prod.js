@@ -8,10 +8,16 @@ const prisma = new PrismaClient();
 
 async function main() {
   const adminEmail = process.env.ADMIN_EMAIL || "admin@llmarena.com";
-  const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+  const adminPassword = process.env.ADMIN_PASSWORD;
   const adminTier = process.env.ADMIN_TIER || "ENTERPRISE";
 
-  const passwordHash = await bcrypt.hash(adminPassword, 10);
+  // The password is only used to create the admin the first time. There is deliberately no default: a guessable
+  // fallback password on a fresh production database would hand the admin account to anyone.
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail }, select: { id: true } });
+  if (!existingAdmin && (!adminPassword || adminPassword.length < 12)) {
+    throw new Error("ADMIN_PASSWORD (at least 12 characters) is required to create the first admin account.");
+  }
+  const passwordHash = adminPassword ? await bcrypt.hash(adminPassword, 10) : null;
 
   const permissionMap = {};
   for (const perm of RBAC_PERMISSIONS) {
@@ -133,6 +139,19 @@ async function main() {
     update: {},
     create: { group_id: opsGroup.id, role_id: opsAdminRole.id }
   });
+
+  // A built-in model that plays random legal moves, so matches can be run and tested without any provider API key.
+  const mockModel = await prisma.model.findFirst({ where: { api_provider: "mock", api_model_id: "mock-random" } });
+  if (!mockModel) {
+    await prisma.model.create({
+      data: {
+        name: "Mock (random legal moves)",
+        description: "Built-in test model. Plays random legal moves; no API key or cost.",
+        api_provider: "mock",
+        api_model_id: "mock-random"
+      }
+    });
+  }
 
   console.log({
     adminEmail,

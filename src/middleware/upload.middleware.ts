@@ -1,14 +1,8 @@
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
 import { Request, Response, NextFunction } from 'express';
 import { scanFileWithClamAV } from '../services/clamav.service';
-
-const ensureDir = (dir: string) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-};
+import { deleteStoredFile, persistUploadedFile, removeTempFile, writeTempFile } from '../services/storage.service';
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   // Allow images, PDFs, text, zip
@@ -16,9 +10,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
   if (allowed.some(t => file.mimetype.startsWith(t))) {
     cb(null, true);
   } else {
-    cb(null, false); // Skip file instead of erroring whole batch? Multer doesn't support skip easily without error.
-    // For now, allow common types.
-    cb(null, true); 
+    cb(new Error('Unsupported file type'));
   }
 };
 
@@ -43,27 +35,24 @@ const redirectUploadError = (req: Request, res: Response, message: string) => {
   return res.status(400).send(message);
 };
 
-const createUpload = (destDir: string, prefix: string, fieldName: string, isArray = false, resolveSubdir?: (req: Request) => string) => {
+type UploadMode = 'persist' | 'memory';
+
+const createUpload = (
+  destDir: string,
+  prefix: string,
+  fieldName: string,
+  isArray = false,
+  resolveSubdir?: (req: Request) => string,
+  mode: UploadMode = 'persist'
+) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const settings = res.locals.settings || {};
     const maxMb = parseInt(settings.upload_max_mb || '10', 10);
     const maxFiles = parseInt(settings.chat_max_upload_count || '5', 10);
 
-    const storage = multer.diskStorage({
-      destination: function (req, file, cb) {
-        const subdir = resolveSubdir ? sanitizeSubdir(resolveSubdir(req)) : '';
-        const finalDir = subdir ? path.join(destDir, subdir) : destDir;
-        ensureDir(finalDir);
-        cb(null, finalDir);
-      },
-      filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, `${prefix}-${uniqueSuffix}${path.extname(file.originalname)}`);
-      }
-    });
-
     const multerInstance = multer({
-      storage,
+      storage: multer.memoryStorage(),
+      fileFilter,
       limits: { fileSize: Math.max(1, maxMb) * 1024 * 1024 }
     });
 
@@ -78,16 +67,49 @@ const createUpload = (destDir: string, prefix: string, fieldName: string, isArra
       
       if (files && files.length > 0) {
         for (const file of files) {
+            const enriched = file as Express.Multer.File & {
+              storageUrl?: string;
+              relativePath?: string | null;
+              absolutePath?: string | null;
+            };
+
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const generatedName = `${prefix}-${uniqueSuffix}${path.extname(file.originalname)}`;
+            enriched.filename = generatedName;
+
+            let tempPath: string | null = null;
+            let stored: Awaited<ReturnType<typeof persistUploadedFile>> | null = null;
             try {
-              const scanResult = await scanFileWithClamAV(file.path);
+              tempPath = await writeTempFile(file.buffer, generatedName);
+              const scanResult = await scanFileWithClamAV(tempPath);
               if (!scanResult.clean) {
-                try { fs.unlinkSync(file.path); } catch { /* noop */ }
                 return redirectUploadError(req, res, `Upload blocked: malware detected in ${file.originalname}.`);
               }
+
+              if (mode === 'persist') {
+                const subdir = resolveSubdir ? sanitizeSubdir(resolveSubdir(req)) : '';
+                const relativeRoot = path.relative(path.join(__dirname, '../../public'), destDir).replace(/\\/g, '/');
+                const finalFolder = subdir ? `${relativeRoot}/${subdir}` : relativeRoot;
+                stored = await persistUploadedFile(file.buffer, generatedName, finalFolder, file.mimetype);
+                enriched.path = stored.absolutePath || stored.publicUrl;
+                enriched.storageUrl = stored.publicUrl;
+                enriched.relativePath = stored.relativePath;
+                enriched.absolutePath = stored.absolutePath;
+              } else {
+                enriched.path = tempPath;
+                enriched.storageUrl = undefined;
+                enriched.relativePath = null;
+                enriched.absolutePath = tempPath;
+              }
             } catch (scanErr: any) {
-              // Fail open or closed? Fail closed for security.
-              try { fs.unlinkSync(file.path); } catch { /* noop */ }
+              if (stored) {
+                await deleteStoredFile(stored);
+              }
               return redirectUploadError(req, res, scanErr?.message || 'Upload blocked: malware scan failed.');
+            } finally {
+              if (tempPath) {
+                await removeTempFile(tempPath);
+              }
             }
         }
       }
@@ -96,7 +118,7 @@ const createUpload = (destDir: string, prefix: string, fieldName: string, isArra
   };
 };
 
-export const uploadAvatar = createUpload(path.join(__dirname, '../../public/uploads/avatars'), 'avatar', 'avatar');
+export const uploadAvatar = createUpload(path.join(__dirname, '../../public/uploads/avatars'), 'avatar', 'avatar', false, undefined, 'memory');
 export const uploadMedia = createUpload(
   path.join(__dirname, '../../public/img'),
   'media',

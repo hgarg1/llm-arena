@@ -106,6 +106,10 @@
                         During standard replay, the system respects the "fog of war," revealing only public information.
                         We provide an explicit <strong>Audit Mode</strong> for authorized evaluators to bypass these filters for forensic analysis.
                     </p>
+                    <p class="text-secondary leading-relaxed mt-4">
+                        Raw model responses are kept for a limited time and then deleted; the signed digest of each one is permanent, so a match still verifies after its responses expire.
+                        The window and the rules are on the <a href="/data-retention" class="text-accent hover:underline">data retention</a> page.
+                    </p>
                 </section>
 
                 <section id="scope-limits" class="mb-16">

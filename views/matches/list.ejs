@@ -1,8 +1,8 @@
 <%- include('../partials/header_layout') %>
-    <div class="container py-8">
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <div class="container py-6 md:py-8">
+        <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center mb-6 md:mb-8 gap-4">
             <div>
-                <h1 class="text-3xl font-bold tracking-tight text-primary">Match History</h1>
+                <h1 class="text-2xl font-bold tracking-tight text-primary sm:text-3xl">Match History</h1>
                 <p class="text-secondary text-sm">Comprehensive log of all competitive evaluations.</p>
             </div>
             <a href="/matches/create" class="btn btn-primary shadow-sm flex items-center gap-2">
@@ -10,6 +10,12 @@
                 Create Match
             </a>
         </div>
+
+        <% if (!queueEnabled || query.queue === 'disabled') { %>
+            <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Match execution is temporarily paused in the hosted web deployment. Existing pages and historical replays remain available.
+            </div>
+        <% } %>
 
         <!-- Toolbar -->
         <div class="bg-surface p-4 rounded-lg border border-border shadow-sm mb-6">
@@ -43,7 +49,16 @@
                     </select>
                 </div>
 
-                <% if (query.search || query.gameType || query.status) { %>
+                <!-- Verification filter -->
+                <div class="w-full md:w-44">
+                    <select name="verification" class="input-field cursor-pointer" id="matchVerification" aria-label="Verification">
+                        <option value="">All matches</option>
+                        <option value="signed" <%= query.verification === 'signed' ? 'selected' : '' %>>Signed only</option>
+                        <option value="unverified" <%= query.verification === 'unverified' ? 'selected' : '' %>>Unverified only</option>
+                    </select>
+                </div>
+
+                <% if (query.search || query.gameType || query.status || query.verification) { %>
                     <a href="/matches" class="btn btn-secondary flex items-center justify-center">Reset</a>
                 <% } %>
             </form>
@@ -51,13 +66,14 @@
 
         <!-- Table -->
         <div class="table-container shadow-sm mb-6">
-            <table class="table-base">
+            <table class="table-base responsive-table">
                 <thead class="table-head">
                     <tr>
                         <th class="table-th">ID</th>
                         <th class="table-th">Game</th>
                         <th class="table-th">Participants</th>
                         <th class="table-th">Status</th>
+                        <th class="table-th">Verification</th>
                         <th class="table-th">Date</th>
                         <th class="table-th text-right">Action</th>
                     </tr>
@@ -65,16 +81,16 @@
                 <tbody class="table-body">
                     <% matches.forEach(match => { %>
                         <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="table-td font-mono text-xs text-secondary">
+                            <td class="table-td rt-title font-mono text-xs text-secondary">
                                 <a href="/matches/<%= match.id %>" class="hover:text-accent hover:underline" title="<%= match.id %>">
                                     <%= match.id.substring(0, 8) %>
                                 </a>
                             </td>
-                            <td class="table-td">
+                            <td class="table-td" data-label="Game">
                                 <span class="capitalize"><%= match.game_type.replace(/_/g, ' ') %></span>
                             </td>
-                            <td class="table-td">
-                                <div class="flex flex-col gap-1">
+                            <td class="table-td" data-label="Players">
+                                <div class="flex flex-col gap-1 text-left">
                                     <% match.participants.forEach(p => { %>
                                         <div class="flex items-center gap-2">
                                             <span class="w-2 h-2 rounded-full <%= p.role === 'white' || p.role === 'seat1' ? 'bg-slate-400' : 'bg-slate-800' %>"></span>
@@ -83,7 +99,7 @@
                                     <% }) %>
                                 </div>
                             </td>
-                            <td class="table-td">
+                            <td class="table-td" data-label="Status">
                                 <span class="badge 
                                     <%= match.status === 'COMPLETED' ? 'badge-success' : 
                                        match.status === 'RUNNING' ? 'badge-primary animate-pulse' : 
@@ -92,10 +108,13 @@
                                     <%= match.status %>
                                 </span>
                             </td>
-                            <td class="table-td text-secondary text-xs">
+                            <td class="table-td" data-label="Verification">
+                                <%- include('../partials/verification_badge', { state: match.manifest ? 'signed' : (['COMPLETED', 'FAILED', 'CANCELLED'].includes(match.status) ? 'unverified' : 'in-progress') }) %>
+                            </td>
+                            <td class="table-td text-secondary text-xs" data-label="Date">
                                 <%= new Date(match.created_at).toLocaleDateString() %>
                             </td>
-                            <td class="table-td text-right">
+                            <td class="table-td text-right rt-actions">
                                 <a href="/matches/<%= match.id %>" class="btn btn-sm btn-ghost text-accent">
                                     Replay
                                 </a>
@@ -116,7 +135,7 @@
         <% if (pagination.totalPages > 1) { %>
             <div class="flex justify-center gap-2">
                 <% if (pagination.page > 1) { %>
-                    <a href="?page=<%= pagination.page - 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>" class="btn btn-sm btn-secondary">&larr; Prev</a>
+                    <a href="?page=<%= pagination.page - 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>&verification=<%= query.verification || '' %>" class="btn btn-sm btn-secondary">&larr; Prev</a>
                 <% } %>
                 
                 <span class="px-4 py-1.5 text-sm text-secondary bg-white rounded border border-border flex items-center">
@@ -124,7 +143,7 @@
                 </span>
 
                 <% if (pagination.page < pagination.totalPages) { %>
-                    <a href="?page=<%= pagination.page + 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>" class="btn btn-sm btn-secondary">Next &rarr;</a>
+                    <a href="?page=<%= pagination.page + 1 %>&q=<%= query.search %>&game=<%= query.gameType %>&status=<%= query.status %>&verification=<%= query.verification || '' %>" class="btn btn-sm btn-secondary">Next &rarr;</a>
                 <% } %>
             </div>
         <% } %>
@@ -135,6 +154,7 @@
             const search = document.getElementById('matchSearch');
             const game = document.getElementById('matchGame');
             const status = document.getElementById('matchStatus');
+            const verification = document.getElementById('matchVerification');
             let timer = null;
 
             const submitWithReset = () => {
@@ -151,6 +171,9 @@
             }
             if (game) {
                 game.addEventListener('change', submitWithReset);
+            }
+            if (verification) {
+                verification.addEventListener('change', submitWithReset);
             }
             if (status) {
                 status.addEventListener('change', submitWithReset);

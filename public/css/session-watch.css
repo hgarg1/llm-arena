@@ -1,0 +1,116 @@
+/*
+ * "Your session has ended" moment (public/js/session-watch.js).
+ *
+ *   ending -> a lock whose shackle pops open, with a ring spinning around it while the page updates
+ *   done   -> the ring completes into a check mark, with a way back in
+ *
+ * Transform/opacity only. Desktop: top centre, under the navigation dock. Phones: above the bottom tab bar.
+ */
+
+.sw-toast {
+  --sw-ink: #0f172a;
+  --sw-muted: #64748b;
+  --sw-line: #e5e7eb;
+  --sw-accent: #2563eb;
+  position: fixed; z-index: 90; left: 50%; top: 84px;
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; column-gap: 0.875rem;
+  width: min(30rem, calc(100vw - 1.5rem)); padding: 0.875rem 1rem; overflow: hidden;
+  background: #fff; color: var(--sw-ink); border: 1px solid var(--sw-line); border-radius: 1rem;
+  box-shadow: 0 24px 50px -18px rgba(15, 23, 42, 0.45), 0 2px 8px rgba(15, 23, 42, 0.08);
+  transform: translate(-50%, -14px) scale(0.97); opacity: 0;
+}
+.sw-toast[hidden], .sw-veil[hidden] { display: none; }
+.sw-toast.is-in { animation: sw-enter 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.sw-toast.is-out { animation: sw-leave 0.26s ease-in forwards; }
+
+@media (max-width: 1023.98px) {
+  .sw-toast {
+    top: auto; bottom: calc(76px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 16px) scale(0.97);
+  }
+}
+
+.sw-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.sw-title { font-size: 0.9375rem; font-weight: 650; letter-spacing: -0.005em; }
+.sw-sub { font-size: 0.8125rem; color: var(--sw-muted); }
+
+/* ---------- icon: lock + ring + check ---------- */
+.sw-icon { position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: var(--sw-ink); }
+.sw-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.sw-ring circle { fill: none; stroke-width: 2.5; }
+.sw-ring-track { stroke: #e2e8f0; }
+.sw-ring-arc { stroke: var(--sw-accent); stroke-linecap: round; stroke-dasharray: 40 132; transform-origin: 24px 24px; }
+.sw-lock, .sw-check { position: absolute; width: 22px; height: 22px; }
+.sw-check { opacity: 0; color: var(--sw-accent); stroke-dasharray: 24; stroke-dashoffset: 24; }
+.sw-shackle { transform-box: fill-box; transform-origin: 100% 100%; }
+
+.sw-toast[data-state="ending"] .sw-ring-arc { animation: sw-spin 1.05s linear infinite; }
+.sw-toast[data-state="ending"] .sw-shackle { animation: sw-unlock 0.7s 0.15s cubic-bezier(0.3, 1.5, 0.5, 1) forwards; }
+
+.sw-toast[data-state="done"] .sw-ring-arc { stroke-dasharray: 132 132; stroke-dashoffset: 0; animation: sw-complete 0.55s ease-out; }
+.sw-toast[data-state="done"] .sw-lock { opacity: 0; transform: scale(0.8); transition: opacity 0.2s ease, transform 0.2s ease; }
+.sw-toast[data-state="done"] .sw-check { opacity: 1; animation: sw-draw 0.5s 0.2s ease-out forwards; }
+
+/* ---------- actions ---------- */
+.sw-action {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 1rem; border-radius: 0.625rem; white-space: nowrap;
+  background: var(--sw-ink); color: #fff; font-size: 0.875rem; font-weight: 600; text-decoration: none;
+}
+.sw-action[hidden], .sw-close[hidden] { display: none; }
+.sw-close {
+  display: inline-grid; place-items: center; width: 40px; height: 40px; margin-left: 0.125rem; border: 0; border-radius: 0.625rem;
+  background: transparent; color: var(--sw-muted); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.sw-close svg { width: 18px; height: 18px; }
+.sw-toast :focus-visible { outline: 2px solid var(--sw-accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .sw-action:hover { background: #1e293b; }
+  .sw-close:hover { background: #f1f5f9; color: var(--sw-ink); }
+}
+@media (max-width: 480px) {
+  .sw-toast { grid-template-columns: auto 1fr auto; row-gap: 0.625rem; }
+  .sw-action { grid-column: 1 / -1; justify-content: center; order: 5; }
+  .sw-close { grid-column: 3; grid-row: 1; }
+}
+@media (any-pointer: coarse) {
+  .sw-action { min-height: 48px; }
+  .sw-close { width: 44px; height: 44px; }
+}
+
+/* ---------- progress bar (ending) ---------- */
+.sw-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: transparent; overflow: hidden; }
+.sw-toast[data-state="ending"] .sw-bar::before {
+  content: ""; position: absolute; inset: 0; width: 40%; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, var(--sw-accent), transparent); animation: sw-slide 1.2s ease-in-out infinite;
+}
+
+/* ---------- veil: shown only while redirecting to sign in, so the stale page does not look interactive ---------- */
+.sw-veil { position: fixed; inset: 0; z-index: 85; background: rgba(15, 23, 42, 0.38); opacity: 0; transition: opacity 0.3s ease; }
+.sw-veil.is-on { opacity: 1; }
+
+/* ---------- the page morphing into its signed-out version (View Transitions API, when available) ---------- */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.38s; animation-timing-function: ease; }
+
+@keyframes sw-enter { from { opacity: 0; transform: translate(-50%, -14px) scale(0.97); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes sw-leave { from { opacity: 1; transform: translate(-50%, 0) scale(1); } to { opacity: 0; transform: translate(-50%, -8px) scale(0.98); } }
+@media (max-width: 1023.98px) {
+  @keyframes sw-enter { from { opacity: 0; transform: translate(-50%, 16px) scale(0.97); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+  @keyframes sw-leave { from { opacity: 1; transform: translate(-50%, 0) scale(1); } to { opacity: 0; transform: translate(-50%, 10px) scale(0.98); } }
+}
+@keyframes sw-spin { to { transform: rotate(360deg); } }
+@keyframes sw-unlock { 0% { transform: translateY(0) rotate(0); } 55% { transform: translateY(-2.5px) rotate(-22deg); } 100% { transform: translateY(-1.5px) rotate(-14deg); } }
+@keyframes sw-complete { from { stroke-dasharray: 40 132; } to { stroke-dasharray: 132 132; } }
+@keyframes sw-draw { to { stroke-dashoffset: 0; } }
+@keyframes sw-slide { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+
+/* Reduced motion: same information, no movement. */
+@media (prefers-reduced-motion: reduce) {
+  .sw-toast, .sw-toast.is-in, .sw-toast.is-out { animation: none !important; opacity: 1; transform: translate(-50%, 0); }
+  .sw-toast.is-out { opacity: 0; }
+  .sw-toast .sw-ring-arc, .sw-toast .sw-shackle, .sw-toast .sw-check, .sw-toast .sw-bar::before { animation: none !important; }
+  .sw-toast[data-state="done"] .sw-check { stroke-dashoffset: 0; }
+  .sw-toast[data-state="ending"] .sw-bar::before { width: 100%; opacity: 0.5; }
+  .sw-veil { transition: none; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+@media print { .sw-toast, .sw-veil { display: none !important; } }

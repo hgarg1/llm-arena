@@ -36,6 +36,7 @@ router.get('/matches', matchController.list);
 router.get('/matches/create', isAuthenticated, matchController.createPage);
 router.post('/matches', isAuthenticated, matchCreateRateLimit, matchController.create);
 
+router.get('/og/matches/:id.png', matchController.ogImage);
 router.get('/matches/:id', matchController.detail);
 router.get('/matches/:id/events', matchController.events); // API for Replay
 
@@ -45,6 +46,7 @@ router.get('/access/requested', isAuthenticated, accessController.requestConfirm
 
 // Models
 router.get('/api/models', apiKeyAuthOptional, requireApiScope('models.read'), apiKeyUsageTracker, modelController.apiList);
+router.get('/og/models/:id.png', modelController.ogImage);
 router.get('/models', modelController.list);
 router.get('/models/:id', modelController.detail);
 

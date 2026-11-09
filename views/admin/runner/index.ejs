@@ -1,0 +1,84 @@
+<%- include('../../partials/admin_header') %>
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Runner Health</h1>
+        <p class="mt-1 text-sm text-gray-500">How matches are being executed right now. Runner mode: <span class="font-mono"><%= stats.mode %></span>.</p>
+    </div>
+
+    <% if (stats.mode === 'none') { %>
+        <div class="mb-6 rounded-md bg-amber-50 p-4 border border-amber-200 text-amber-800 text-sm" role="alert">No match runner is configured, so new matches will stay pending. Set <span class="font-mono">MATCH_RUNNER=vercel</span> (or enable the Redis queue).</div>
+    <% } %>
+    <% if (stats.runningOrphaned > 0) { %>
+        <div class="mb-6 rounded-md bg-amber-50 p-4 border border-amber-200 text-amber-800 text-sm" role="alert"><%= stats.runningOrphaned %> running match(es) have no live runner. The per-minute sweep resumes them; if this number stays above zero for several minutes, check the cron job and function logs.</div>
+    <% } %>
+
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
+            <dt class="text-xs uppercase tracking-wider text-gray-500">Running</dt>
+            <dd class="mt-1 text-2xl font-semibold text-gray-900"><%= stats.runningLeased %> <span class="text-sm font-normal text-gray-500">of <%= stats.cap %></span></dd>
+            <dd class="text-xs text-gray-500">live runners vs. concurrency cap</dd>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
+            <dt class="text-xs uppercase tracking-wider text-gray-500">Waiting</dt>
+            <dd class="mt-1 text-2xl font-semibold <%= stats.pending > 0 && stats.runningLeased >= stats.cap ? 'text-amber-600' : 'text-gray-900' %>"><%= stats.pending %></dd>
+            <dd class="text-xs text-gray-500"><%= stats.oldestPendingMinutes === null ? 'queue is empty' : 'oldest has waited ' + stats.oldestPendingMinutes + ' min' %></dd>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
+            <dt class="text-xs uppercase tracking-wider text-gray-500">Finished (24 h)</dt>
+            <dd class="mt-1 text-2xl font-semibold text-gray-900"><%= stats.completed24h %></dd>
+            <dd class="text-xs text-gray-500"><%= stats.failed24h %> failed, <%= stats.cancelled24h %> cancelled</dd>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
+            <dt class="text-xs uppercase tracking-wider text-gray-500">Throttled (24 h)</dt>
+            <dd class="mt-1 text-2xl font-semibold <%= stats.throttleWaits24h > 0 ? 'text-amber-600' : 'text-gray-900' %>"><%= stats.throttleWaits24h %></dd>
+            <dd class="text-xs text-gray-500">waits for provider rate limits</dd>
+        </div>
+    </dl>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4 text-sm">
+            <div class="text-xs uppercase tracking-wider text-gray-500 mb-2">Budgets (24 h)</div>
+            <p class="text-gray-700"><%= stats.budgetFailures24h %> match(es) were stopped for exceeding their time or token budget.</p>
+            <p class="text-gray-500 text-xs mt-1">Average slices per completed match: <%= stats.avgSlicesCompleted24h === null ? 'n/a' : stats.avgSlicesCompleted24h %></p>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4 text-sm">
+            <div class="text-xs uppercase tracking-wider text-gray-500 mb-2">Longest running</div>
+            <% if (stats.longestRunning.length === 0) { %><p class="text-gray-500">Nothing is running.</p><% } else { %>
+            <ul class="divide-y divide-gray-100">
+                <% stats.longestRunning.forEach(m => { %>
+                <li class="py-1 flex justify-between gap-3"><a class="text-blue-600 hover:underline font-mono" href="/matches/<%= m.id %>"><%= m.id.substring(0, 8) %></a><span class="text-gray-600"><%= m.game_type %> &middot; <%= m.minutes %> min &middot; <%= m.moves %> moves &middot; <%= m.slices %> slices</span></li>
+                <% }) %>
+            </ul>
+            <% } %>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500">Model providers, last hour</div>
+        <table class="responsive-table min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50"><tr>
+                <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Provider</th>
+                <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Calls</th>
+                <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">p50</th>
+                <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">p95</th>
+                <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Input tokens</th>
+                <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Output tokens</th>
+                <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Limit</th>
+            </tr></thead>
+            <tbody class="divide-y divide-gray-100">
+                <% stats.providers.forEach(p => { %>
+                <tr>
+                    <td class="rt-title px-4 py-2 font-medium text-gray-900"><%= p.provider %></td>
+                    <td class="px-4 py-2 text-right tabular-nums" data-label="Calls"><%= p.calls.toLocaleString('en-US') %></td>
+                    <td class="px-4 py-2 text-right tabular-nums" data-label="p50"><%= (p.p50Ms / 1000).toFixed(1) %> s</td>
+                    <td class="px-4 py-2 text-right tabular-nums" data-label="p95"><%= (p.p95Ms / 1000).toFixed(1) %> s</td>
+                    <td class="px-4 py-2 text-right tabular-nums" data-label="Input tokens"><%= p.inputTokens.toLocaleString('en-US') %></td>
+                    <td class="px-4 py-2 text-right tabular-nums" data-label="Output tokens"><%= p.outputTokens.toLocaleString('en-US') %></td>
+                    <td class="px-4 py-2 text-gray-600" data-label="Limit"><%= (p.rpm || p.tpm) ? ((p.rpm ? p.rpm + ' req/min' : '') + (p.rpm && p.tpm ? ', ' : '') + (p.tpm ? p.tpm.toLocaleString('en-US') + ' tok/min' : '')) : 'unlimited' %></td>
+                </tr>
+                <% }) %>
+                <% if (stats.providers.length === 0) { %><tr><td colspan="7" class="rt-title px-4 py-6 text-center text-gray-500">No model calls in the last hour.</td></tr><% } %>
+            </tbody>
+        </table>
+    </div>
+    <p class="mt-3 text-xs text-gray-500">Limits come from <span class="font-mono">PROVIDER_RPM_&lt;NAME&gt;</span> and <span class="font-mono">PROVIDER_TPM_&lt;NAME&gt;</span>. Token counts are estimates (about 3.5 characters per token).</p>
+<%- include('../../partials/admin_footer') %>

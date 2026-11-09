@@ -176,8 +176,11 @@ export const updateProfile = async (req: Request, res: Response) => {
     };
 
     if (req.file) {
-        // Store relative path for public access
-        data.avatar_url = '/uploads/avatars/' + req.file.filename;
+        data.avatar_data = req.file.buffer;
+        data.avatar_content_type = req.file.mimetype || 'application/octet-stream';
+        data.avatar_file_name = req.file.originalname || req.file.filename || 'avatar';
+        data.avatar_updated_at = new Date();
+        data.avatar_url = `/users/${userId}/avatar?v=${Date.now()}`;
     }
 
     try {

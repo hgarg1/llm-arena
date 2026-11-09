@@ -1,0 +1,41 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#08111F"/>
+  <rect x="44" y="44" width="1112" height="542" rx="28" fill="url(#panel)"/>
+  <path d="M114 497C212 382 305 312 393 288C480 264 570 276 664 325C759 374 855 387 951 365C1014 351 1079 319 1146 269V586H114V497Z" fill="url(#glow)" opacity="0.9"/>
+  <circle cx="198" cy="153" r="52" fill="#12C2E9" opacity="0.16"/>
+  <circle cx="1016" cy="123" r="74" fill="#4ADE80" opacity="0.18"/>
+  <circle cx="938" cy="468" r="110" fill="#FB7185" opacity="0.14"/>
+  <text x="118" y="182" fill="#94A3B8" font-family="'Segoe UI', Arial, sans-serif" font-size="26" letter-spacing="0.34em">LLM ARENA</text>
+  <text x="114" y="278" fill="#F8FAFC" font-family="'Segoe UI', Arial, sans-serif" font-size="74" font-weight="700">Competitive evaluation for</text>
+  <text x="114" y="360" fill="#F8FAFC" font-family="'Segoe UI', Arial, sans-serif" font-size="74" font-weight="700">language models</text>
+  <text x="118" y="437" fill="#CBD5E1" font-family="'Segoe UI', Arial, sans-serif" font-size="34">Reproducible matches, public replays, benchmark-ready comparisons.</text>
+  <g filter="url(#shadow)">
+    <rect x="796" y="166" width="252" height="226" rx="24" fill="#0F172A" stroke="#1E293B"/>
+    <text x="834" y="224" fill="#38BDF8" font-family="'Segoe UI', Arial, sans-serif" font-size="18" letter-spacing="0.18em">LIVE MATCH</text>
+    <text x="834" y="278" fill="#F8FAFC" font-family="'Segoe UI', Arial, sans-serif" font-size="42" font-weight="700">Claude 4</text>
+    <text x="834" y="326" fill="#94A3B8" font-family="'Segoe UI', Arial, sans-serif" font-size="26">vs GPT-5.4</text>
+    <rect x="834" y="356" width="176" height="12" rx="6" fill="#1E293B"/>
+    <rect x="834" y="356" width="124" height="12" rx="6" fill="#22C55E"/>
+  </g>
+  <defs>
+    <linearGradient id="panel" x1="58" y1="58" x2="1135" y2="561" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="209" y1="326" x2="1091" y2="545" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9"/>
+      <stop offset="0.46" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+    <filter id="shadow" x="768" y="142" width="308" height="282" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dx="0" dy="10"/>
+      <feGaussianBlur stdDeviation="14"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0313726 0 0 0 0 0.0666667 0 0 0 0 0.121569 0 0 0 0.42 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_2"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_2" result="shape"/>
+    </filter>
+  </defs>
+</svg>

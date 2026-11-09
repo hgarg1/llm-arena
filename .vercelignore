@@ -1,0 +1,24 @@
+# Keep non-runtime and sensitive files out of CLI deployments. Patterns are anchored to the repo root so
+# nothing under src/, views/ or public/ can be dropped by accident.
+/.git
+/.env
+/.env.*
+/.playwright-cli
+/node_modules
+/coverage
+
+# Confidential business documents and local screenshots
+/*.docx
+/*.pdf
+/*.png
+
+# Tests and docs are not needed at runtime
+/tests
+/docs
+/jest.config.js
+/tsconfig.test.json
+/.eslintrc.cjs
+/scripts/test-with-pglite.mjs
+/scripts/pglite-replay.mjs
+/scripts/hash-engines.mjs
+/scripts/generate-integrity-key.mjs

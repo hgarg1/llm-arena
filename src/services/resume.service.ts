@@ -1,5 +1,4 @@
 import fs from 'fs/promises';
-import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 
 export const extractResumeText = async (filePath: string, mimeType?: string) => {
@@ -7,9 +6,27 @@ export const extractResumeText = async (filePath: string, mimeType?: string) => 
   const lower = (mimeType || '').toLowerCase();
 
   if (lower.includes('pdf') || filePath.toLowerCase().endsWith('.pdf')) {
-    const parsePdf = pdfParse as unknown as (data: Buffer) => Promise<{ text?: string }>;
-    const parsed = await parsePdf(buffer);
-    return parsed.text || '';
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const loadingTask = pdfjs.getDocument({
+      data: new Uint8Array(buffer),
+      disableFontFace: true,
+      isEvalSupported: false,
+      useWorkerFetch: false
+    });
+    const pdf = await loadingTask.promise;
+    const pages: string[] = [];
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const text = content.items
+        .map((item: any) => ('str' in item ? item.str : ''))
+        .filter(Boolean)
+        .join(' ');
+      pages.push(text);
+    }
+
+    return pages.join('\n').trim();
   }
 
   if (lower.includes('word') || filePath.toLowerCase().endsWith('.docx')) {

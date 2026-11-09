@@ -135,7 +135,7 @@
             </div>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="responsive-table min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Channel</th>
@@ -148,7 +148,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     <% channels.forEach(channel => { %>
                         <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-6 py-4">
+                            <td class="rt-title px-6 py-4">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
                                         <span class="font-bold text-lg">#</span>
@@ -159,7 +159,7 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4" data-label="Access Control">
                                 <div class="flex flex-col gap-1">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= channel.type === 'PUBLIC' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' %>">
                                         <%= channel.type %>
@@ -178,11 +178,11 @@
                                     <% } %>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-4 whitespace-nowrap" data-label="Activity">
                                 <div class="text-sm text-gray-900 font-bold"><%= channel._count.messages %> <span class="font-normal text-gray-500">msgs</span></div>
                                 <div class="text-xs text-gray-500"><%= channel._count.participants %> participants</div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-label="Owner">
                                 <div class="flex items-center gap-2">
                                     <% if (channel.creator) { %>
                                         <img class="h-6 w-6 rounded-full" src="<%= channel.creator.avatar_url || `https://ui-avatars.com/api/?name=${channel.creator.email}&background=random` %>">
@@ -192,7 +192,7 @@
                                     <% } %>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <td class="rt-actions px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex items-center justify-end gap-2">
                                     <a href="/admin/chat/channels/<%= channel.id %>/config" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 p-2 rounded transition-colors" title="Configure">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>

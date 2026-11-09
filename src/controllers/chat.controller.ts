@@ -2,17 +2,24 @@ import { Request, Response, NextFunction } from 'express';
 import { chatService } from '../services/chat.service';
 import { ChatChannelType } from '@prisma/client';
 import { Server } from 'socket.io';
+import { settingsService } from '../services/settings.service';
 
 export const index = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = res.locals.user.id;
-        const channels = await chatService.getChannelsForUser(userId);
+        const [channels, settings] = await Promise.all([
+            chatService.getChannelsForUser(userId),
+            settingsService.getAll()
+        ]);
         
         // If no channels, or to support the UI, pass them down
         res.render('chat/index', {
             title: 'Team Chat',
             channels,
-            activeChannel: null
+            activeChannel: null,
+            chatMaintenanceMode: settings.chat_maintenance_mode === 'true',
+            error: req.query.error,
+            success: req.query.success
         });
     } catch (error) {
         next(error);
@@ -24,7 +31,10 @@ export const getChannel = async (req: Request, res: Response, next: NextFunction
         const userId = res.locals.user.id;
         const { id } = req.params;
         
-        const channels = await chatService.getChannelsForUser(userId);
+        const [channels, settings] = await Promise.all([
+            chatService.getChannelsForUser(userId),
+            settingsService.getAll()
+        ]);
         const activeChannel = channels.find(c => c.id === id);
 
         if (!activeChannel) {
@@ -39,7 +49,10 @@ export const getChannel = async (req: Request, res: Response, next: NextFunction
             title: `#${activeChannel.name}`,
             channels,
             activeChannel,
-            messages: messages.reverse() // Oldest first for chat UI
+            messages: messages.reverse(), // Oldest first for chat UI
+            chatMaintenanceMode: settings.chat_maintenance_mode === 'true',
+            error: req.query.error,
+            success: req.query.success
         });
     } catch (error) {
         next(error);
@@ -76,7 +89,10 @@ export const joinChannel = async (req: Request, res: Response, next: NextFunctio
         await chatService.joinChannel(userId, id);
         res.redirect(`/chat/channels/${id}`);
     } catch (error) {
-        next(error);
+        if (req.xhr || req.headers.accept?.includes('json')) {
+            return res.status(400).json({ success: false, message: (error as any)?.message || 'Failed to send message' });
+        }
+        res.redirect(`/chat/channels/${req.params.id}?error=${encodeURIComponent((error as any)?.message || 'Failed to send message')}`);
     }
 };
 
@@ -87,7 +103,7 @@ export const postMessage = async (req: Request, res: Response, next: NextFunctio
         const { content } = req.body;
         const files = req.files as Express.Multer.File[];
 
-        const attachments: { filename: string, path: string, mimetype: string, size: number }[] = [];
+        const attachments: { filename: string, path: string, url?: string, mimetype: string, size: number }[] = [];
         let type: any = 'TEXT';
         
         if (files && files.length > 0) {
@@ -95,6 +111,7 @@ export const postMessage = async (req: Request, res: Response, next: NextFunctio
                 attachments.push({
                     filename: file.originalname,
                     path: file.path,
+                    url: (file as any).storageUrl,
                     mimetype: file.mimetype,
                     size: file.size
                 });

@@ -1,118 +1,248 @@
-<nav class="sticky top-0 z-50 w-full border-b border-border bg-surface/80 backdrop-blur supports-[backdrop-filter]:bg-surface/60" x-data="{ open: false }">
-    <% if (typeof settings !== 'undefined' && settings['global_alert']) { %>
-        <div class="bg-indigo-600 text-white text-center text-xs font-bold py-2 px-4">
-            <%= settings['global_alert'] %>
-        </div>
-    <% } %>
-    <div class="container flex h-14 items-center">
-        <div class="mr-4 hidden md:flex">
-            <a href="/" class="mr-6 flex items-center space-x-2">
-                <span class="hidden font-bold sm:inline-block text-primary">LLM Arena</span>
-            </a>
-            <nav class="flex items-center space-x-6 text-sm font-medium">
-                <a href="/how-it-works" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/how-it-works') ? 'text-accent' : '' %>">How It Works</a>
-                <a href="/benchmarks" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/benchmarks') ? 'text-accent' : '' %>">Benchmarks</a>
-                <a href="/methodology" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/methodology') ? 'text-accent' : '' %>">Methodology</a>
-                <a href="/use-cases" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/use-cases') ? 'text-accent' : '' %>">Use Cases</a>
-                <a href="/about" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/about') ? 'text-accent' : '' %>">About</a>
-                <a href="/docs" class="transition-colors hover:text-foreground/80 text-secondary <%= (typeof path !== 'undefined' && path === '/docs') ? 'text-accent' : '' %>">Docs</a>
-                <% if (user && typeof can === 'function' && can('admin.access')) { %>
-                    <a href="/admin" class="text-purple-600 font-bold hover:text-purple-800 flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                        Admin
-                    </a>
-                <% } %>
-            </nav>
-        </div>
-        <div class="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-            <div class="flex items-center md:hidden">
-                <a href="/" class="flex items-center space-x-2">
-                    <span class="font-bold text-primary">LLM Arena</span>
+<%
+    const currentPath = typeof path !== 'undefined' ? path : '';
+    const isActivePath = (href) => {
+        if (href === '/') return currentPath === '/';
+        return currentPath === href || currentPath.startsWith(`${href}/`);
+    };
+    const navItems = [
+        { href: '/how-it-works', label: 'How It Works' },
+        { href: '/benchmarks', label: 'Benchmarks' },
+        { href: '/methodology', label: 'Methodology' },
+        { href: '/use-cases', label: 'Use Cases' },
+        { href: '/about', label: 'About' },
+        { href: '/docs', label: 'Docs' }
+    ];
+    const unread = typeof unreadChatCount !== 'undefined' && unreadChatCount > 0 ? unreadChatCount : 0;
+    const isAdmin = Boolean(user && typeof can === 'function' && can('admin.access'));
+    const chatActive = isActivePath('/chat');
+
+    // Outline icons (24x24, 1.5 stroke).
+    const ICONS = {
+        home: 'M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25',
+        matches: 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z',
+        benchmarks: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+        chat: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z',
+        docs: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25',
+        menu: 'M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5',
+        close: 'M6 18L18 6M6 6l12 12',
+        user: 'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z',
+        chevron: 'M19.5 8.25l-7.5 7.5-7.5-7.5',
+        shield: 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z',
+        logout: 'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75',
+        arrow: 'M8.25 4.5l7.5 7.5-7.5 7.5'
+    };
+    const icon = (name, cls) => `<svg class="${cls || 'h-5 w-5'}" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true" focusable="false"><path stroke-linecap="round" stroke-linejoin="round" d="${ICONS[name]}"/></svg>`;
+
+    // Thumb-reach tabs (phones): the four destinations people use most, then the menu sheet for everything else.
+    const tabs = [
+        { href: '/', label: 'Home', icon: 'home' },
+        { href: '/matches', label: 'Matches', icon: 'matches' },
+        { href: '/benchmarks', label: 'Benchmarks', icon: 'benchmarks' },
+        user ? { href: '/chat', label: 'Chat', icon: 'chat', badge: unread } : { href: '/docs', label: 'Docs', icon: 'docs' }
+    ];
+%>
+<script src="/js/nav-state.js"></script>
+<% if (user) { %>
+<%# Pages rendered for a signed-in visitor watch for the login ending (see public/js/session-watch.js). %>
+<script src="/js/session-watch.js" defer data-signed-in="true" data-endpoint="/auth/session" data-login="/auth/login"></script>
+<% } %>
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('siteNav', () => ({
+            condensed: false,      // scrolled away from the top: morph into the dock (desktop) or the tab bar (phone)
+            hidden: false,         // phone: the slim top bar slides away while scrolling down
+            desktop: true,
+            sheet: false,          // phone menu sheet
+            account: false,        // account dropdown in the top bar
+            dockAccount: false,    // account dropdown in the dock (separate state: see nav_account.ejs)
+            lastY: 0,
+            returnFocus: null,
+            init() {
+                const query = window.matchMedia('(min-width: 1024px)');
+                const sync = () => { this.desktop = query.matches; if (this.desktop) this.closeSheet(false); this.measure(); };
+                query.addEventListener('change', sync);
+                let queued = false;
+                window.addEventListener('scroll', () => {
+                    if (queued) return;
+                    queued = true;
+                    window.requestAnimationFrame(() => { queued = false; this.measure(); });
+                }, { passive: true });
+                sync();
+            },
+            measure() {
+                const y = Math.max(0, window.scrollY || 0);
+                const wasCondensed = this.condensed;
+                this.condensed = NavState.nextCondensed(this.condensed, y);
+                this.hidden = !this.desktop && !this.sheet ? NavState.nextHidden(this.hidden, y, this.lastY) : false;
+                if (wasCondensed !== this.condensed) { this.account = false; this.dockAccount = false; }
+                this.lastY = y;
+            },
+            openSheet() {
+                this.returnFocus = document.activeElement;
+                this.sheet = true;
+                this.account = false;
+                this.dockAccount = false;
+                this.hidden = false;
+                document.documentElement.classList.add('site-nav-locked');
+                this.$nextTick(() => this.$refs.sheet && this.$refs.sheet.focus());
+            },
+            closeSheet(restoreFocus = true) {
+                if (!this.sheet) return;
+                this.sheet = false;
+                document.documentElement.classList.remove('site-nav-locked');
+                if (restoreFocus && this.returnFocus && this.returnFocus.focus) this.returnFocus.focus();
+            },
+            trapFocus(event) {
+                const nodes = [...this.$refs.sheet.querySelectorAll('a[href], button:not([disabled])')].filter(n => n.offsetParent !== null);
+                if (!nodes.length) return;
+                const first = nodes[0], last = nodes[nodes.length - 1];
+                if (event.shiftKey && (document.activeElement === first || document.activeElement === this.$refs.sheet)) { event.preventDefault(); last.focus(); }
+                else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+            }
+        }));
+    });
+</script>
+
+<% if (typeof settings !== 'undefined' && settings['global_alert']) { %>
+    <div class="bg-primary px-4 py-2 text-center text-xs font-medium tracking-wide text-white" role="status"><%= settings['global_alert'] %></div>
+<% } %>
+
+<a href="#main-content" class="site-nav__skip">Skip to content</a>
+
+<header
+    class="site-nav"
+    x-data="siteNav()"
+    data-condensed="false"
+    data-hidden="false"
+    :data-condensed="condensed ? 'true' : 'false'"
+    :data-hidden="hidden ? 'true' : 'false'"
+    @keydown.escape.window="closeSheet()"
+>
+    <!-- Top bar: full navigation at the top of the page; slim on phones -->
+    <div class="site-nav__bar" :inert="condensed && desktop">
+        <div class="container mx-auto flex h-full items-center justify-between gap-4 px-4">
+            <div class="flex min-w-0 items-center gap-8">
+                <a href="/" class="site-nav__brand" aria-label="LLM Arena home">
+                    <img src="/img/icon.svg" alt="" class="h-7 w-7">
+                    <span>LLM Arena</span>
                 </a>
+                <nav class="hidden items-center gap-1 lg:flex" aria-label="Primary">
+                    <% navItems.forEach((item) => { const active = isActivePath(item.href); %>
+                        <a href="<%= item.href %>" class="site-nav__link inline-flex items-center <%= active ? 'is-active' : '' %>" <% if (active) { %>aria-current="page"<% } %>><%= item.label %></a>
+                    <% }) %>
+                </nav>
             </div>
-            <div class="w-full flex-1 md:w-auto md:flex-none">
-                <!-- Search could go here -->
-            </div>
-            <nav class="hidden md:flex items-center space-x-2">
-                <a href="/chat" class="p-2 text-secondary hover:text-foreground transition-colors relative group/chat" title="Chat">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                    <% if (typeof unreadChatCount !== "undefined" && unreadChatCount > 0) { %>
-                        <span class="absolute top-1 right-1 flex h-4 w-4 items-center justify-center">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-4 w-4 bg-indigo-600 text-[10px] text-white font-bold items-center justify-center">
-                                <%= unreadChatCount > 9 ? '9+' : unreadChatCount %>
-                            </span>
-                        </span>
-                    <% } %>
-                </a>
-                <a href="/matches" class="btn btn-sm btn-ghost">
-                    View Live Matches
-                </a>
-                
+
+            <div class="flex items-center gap-2">
+                <a href="/matches" class="site-nav__link hidden items-center md:inline-flex <%= isActivePath('/matches') ? 'is-active' : '' %>" <% if (isActivePath('/matches')) { %>aria-current="page"<% } %>>Live matches</a>
                 <% if (user) { %>
-                    <div class="flex items-center gap-2 border-l border-border pl-4 ml-2">
-                        <a href="/account" class="group flex items-center gap-2 transition-opacity hover:opacity-80">
-                            <% if (user.avatar_url) { %>
-                                <img src="<%= user.avatar_url %>" alt="Profile" class="w-8 h-8 rounded-full border border-border object-cover shadow-sm group-hover:ring-2 group-hover:ring-accent group-hover:ring-offset-1 transition-all">
-                            <% } else { %>
-                                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 border border-border">
-                                    <%= user.email.charAt(0).toUpperCase() %>
-                                </div>
-                            <% } %>
-                        </a>
-                        <form action="/auth/logout" method="POST" class="inline">
+                    <a href="/chat" class="site-nav__icon-btn relative hidden items-center justify-center md:inline-flex <%= chatActive ? 'is-active' : '' %>" aria-label="Chat<%= unread ? ` (${unread} unread)` : '' %>" <% if (chatActive) { %>aria-current="page"<% } %>>
+                        <%- icon('chat', 'h-5 w-5') %>
+                        <% if (unread) { %><span class="site-nav__badge" aria-hidden="true"><%= unread > 9 ? '9+' : unread %></span><% } %>
+                    </a>
+                    <div class="hidden md:block"><%- include('nav_account', { icon, variant: 'bar' }) %></div>
+                <% } else { %>
+                    <a href="/auth/login" class="site-nav__link hidden items-center md:inline-flex">Sign in</a>
+                    <a href="/auth/signup" class="btn btn-primary hidden md:inline-flex">Get started</a>
+                <% } %>
+                <button type="button" class="site-nav__icon-btn inline-flex items-center justify-center lg:hidden" aria-label="Open menu" aria-haspopup="dialog" :aria-expanded="sheet ? 'true' : 'false'" @click="openSheet()">
+                    <%- icon('menu', 'h-6 w-6') %>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dock: what the bar becomes on laptops and desktops once the page is scrolled (larger targets on touch screens) -->
+    <div class="site-nav__dock-wrap" :inert="!(condensed && desktop)">
+        <nav class="site-nav__dock" aria-label="Primary (compact)">
+            <a href="/" class="site-nav__dock-brand" aria-label="LLM Arena home"><img src="/img/icon.svg" alt="" class="h-7 w-7"></a>
+            <span class="site-nav__dock-sep" aria-hidden="true"></span>
+            <% navItems.forEach((item) => { const active = isActivePath(item.href); %>
+                <a href="<%= item.href %>" class="site-nav__dock-link <%= active ? 'is-active' : '' %>" <% if (active) { %>aria-current="page"<% } %>><%= item.label %></a>
+            <% }) %>
+            <span class="site-nav__dock-sep" aria-hidden="true"></span>
+            <% if (user) { %>
+                <a href="/chat" class="site-nav__dock-icon relative <%= chatActive ? 'is-active' : '' %>" aria-label="Chat<%= unread ? ` (${unread} unread)` : '' %>">
+                    <%- icon('chat', 'h-5 w-5') %>
+                    <% if (unread) { %><span class="site-nav__badge" aria-hidden="true"><%= unread > 9 ? '9+' : unread %></span><% } %>
+                </a>
+                <%- include('nav_account', { icon, variant: 'dock' }) %>
+            <% } else { %>
+                <a href="/auth/login" class="site-nav__dock-link">Sign in</a>
+                <a href="/auth/signup" class="site-nav__dock-cta">Get started</a>
+            <% } %>
+        </nav>
+    </div>
+
+    <!-- Tab bar: phones, once the page is scrolled -->
+    <nav class="site-nav__tabbar" aria-label="Quick navigation" :inert="!(condensed && !desktop)">
+        <ul class="site-nav__tabs">
+            <% tabs.forEach((tab) => { const active = isActivePath(tab.href); %>
+                <li>
+                    <a href="<%= tab.href %>" class="site-nav__tab <%= active ? 'is-active' : '' %>" <% if (active) { %>aria-current="page"<% } %>>
+                        <span class="relative"><%- icon(tab.icon, 'h-6 w-6') %><% if (tab.badge) { %><span class="site-nav__badge" aria-hidden="true"><%= tab.badge > 9 ? '9+' : tab.badge %></span><% } %></span>
+                        <span><%= tab.label %></span>
+                    </a>
+                </li>
+            <% }) %>
+            <li>
+                <button type="button" class="site-nav__tab" aria-haspopup="dialog" :aria-expanded="sheet ? 'true' : 'false'" @click="openSheet()">
+                    <%- icon('menu', 'h-6 w-6') %>
+                    <span>Menu</span>
+                </button>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Menu sheet (phones) -->
+    <div x-show="sheet" x-cloak class="site-nav__sheet-root" @keydown.tab="trapFocus($event)">
+        <div class="site-nav__backdrop" x-show="sheet" x-transition.opacity @click="closeSheet()"></div>
+        <div
+            class="site-nav__sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            tabindex="-1"
+            x-ref="sheet"
+            x-show="sheet"
+            x-transition:enter="site-nav__sheet-enter"
+            x-transition:enter-start="site-nav__sheet-from"
+            x-transition:enter-end="site-nav__sheet-to"
+            x-transition:leave="site-nav__sheet-enter"
+            x-transition:leave-start="site-nav__sheet-to"
+            x-transition:leave-end="site-nav__sheet-from"
+        >
+            <div class="site-nav__sheet-head">
+                <span class="site-nav__grab" aria-hidden="true"></span>
+                <button type="button" class="site-nav__icon-btn inline-flex items-center justify-center" aria-label="Close menu" @click="closeSheet()"><%- icon('close', 'h-6 w-6') %></button>
+            </div>
+            <nav aria-label="Menu" class="site-nav__sheet-body">
+                <ul class="grid gap-1">
+                    <% [{ href: '/matches', label: 'Live matches' }].concat(navItems).forEach((item) => { const active = isActivePath(item.href); %>
+                        <li>
+                            <a href="<%= item.href %>" class="site-nav__sheet-link <%= active ? 'is-active' : '' %>" <% if (active) { %>aria-current="page"<% } %>>
+                                <%= item.label %><%- icon('arrow', 'h-4 w-4 opacity-50') %>
+                            </a>
+                        </li>
+                    <% }) %>
+                </ul>
+                <div class="mt-4 border-t border-border pt-4">
+                    <% if (user) { %>
+                        <a href="/chat" class="site-nav__sheet-link">Chat<% if (unread) { %><span class="ml-auto rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white"><%= unread %></span><% } else { %><%- icon('arrow', 'h-4 w-4 opacity-50') %><% } %></a>
+                        <a href="/account" class="site-nav__sheet-link">Account<span class="ml-auto truncate pl-3 text-xs font-normal text-slate-500"><%= user.name || user.email %></span></a>
+                        <% if (isAdmin) { %><a href="/admin" class="site-nav__sheet-link">Admin console<%- icon('shield', 'h-5 w-5 opacity-60') %></a><% } %>
+                        <form action="/auth/logout" method="POST">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                            <button class="btn btn-sm btn-ghost text-xs text-secondary hover:text-red-600">Sign Out</button>
+                            <button class="site-nav__sheet-link w-full text-left text-red-600">Sign out<%- icon('logout', 'h-5 w-5 opacity-70') %></button>
                         </form>
-                    </div>
-                <% } else { %>
-                    <a href="/auth/login" class="btn btn-sm btn-primary">
-                        Sign In
-                    </a>
-                <% } %>
+                    <% } else { %>
+                        <div class="grid gap-2">
+                            <a href="/auth/signup" class="btn btn-primary !py-3.5 text-base">Create account</a>
+                            <a href="/auth/login" class="btn btn-secondary !py-3.5 text-base">Sign in</a>
+                        </div>
+                    <% } %>
+                </div>
             </nav>
-            <button type="button" class="md:hidden inline-flex items-center justify-center rounded-md border border-border px-3 py-2 text-xs font-semibold uppercase tracking-widest text-secondary hover:text-foreground" @click="open = !open" :aria-expanded="open.toString()">
-                <span x-text="open ? 'Close' : 'Menu'"></span>
-            </button>
         </div>
     </div>
-    <div x-show="open" x-cloak x-transition class="md:hidden border-t border-border bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-emerald-900/80 text-white">
-        <div class="container py-4 space-y-4">
-            <div class="grid gap-3 text-sm font-semibold">
-                <a href="/how-it-works" class="uppercase tracking-widest text-xs text-white/70 hover:text-white">How It Works</a>
-                <a href="/benchmarks" class="uppercase tracking-widest text-xs text-white/70 hover:text-white">Benchmarks</a>
-                <a href="/methodology" class="uppercase tracking-widest text-xs text-white/70 hover:text-white">Methodology</a>
-                <a href="/use-cases" class="uppercase tracking-widest text-xs text-white/70 hover:text-white">Use Cases</a>
-                <a href="/about" class="uppercase tracking-widest text-xs text-white/70 hover:text-white">About</a>
-                <a href="/docs" class="uppercase tracking-widest text-xs text-white/70 hover:text-white">Docs</a>
-                <a href="/chat" class="uppercase tracking-widest text-xs text-white/70 hover:text-white">Chat</a>
-                <% if (user && typeof can === 'function' && can('admin.access')) { %>
-                    <a href="/admin" class="uppercase tracking-widest text-xs text-emerald-200 hover:text-white">Admin</a>
-                <% } %>
-            </div>
-            <div class="flex flex-col gap-3">
-                <a href="/matches" class="btn btn-sm btn-ghost bg-white/10 text-white border border-white/20">
-                    View Live Matches
-                </a>
-                <% if (user) { %>
-                    <a href="/account" class="flex items-center gap-3 rounded-md bg-white/10 px-3 py-2">
-                        <% if (user.avatar_url) { %>
-                            <img src="<%= user.avatar_url %>" alt="Profile" class="w-8 h-8 rounded-full border border-white/20 object-cover">
-                        <% } else { %>
-                            <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white/80 border border-white/20">
-                                <%= user.email.charAt(0).toUpperCase() %>
-                            </div>
-                        <% } %>
-                        <span class="text-xs text-white/80">Account</span>
-                    </a>
-                    <form action="/auth/logout" method="POST" class="inline">
-                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button class="btn btn-sm btn-ghost w-full bg-white/10 text-white border border-white/20">Sign Out</button>
-                    </form>
-                <% } else { %>
-                    <a href="/auth/login" class="btn btn-sm btn-primary w-full">Sign In</a>
-                <% } %>
-            </div>
-        </div>
-    </div>
-</nav>
+</header>

@@ -1,6 +1,46 @@
-<meta name="description" content="<%= typeof description !== 'undefined' ? description : 'Standardized Competitive Evaluation for Language Models. Reproducible, Auditable, Comparable.' %>">
-<meta property="og:title" content="<%= title %> | LLM Arena">
-<meta property="og:description" content="<%= typeof description !== 'undefined' ? description : 'Standardized Competitive Evaluation for Language Models.' %>">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://llmarena.com<%= typeof path !== 'undefined' ? path : '' %>">
+<%
+const seoConfig = typeof seo !== 'undefined' && seo ? seo : {};
+const siteUrl = (typeof canonicalSiteUrl !== 'undefined' && canonicalSiteUrl) ? canonicalSiteUrl : 'https://llm-arena.harshit-garg.com';
+const pageTitle = seoConfig.title || (typeof title !== 'undefined' ? title : 'LLM Arena');
+const pageDescription = seoConfig.description || (typeof description !== 'undefined' ? description : 'Standardized competitive evaluation for language models with reproducible matches, auditable replays, and comparable benchmark workflows.');
+const canonicalPath = seoConfig.canonicalPath || (typeof requestOriginalUrl !== 'undefined' && requestOriginalUrl ? requestOriginalUrl : ((typeof path !== 'undefined' && path) ? path : '/'));
+const canonicalUrl = seoConfig.canonicalUrl || new URL(canonicalPath.startsWith('/') ? canonicalPath : `/${canonicalPath}`, siteUrl).toString();
+const autoNoindex =
+  (typeof path === 'string' && (path.startsWith('/auth') || path.startsWith('/account') || path.startsWith('/admin'))) ||
+  canonicalPath === '/matches/create' ||
+  /^\/careers\/[^/]+\/apply/.test(canonicalPath);
+const robotsContent = seoConfig.robots || (autoNoindex ? 'noindex,follow' : 'index,follow');
+const ogType = seoConfig.ogType || 'website';
+const ogImageBase = seoConfig.ogImage || `${siteUrl}/img/og-default.svg`;
+const twitterImageBase = seoConfig.twitterImage || ogImageBase;
+const version = (typeof ogImageVersion !== 'undefined' && ogImageVersion) ? ogImageVersion : '20260403-preview-fix';
+const ogImageUrl = new URL(ogImageBase, siteUrl);
+ogImageUrl.searchParams.set('v', version);
+const twitterImageUrl = new URL(twitterImageBase, siteUrl);
+twitterImageUrl.searchParams.set('v', version);
+const ogImageWidth = seoConfig.ogImageWidth || 1200;
+const ogImageHeight = seoConfig.ogImageHeight || 630;
+const ogImageType = seoConfig.ogImageType || 'image/png';
+const ogImageAlt = seoConfig.ogImageAlt || `${pageTitle} preview`;
+const structuredData = Array.isArray(seoConfig.structuredData) ? seoConfig.structuredData : [];
+%>
+<meta name="description" content="<%= pageDescription %>">
+<meta name="robots" content="<%= robotsContent %>">
+<link rel="canonical" href="<%= canonicalUrl %>">
+<meta property="og:title" content="<%= pageTitle %> | LLM Arena">
+<meta property="og:description" content="<%= pageDescription %>">
+<meta property="og:type" content="<%= ogType %>">
+<meta property="og:url" content="<%= canonicalUrl %>">
+<meta property="og:image" content="<%= ogImageUrl.toString() %>">
+<meta property="og:image:width" content="<%= ogImageWidth %>">
+<meta property="og:image:height" content="<%= ogImageHeight %>">
+<meta property="og:image:type" content="<%= ogImageType %>">
+<meta property="og:image:alt" content="<%= ogImageAlt %>">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<%= pageTitle %> | LLM Arena">
+<meta name="twitter:description" content="<%= pageDescription %>">
+<meta name="twitter:image" content="<%= twitterImageUrl.toString() %>">
+<meta name="twitter:image:alt" content="<%= ogImageAlt %>">
+<% structuredData.forEach(item => { %>
+<script type="application/ld+json"><%- JSON.stringify(item) %></script>
+<% }) %>

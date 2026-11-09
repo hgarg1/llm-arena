@@ -1,14 +1,14 @@
 <%- include('../../layouts/investor', { body: `
-    <div class="bg-slate-50 border-b border-slate-200 py-16">
-        <div class="container mx-auto px-6">
-            <h1 class="text-4xl md:text-5xl font-serif text-slate-900 mb-4">Committee Composition</h1>
+    <div class="bg-slate-50 border-b border-slate-200 py-10 md:py-16">
+        <div class="container mx-auto px-4 sm:px-6">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-serif text-slate-900 mb-4">Committee Composition</h1>
             <p class="text-slate-500 text-lg">Detailed breakdown of board committee assignments.</p>
         </div>
     </div>
 
-    <div class="container mx-auto px-6 py-16">
+    <div class="container mx-auto px-4 py-8 sm:px-6 md:py-16">
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+            <table class="responsive-table w-full text-left border-collapse">
                 <thead>
                     <tr class="border-b-2 border-slate-900 text-xs uppercase tracking-widest text-slate-500">
                         <th class="py-4 w-1/4">Director</th>
@@ -20,54 +20,54 @@
                 </thead>
                 <tbody class="text-sm text-slate-900 divide-y divide-slate-100">
                     <tr class="hover:bg-slate-50">
-                        <td class="py-4 font-bold font-serif text-lg">Dr. Elena Rostova</td>
-                        <td class="py-4 text-center"></td>
-                        <td class="py-4 text-center"></td>
-                        <td class="py-4 text-center">Member</td>
-                        <td class="py-4 text-center font-bold bg-slate-100">Chair</td>
+                        <td class="py-4 font-bold font-serif text-lg rt-title">Dr. Elena Rostova</td>
+                        <td data-label="Audit" class="py-4 text-center"></td>
+                        <td data-label="Compensation" class="py-4 text-center"></td>
+                        <td data-label="Nominating &amp; Gov" class="py-4 text-center">Member</td>
+                        <td data-label="AI Safety" class="py-4 text-center font-bold bg-slate-100">Chair</td>
                     </tr>
                     <tr class="hover:bg-slate-50">
-                        <td class="py-4 font-bold font-serif text-lg">Marcus Thorne</td>
-                        <td class="py-4 text-center font-bold bg-slate-100">Chair</td>
-                        <td class="py-4 text-center">Member</td>
-                        <td class="py-4 text-center"></td>
-                        <td class="py-4 text-center"></td>
+                        <td class="py-4 font-bold font-serif text-lg rt-title">Marcus Thorne</td>
+                        <td data-label="Audit" class="py-4 text-center font-bold bg-slate-100">Chair</td>
+                        <td data-label="Compensation" class="py-4 text-center">Member</td>
+                        <td data-label="Nominating &amp; Gov" class="py-4 text-center"></td>
+                        <td data-label="AI Safety" class="py-4 text-center"></td>
                     </tr>
                     <tr class="hover:bg-slate-50">
-                        <td class="py-4 font-bold font-serif text-lg">Sarah Chen</td>
-                        <td class="py-4 text-center"></td>
-                        <td class="py-4 text-center"></td>
-                        <td class="py-4 text-center"></td>
-                        <td class="py-4 text-center">Member</td>
+                        <td class="py-4 font-bold font-serif text-lg rt-title">Sarah Chen</td>
+                        <td data-label="Audit" class="py-4 text-center"></td>
+                        <td data-label="Compensation" class="py-4 text-center"></td>
+                        <td data-label="Nominating &amp; Gov" class="py-4 text-center"></td>
+                        <td data-label="AI Safety" class="py-4 text-center">Member</td>
                     </tr>
                     <tr class="hover:bg-slate-50">
-                        <td class="py-4 font-bold font-serif text-lg">David Kim</td>
-                        <td class="py-4 text-center">Member</td>
-                        <td class="py-4 text-center font-bold bg-slate-100">Chair</td>
-                        <td class="py-4 text-center">Member</td>
-                        <td class="py-4 text-center"></td>
+                        <td class="py-4 font-bold font-serif text-lg rt-title">David Kim</td>
+                        <td data-label="Audit" class="py-4 text-center">Member</td>
+                        <td data-label="Compensation" class="py-4 text-center font-bold bg-slate-100">Chair</td>
+                        <td data-label="Nominating &amp; Gov" class="py-4 text-center">Member</td>
+                        <td data-label="AI Safety" class="py-4 text-center"></td>
                     </tr>
                     <tr class="hover:bg-slate-50">
-                        <td class="py-4 font-bold font-serif text-lg">Olivia Vance</td>
-                        <td class="py-4 text-center">Member</td>
-                        <td class="py-4 text-center"></td>
-                        <td class="py-4 text-center font-bold bg-slate-100">Chair</td>
-                        <td class="py-4 text-center">Member</td>
+                        <td class="py-4 font-bold font-serif text-lg rt-title">Olivia Vance</td>
+                        <td data-label="Audit" class="py-4 text-center">Member</td>
+                        <td data-label="Compensation" class="py-4 text-center"></td>
+                        <td data-label="Nominating &amp; Gov" class="py-4 text-center font-bold bg-slate-100">Chair</td>
+                        <td data-label="AI Safety" class="py-4 text-center">Member</td>
                     </tr>
                 </tbody>
             </table>
         </div>
         
-        <div class="mt-12 p-6 bg-slate-50 border border-slate-200">
+        <div class="mt-8 p-4 bg-slate-50 md:mt-12 md:p-6 border border-slate-200">
             <h4 class="font-bold text-slate-900 mb-2">Committee Charters</h4>
-            <div class="flex gap-4 text-sm text-blue-900">
-                <a href="#" class="hover:underline">Audit Charter</a>
-                <span class="text-slate-300">|</span>
-                <a href="#" class="hover:underline">Compensation Charter</a>
-                <span class="text-slate-300">|</span>
-                <a href="#" class="hover:underline">Nominating & Governance Charter</a>
-                <span class="text-slate-300">|</span>
-                <a href="#" class="hover:underline">AI Safety Charter</a>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-blue-900">
+                <a href="#" class="inline-flex min-h-[2.75rem] items-center hover:underline md:min-h-0">Audit Charter</a>
+                <span class="hidden text-slate-300 sm:inline">|</span>
+                <a href="#" class="inline-flex min-h-[2.75rem] items-center hover:underline md:min-h-0">Compensation Charter</a>
+                <span class="hidden text-slate-300 sm:inline">|</span>
+                <a href="#" class="inline-flex min-h-[2.75rem] items-center hover:underline md:min-h-0">Nominating & Governance Charter</a>
+                <span class="hidden text-slate-300 sm:inline">|</span>
+                <a href="#" class="inline-flex min-h-[2.75rem] items-center hover:underline md:min-h-0">AI Safety Charter</a>
             </div>
         </div>
     </div>

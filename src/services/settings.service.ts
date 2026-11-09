@@ -59,6 +59,9 @@ class SettingsService {
     // Uploads
     upload_max_mb: '5',
 
+    // Integrity
+    integrity_raw_retention_days: '90',
+
     // Communications
     comms_email_enabled: 'true',
     comms_email_test_address: '',
@@ -70,6 +73,8 @@ class SettingsService {
     default_user_tier: 'FREE',
 
     // Chat Visibility/Configurability for Users
+    chat_maintenance_mode: 'false',
+    chat_global_rate_limit: '0',
     user_can_toggle_chat_notifications: 'true',
     user_can_toggle_chat_sound: 'true',
     user_can_change_chat_rate_limit: 'true',

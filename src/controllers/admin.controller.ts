@@ -9,6 +9,18 @@ import { contentService } from '../services/content.service';
 import { comms } from '../services/communication';
 import { logAdminAction } from '../services/audit.service';
 import { addDataRows, applyColumnSizing, createStyledSheet, createWorkbook } from '../services/excel-export.service';
+import { isQueueEnabled, isRunnerEnabled } from '../config/runtime';
+import { startMatch } from '../services/runner/backend';
+import { clearManifest, sealIfFinal } from '../services/match-manifest.service';
+
+const EMPTY_QUEUE_COUNTS = {
+    active: 0,
+    waiting: 0,
+    completed: 0,
+    failed: 0,
+    delayed: 0,
+    paused: 0
+};
 
 const mapPlanLevelToTier = (level: number) => {
     if (level >= 3) return 'ENTERPRISE';
@@ -25,6 +37,7 @@ const getEnterprisePlan = async () => {
 
 export const dashboard = async (req: Request, res: Response) => {
     const userId = (req.session as any).userId;
+    const queueEnabled = isQueueEnabled();
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -71,7 +84,9 @@ export const dashboard = async (req: Request, res: Response) => {
             orderBy: { created_at: 'desc' },
             include: { created_by: { select: { email: true } } }
         }),
-        matchQueue.getJobCounts('active', 'waiting', 'completed', 'failed'),
+        queueEnabled
+            ? matchQueue.getJobCounts('active', 'waiting', 'completed', 'failed')
+            : Promise.resolve(EMPTY_QUEUE_COUNTS),
         prisma.adminAuditLog.findMany({
             take: 10,
             orderBy: { created_at: 'desc' },
@@ -110,7 +125,8 @@ export const dashboard = async (req: Request, res: Response) => {
             messagesToday,
             activeModels,
             accessDeniedCount,
-            tierDistribution
+            tierDistribution,
+            queueEnabled
         },
         recentMatches,
         recentSignups,
@@ -762,82 +778,107 @@ export const matchList = async (req: Request, res: Response) => {
         take: 50
     });
     
-    res.render('admin/matches/list', { title: 'Match Operations', path: '/admin/matches', matches, filter: status });
+    res.render('admin/matches/list', {
+        title: 'Match Operations',
+        path: '/admin/matches',
+        matches,
+        filter: status,
+        queueEnabled: isRunnerEnabled(),
+        success: req.query.success,
+        error: req.query.error
+    });
 };
 
 export const cancelMatch = async (req: Request, res: Response) => {
     const { id } = req.params;
-    // Update DB
-    await prisma.match.update({
-        where: { id },
-        data: { status: 'FAILED' } // Or 'CANCELLED' if we add that enum
+    const queueEnabled = isQueueEnabled();
+
+    // Atomic: only a match that is still waiting or running can be cancelled. The runner checks the
+    // status between moves, so a running match stops at its next move instead of overwriting the status.
+    const result = await prisma.match.updateMany({
+        where: { id, status: { in: ['PENDING', 'RUNNING'] } },
+        data: { status: 'CANCELLED', finished_at: new Date(), failure_reason: 'Cancelled by an administrator' }
     });
-    
-    // Attempt to remove from queue if waiting
-    const jobs = await matchQueue.getJobs(['waiting', 'active', 'delayed']);
-    const job = jobs.find(j => j.data.matchId === id);
-    if (job) {
-        await job.remove();
+    if (result.count === 0) {
+        return res.redirect('/admin/matches?error=Only pending or running matches can be cancelled');
     }
-    
-    await logAdminAction((req.session as any).userId, 'match.cancel', id);
-    res.redirect('/admin/matches');
+    // A pending match has no runner to do this; a running one is sealed by its runner when it stops (or by the sweeper).
+    await sealIfFinal(id).catch(() => undefined);
+
+    if (queueEnabled) {
+        try {
+            const jobs = await matchQueue.getJobs(['waiting', 'delayed']);
+            const job = jobs.find((j: any) => j.data.matchId === id);
+            if (job) await job.remove();
+        } catch (err) {
+            // An active job is locked by a worker and cannot be removed; it stops via the status check.
+        }
+    }
+
+    await logAdminAction((req.session as any).userId, 'match.cancel', id, { queueEnabled });
+    res.redirect(`/admin/matches?success=${encodeURIComponent(queueEnabled ? 'Match cancelled' : 'Match cancelled. Queue processing is disabled, so no queue job was removed.')}`);
 };
 
 export const retryMatch = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const match = await prisma.match.findUnique({ where: { id } });
-    if (match) {
-        await prisma.match.update({
-            where: { id },
-            data: { status: 'PENDING' }
-        });
-        const settings = await settingsService.getAll();
-        const attempts = parseInt(settings.queue_retry_attempts || '3', 10);
-        const backoffMs = parseInt(settings.queue_retry_backoff_ms || '5000', 10);
-        await matchQueue.add(
-            'run-match',
-            { matchId: id },
-            {
-                attempts: Math.max(1, attempts),
-                backoff: { type: 'fixed', delay: Math.max(0, backoffMs) }
-            }
-        );
+    if (!isRunnerEnabled()) {
+        return res.redirect('/admin/matches?error=No match runner is configured. Set MATCH_RUNNER=vercel (or enable the Redis queue) before retrying matches.');
     }
+    // Atomic and guarded: retrying a running or completed match would play it twice.
+    const result = await prisma.match.updateMany({
+        where: { id, status: { in: ['FAILED', 'CANCELLED'] } },
+        data: { status: 'PENDING', finished_at: null, failure_reason: null, move_failures: 0, lease_owner: null, lease_expires_at: null }
+    });
+    if (result.count === 0) {
+        return res.redirect('/admin/matches?error=Only failed or cancelled matches can be retried');
+    }
+    await clearManifest(id); // no longer final: the old manifest must not outlive the retry
+    const match = await prisma.match.findUnique({ where: { id }, select: { options: true } });
+    await startMatch(id, match?.options ?? undefined);
     await logAdminAction((req.session as any).userId, 'match.retry', id);
-    res.redirect('/admin/matches');
+    res.redirect('/admin/matches?success=Match retry queued');
 };
 
 // --- Queue Management ---
 export const queueDashboard = async (req: Request, res: Response) => {
     const type = (req.query.type as any) || 'failed';
-    const jobs = await matchQueue.getJobs([type], 0, 50, true); // limit 50
-    const counts = await matchQueue.getJobCounts('active', 'waiting', 'completed', 'failed', 'delayed');
+    const queueEnabled = isQueueEnabled();
+    const jobs = queueEnabled ? await matchQueue.getJobs([type], 0, 50, true) : [];
+    const counts = queueEnabled ? await matchQueue.getJobCounts('active', 'waiting', 'completed', 'failed', 'delayed') : EMPTY_QUEUE_COUNTS;
     
     res.render('admin/queue/index', { 
         title: 'Queue Inspector', 
         path: '/admin/queue', 
         jobs, 
         counts, 
-        currentType: type 
+        currentType: type,
+        queueEnabled,
+        success: req.query.success,
+        error: req.query.error
     });
 };
 
 export const retryJob = async (req: Request, res: Response) => {
     const { id } = req.params;
+    if (!isQueueEnabled()) {
+        return res.redirect('/admin/queue?error=Queue processing is disabled. Retry is unavailable.');
+    }
     const job = await matchQueue.getJob(id);
     if (job) {
         await job.retry();
     }
     await logAdminAction((req.session as any).userId, 'queue.retry', id);
-    res.redirect('/admin/queue?type=failed');
+    res.redirect('/admin/queue?type=failed&success=Job retried');
 };
 
 export const cleanQueue = async (req: Request, res: Response) => {
+    if (!isQueueEnabled()) {
+        return res.redirect('/admin/queue?error=Queue processing is disabled. Clean is unavailable.');
+    }
     await matchQueue.clean(1000, 100, 'completed');
     await matchQueue.clean(1000, 100, 'failed');
     await logAdminAction((req.session as any).userId, 'queue.clean');
-    res.redirect('/admin/queue');
+    res.redirect('/admin/queue?success=Queue cleaned');
 };
 
 // --- Analytics ---
@@ -964,6 +1005,7 @@ export const updateSettings = async (req: Request, res: Response) => {
         'security_csp_connect_src',
         'security_csp_font_src',
         'upload_max_mb',
+        'integrity_raw_retention_days',
         'chat_max_upload_count',
         'comms_email_test_address',
         'comms_sms_test_number',

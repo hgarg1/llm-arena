@@ -1,5 +1,5 @@
 <%- include('../partials/header_layout') %>
-    <div class="min-h-[calc(100vh-60px)] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-background">
+    <div class="min-h-[calc(100vh-60px)] flex flex-col justify-center px-4 py-10 sm:px-6 sm:py-12 lg:px-8 bg-background">
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
             <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-primary">
                 Sign In
@@ -10,7 +10,7 @@
         </div>
 
         <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-            <div class="bg-surface py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-border">
+            <div class="bg-surface py-8 px-4 shadow rounded-lg sm:px-10 border border-border">
                 
                 <% if (typeof error !== 'undefined' && error) { %>
                     <div class="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
@@ -29,14 +29,14 @@
 
                 <!-- SSO Section -->
                 <div class="grid grid-cols-3 gap-3 mb-6">
-                    <button class="flex items-center justify-center w-full px-4 py-2 border border-border rounded-md shadow-sm bg-white text-sm font-medium text-secondary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors" title="Sign in with Google">
+                    <button class="flex min-h-[44px] items-center justify-center w-full px-4 py-2 border border-border rounded-md shadow-sm bg-white text-sm font-medium text-secondary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors" title="Sign in with Google" aria-label="Sign in with Google">
                         <span class="font-bold font-sans text-blue-600">G</span>
                     </button>
-                    <button class="flex items-center justify-center w-full px-4 py-2 border border-border rounded-md shadow-sm bg-white text-sm font-medium text-secondary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors" title="Sign in with Microsoft">
+                    <button class="flex min-h-[44px] items-center justify-center w-full px-4 py-2 border border-border rounded-md shadow-sm bg-white text-sm font-medium text-secondary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors" title="Sign in with Microsoft" aria-label="Sign in with Microsoft">
                         <span class="font-bold font-sans text-orange-600">M</span>
                     </button>
-                    <button class="flex items-center justify-center w-full px-4 py-2 border border-border rounded-md shadow-sm bg-white text-sm font-medium text-secondary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors" title="Sign in with Apple">
-                        <span class="font-bold font-sans text-black"></span>
+                    <button class="flex min-h-[44px] items-center justify-center w-full px-4 py-2 border border-border rounded-md shadow-sm bg-white text-sm font-medium text-secondary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors" title="Sign in with Apple" aria-label="Sign in with Apple">
+                        <span class="font-bold font-sans text-black">A</span>
                     </button>
                 </div>
 
@@ -51,8 +51,9 @@
                     </div>
                 </div>
 
-                <form action="/auth/login" method="POST" class="space-y-6" <%= settings && settings['auth_passkey_enabled'] !== 'false' ? 'x-data="passkeyLogin()"' : '' %>>
+                <form action="/auth/login" method="POST" class="space-y-6" <%- settings && settings['auth_passkey_enabled'] !== 'false' ? 'x-data="passkeyLogin()"' : '' %>>
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="next" value="<%= typeof next !== 'undefined' ? next : '' %>">
                     <% if (settings && settings['auth_passkey_enabled'] !== 'false') { %>
                         <!-- Passkey Button -->
                         <button type="button" @click="authenticate()" class="btn btn-secondary w-full flex justify-center py-2.5 mb-4 border-2 border-dashed hover:border-accent hover:text-accent transition-colors">
@@ -80,7 +81,7 @@
                         <div class="flex items-center justify-between">
                             <label for="password" class="input-label mb-0">Password</label>
                             <div class="text-sm">
-                                <a href="/auth/forgot-password" class="font-medium text-accent hover:text-accent/80">
+                                <a href="/auth/forgot-password" class="inline-flex min-h-[44px] items-center font-medium text-accent hover:text-accent/80">
                                     Forgot your password?
                                 </a>
                             </div>
@@ -92,7 +93,7 @@
                     </div>
 
                     <div class="flex items-center justify-between">
-                        <label class="flex items-center gap-2 text-sm text-secondary">
+                        <label class="flex min-h-[44px] items-center gap-2 text-sm text-secondary">
                             <input type="checkbox" name="remember_me" class="rounded border-border text-accent focus:ring-accent">
                             Remember me
                         </label>
@@ -150,7 +151,9 @@
                         
                         const verification = await verifyResp.json();
                         if (verification.verified) {
-                            window.location.href = '/';
+                            // Return to where the visitor was (the server already validated this value; re-check before using it).
+                            const requested = document.querySelector('input[name="next"]')?.value || '';
+                            window.location.href = /^\/(?![\/\\])/.test(requested) ? requested : '/';
                         } else {
                             alert('Authentication failed');
                         }
