@@ -1,3 +1,10 @@
 {
-  "keys": []
+  "keys": [
+    {
+      "key_id": "3ceb1fb7a56ec9dc",
+      "alg": "Ed25519",
+      "public_key": "6GMhxxaZU8oEdp04swkm2FqlETfWVHcYIrib9wfWZnQ",
+      "status": "active"
+    }
+  ]
 }
