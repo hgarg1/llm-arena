@@ -1,4 +1,3 @@
-import { prisma } from './config/db';
 import { listGames } from './controllers/admin/games.controller';
 
 async function run() {
